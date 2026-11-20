@@ -32,7 +32,7 @@ Výpis je v embedech a pod ním jsou tlačítka na přepínání.
 | `/napoje` | Energetické nápoje a limonády bez cukru v akci (✅ výslovně bez cukru, 🤷 různé druhy značky, která má i verzi bez cukru) |
 | `/domu` | Jak se dostat z centra na koleje (jeden výpis s příjezdem na Purkyňovy i PPV): tramvaje a noční N99 z České, poslední denní spoj, o kolik dřív to jede z Hlavního nádraží |
 | `/obed` | Hlasování „Kdo jde na oběd?“ – tlačítka s menzami a restauracemi, časy, „Jdu teď“; svolat jde i tlačítkem pod menzami a restauracemi |
-| `/co-jist` | Náhodné jídlo z dnešních menz a restaurací do 150 Kč (znovu / jen menzy / jen Economy / jen restaurace / bez limitu ceny) |
+| `/co-jist` | Náhodné jídlo z dnešních menz a restaurací (znovu / jen menzy / jen Economy / jen restaurace / do 150 Kč) |
 | `/pocasi` | Počasí u FITu a kolejí (Open-Meteo): teď, dalších 18 h, dnes a zítra, rady na oblečení, večer rada k otevřenému oknu |
 | `/novinky` | Co je nového v posledních verzích bota (z [CHANGELOG.md](CHANGELOG.md)), s listováním ke starším |
 

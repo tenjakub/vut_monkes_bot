@@ -24,7 +24,7 @@ SCOPES: dict[str, tuple[str, str]] = {
     "economy": ("💰", "Jen Economy"),
     "restaurace": ("🍴", "Restaurace"),
 }
-MAX_PRICE = 150  # Kč – tlačítko "Do 150 Kč", ve výchozím stavu zapnuté
+MAX_PRICE = 150  # Kč – přepínač "Do 150 Kč", ve výchozím stavu vypnutý
 _PRICE_RE = re.compile(r"\d+(?:[.,]\d+)?")
 
 
@@ -84,7 +84,7 @@ def pick_embed(pick: Pick) -> discord.Embed:
 
 
 async def build_message(
-    bot: commands.Bot, scope: str, cheap: bool = True
+    bot: commands.Bot, scope: str, cheap: bool = False
 ) -> tuple[str, list[discord.Embed], discord.ui.View]:
     picks = await candidates(bot.fetcher, scope, cheap)
     icon, label = SCOPES[scope]
@@ -104,9 +104,9 @@ class CojistButton(
     discord.ui.DynamicItem[discord.ui.Button], template=r"cojist:(?P<scope>[a-z]+):(?P<slot>[rsc])(?::(?P<cheap>[01]))?"
 ):
     """slot: r = znovu losovat ve stejném rozsahu, s = přepnout rozsah (a losovat), c = zapnout/vypnout limit ceny.
-    cheap = 1/0 jen do MAX_PRICE Kč; starší tlačítka ho nemají -> zapnuto (výchozí stav)."""
+    cheap = 1/0 jen do MAX_PRICE Kč; starší tlačítka ho nemají -> vypnuto (výchozí stav)."""
 
-    def __init__(self, scope: str, slot: str, cheap: bool = True, **button_kwargs) -> None:
+    def __init__(self, scope: str, slot: str, cheap: bool = False, **button_kwargs) -> None:
         super().__init__(discord.ui.Button(custom_id=f"cojist:{scope}:{slot}:{int(cheap)}", **button_kwargs))
         self.scope = scope
         self.cheap = cheap
@@ -115,7 +115,7 @@ class CojistButton(
     async def from_custom_id(
         cls, interaction: discord.Interaction, item: discord.ui.Button, match: re.Match[str], /
     ) -> CojistButton:
-        return cls(match["scope"], match["slot"], match["cheap"] != "0")
+        return cls(match["scope"], match["slot"], match["cheap"] == "1")
 
     async def callback(self, interaction: discord.Interaction) -> None:
         if self.scope not in SCOPES:
@@ -126,7 +126,7 @@ class CojistButton(
         await interaction.edit_original_response(content=content, embeds=embeds, view=view)
 
 
-def build_view(scope: str, cheap: bool = True) -> discord.ui.View:
+def build_view(scope: str, cheap: bool = False) -> discord.ui.View:
     view = discord.ui.View(timeout=None)
     view.add_item(CojistButton(scope, "r", cheap, label="Znovu", emoji="🎲", style=discord.ButtonStyle.success, row=0))
     for key, (icon, label) in SCOPES.items():

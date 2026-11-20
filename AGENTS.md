@@ -30,7 +30,12 @@ Tenhle soubor je pro AI, která na projektu pracuje. Lidský návod je v [README
   `feature/<krátký-popis>` pro novinky, `fix/<krátký-popis>` pro opravy (anglicky nebo česky bez diakritiky,
   malými písmeny, s pomlčkami). Na začátku práce zkontroluj `git status` a branch. Pokud jsi na `main`,
   založ branch dřív, než cokoli změníš.
-- Jedna branch = jedna ucelená změna. Nesouvisející věci patří do jiné branche.
+- Jedna branch = jedno téma. Nesouvisející věci patří do jiné branche.
+- **Nezakládej branch pro každou úpravu.** Další kola zpětné vazby, doladění a drobnosti ke stejnému tématu
+  (např. „ještě u /pivo…“, „a u /domu…“ po testování) pokračují ve **stejné branchi**, dalšími commity. Platí to,
+  i když uživatel mezitím branch začlenil do `main`: přepni se na ni, `git merge --ff-only main` a pokračuj (když
+  byla smazaná, založ ji znovu se stejným názvem z `main`). Novou branch zakládej jen pro opravdu nové, nesouvisející
+  téma. Žádné řetězení `xyz-2`, `xyz-3`… nad nezačleněnými branchemi.
 - Lokální vývojový bot může běžet z jakékoli branche, na produkci jde jen `main`.
 - Push feature branche je bezpečný (CI v ní jen pustí testy, nic nenasazuje), ale i tak jen na žádost uživatele.
 - **Historie je lineární, bez merge commitů.** Před začleněním branch přeskládej na aktuální `main`
@@ -239,8 +244,8 @@ Výpis je jedna společná karta: `all_home_trips` sloučí stejný spoj ke vše
 Časy jsou z hlavní výchozí zastávky (`HOME_ORIGINS[0]` = Česká). O kolik dřív jede linka z Hlavního nádraží, se napíše
 jednou nahoře (`origin_offsets` = nejčastější rozdíl z JŘ, u 12 je 6 min, u N99 3 min).
 
-**/co-jist** (`cogs/cojist.py`): ve výchozím stavu jen jídla do `MAX_PRICE` (150 Kč), jídlo bez ceny se nevyřazuje.
-Tlačítka `cojist:<rozsah>:<r|s|c>:<limit 0/1>`, příznak limitu je volitelný kvůli tlačítkům ze starších zpráv (= zapnuto).
+**/co-jist** (`cogs/cojist.py`): přepínač „Do 150 Kč“ (`MAX_PRICE`) je ve výchozím stavu vypnutý, jídlo bez ceny se nevyřazuje.
+Tlačítka `cojist:<rozsah>:<r|s|c>:<limit 0/1>`, příznak limitu je volitelný kvůli tlačítkům ze starších zpráv (= vypnuto).
 
 **/obed** (`cogs/obed.py`): stav hlasování (kdo, kam, v kolik) je **jen v embedu zprávy** – tlačítka ho přečtou
 (`read_state`), upraví a přepíšou. Žádná databáze, přežije restart. Názvy polí musí odpovídat `SPOTS`.
