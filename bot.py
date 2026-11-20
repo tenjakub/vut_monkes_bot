@@ -15,7 +15,7 @@ from utils import changelog
 
 log = logging.getLogger("bot")
 
-EXTENSIONS = ["cogs.menza", "cogs.restaurace", "cogs.mhd", "cogs.slevy", "cogs.novinky"]
+EXTENSIONS = ["cogs.menza", "cogs.restaurace", "cogs.mhd", "cogs.slevy", "cogs.cojist", "cogs.novinky"]
 
 
 def status_text() -> str:

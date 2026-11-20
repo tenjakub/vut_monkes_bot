@@ -13,6 +13,7 @@ Nejnovější verze je vždy nahoře.
 
 ## 1.7 · 2026-11-20 · Pro kolej
 
+- 🎲 Nový command `/co-jist` náhodně vybere jídlo z dnešních menz a restaurací. Tlačítkem se dá losovat znovu nebo jen z menz, jen Economy či jen z restaurací.
 - 🏆 `/maso` a `/pivo` ukazují nahoře nejlevnější kus z každého druhu napříč obchody podle ceny za kilo nebo litr.
 
 ## 1.6 · 2026-11-20 · Pizza dne v La Stradě 🍕
