@@ -1,8 +1,17 @@
-# Obědový Discord bot
+# VUT Monkes bot
 
-Discord bot v Pythonu ([discord.py](https://discordpy.readthedocs.io/) 2.x), který vypisuje,
-co je dnes k obědu v menzách VUT a v okolních restauracích a kdy jede MHD.
+Discord bot v Pythonu ([discord.py](https://discordpy.readthedocs.io/) 2.x) pro jeden kamarádský
+server. Vypisuje, co je dnes k obědu v menzách VUT a v okolních restauracích a kdy jede MHD.
 Výpis je v embedech a pod ním jsou tlačítka na přepínání.
+
+> [!NOTE]
+> 🤖 **Tenhle projekt je psaný AI.** Celý kód, testy i tohle README napsal
+> [Claude](https://www.anthropic.com/claude) (model od Anthropicu) v
+> [Claude Code](https://claude.com/claude-code). Majitel repa zadává, co má bot umět,
+> testuje ho na serveru a rozhoduje o směru, ale kód sám nepíše. Proto mají commity
+> `Co-Authored-By: Claude`.
+>
+> Pokud tu najdeš chybu nebo podivné řešení, je to nejspíš chyba AI, ne člověka. 🙂
 
 ## Commandy
 
