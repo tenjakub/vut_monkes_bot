@@ -196,7 +196,7 @@ def test_beer_view_lines_and_filters():
     packs = slevy.store_deals(deals, billa, BEER_PACK, DAY, view=slevy.VIEW_BEER)
     assert [d.product for d in packs] == ["Pivo Originál 10° Gambrinus"]
     line = slevy._deal_line(packs[0], slevy.DEAL_VIEWS[slevy.VIEW_BEER], DAY)
-    assert line == "`\u2007\u2007\u2007\u2007–` 📦 **Gambrinus** Originál 10° 6× 0,5 l — **15,98 Kč/ks** (celkem 95,90 Kč) · do 24. 11."
+    assert line == "`\u2007\u2007\u2007\u2007–` 📦 **Gambrinus** Originál 10° 6× 0,5 l — **15,98 Kč/ks** (95,90 Kč) · do 24. 11."
     # bez slevy v % řadí podle ceny za litr (Braník 21,80 Kč/l před Gambrinusem 31,97 Kč/l)
     no_pct = [d.product for d in slevy.store_deals(deals, billa, slevy.ALL, DAY, view=slevy.VIEW_BEER)[1:]]
     assert no_pct == ["Pivo světlé Braník", "Pivo Originál 10° Gambrinus"]

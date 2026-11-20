@@ -203,7 +203,7 @@ def _deal_line(d: kupi.Deal, view: DealView, day: date) -> str:
         total = _price_value(d.price)
         if pack == BEER_PACK and size and size[0] > 1 and total:
             # multipack: hlavní je cena za kus, celková až v závorce
-            price, extra = f"**{_czk(total / size[0])}/ks**", f" (celkem {d.price})"
+            price, extra = f"**{_czk(total / size[0])}/ks**", f" ({d.price})"
         elif size not in (None, (1, 0.5)) and price_per_half_liter(d):
             # jiná velikost než 0,5 l: přepočet na půllitr
             extra = f" ({_czk(price_per_half_liter(d))}/0,5 l)"
