@@ -13,22 +13,18 @@ Nejnovější verze je vždy nahoře.
 
 ## 1.5 · 2026-11-20 · Rychlost ⚡
 
-- ⚡ Bot si data stahuje průběžně sám na pozadí, takže všechny commandy odpovídají hned. `/maso`, `/pivo` a spol. dřív trvaly i několik sekund. Jídelníčky menz se obnovují každých 10 minut, restaurace každou půlhodinu, výluky MHD každých 5 minut a slevy a letáky každou hodinu. Tlačítko 🔄 Obnovit stáhne data hned.
+- ⚡ Všechny commandy odpovídají hned, slevy dřív trvaly i několik sekund. Bot si data stahuje průběžně sám: menzy každých 10 minut, restaurace každou půlhodinu, výluky MHD každých 5 minut a slevy s letáky každou hodinu. Tlačítko 🔄 Obnovit stáhne data hned.
 
 ## 1.4 · 2026-11-20 · Pivo 🍺
 
-- 🍺 Nový command `/pivo` ukáže pivo v akci v Lidlu, BILLE Srbská, Albertu Semilasso a Globusu Ivanovice.
-- 🍾 🥫 📦 Tlačítky se dá vybrat jen lahve, plechovky, nebo basy a multipacky. U multipacků je cena za litr, ať se dá porovnat, co se vyplatí víc.
-- 🚫 PET lahve, sudy a dárková balení s krýglem se nezobrazují.
-- ✨ Přehlednější výpisy slev: sleva v % je na začátku řádku pod sebou, piva se jmenují zkráceně podle značky (**Kozel** 12° ležák), stejná akce se neukazuje dvakrát a obchody, kde nic není, jsou jen vyjmenované nahoře.
-- 📅 Akce a letáky, které teprve začnou, mají „📅 od …“ místo nečitelné šipky.
-- 🏷️ `/maso`, `/napoje` i `/pivo` se teď otevírají rovnou s filtrem **Jen se slevou**. Tlačítkem se dá vypnout a ukázat všechny akce.
-- 🛒 Obchody se jmenují obecně (BILLA, Albert supermarket, Globus), protože akce platí pro celý řetězec. U Albertu jsou jen akce supermarketů, hypermarketové ne. Konkrétní pobočka je vidět u `/letaky`, kde se letáky a otevírací doba opravdu liší.
+- 🍺 Nový command `/pivo` ukáže pivo v akci v Lidlu, BILLE, Albertu a Globusu. Tlačítky se dá vybrat jen lahve 🍾, plechovky 🥫, nebo basy a multipacky 📦. U multipacků je cena za litr. Piva se jmenují tak, jak se jim říká (**Kozel** 12° ležák). PET lahve, sudy a dárková balení s krýglem se nezobrazují.
+- ✨ Přehlednější výpisy slev: sleva v % je na začátku řádku pod sebou, stejná akce se neukazuje dvakrát a obchody, kde nic není, jsou jen vyjmenované nahoře. U akcí a letáků, které teprve začnou, je „📅 od …“.
+- 🛒 Obchody se ve slevách jmenují obecně (Lidl, BILLA, Albert supermarket, Globus), protože akce platí pro celý řetězec. Konkrétní pobočka je vidět u `/letaky`, kde se letáky a otevírací doba opravdu liší.
 
 ## 1.3 · 2026-11-20 · Nápoje bez cukru
 
 - 🥤 Nový command `/napoje` ukáže energetické nápoje a limonády bez cukru v akci ve stejných obchodech jako `/maso`. ✅ znamená výslovně bez cukru (Zero, bez cukru…), 🤷 akci na „různé druhy“ značky, která verzi bez cukru vyrábí.
-- 🏷️ U `/maso` a `/napoje` je nový přepínač **Jen se slevou**, který ukáže jen akce s uvedenou slevou v %.
+- 🏷️ Slevy se otevírají rovnou s filtrem **Jen se slevou**, který ukáže jen akce s uvedenou slevou v %. Tlačítkem se dá vypnout a ukázat všechny akce.
 - 📰 `/slevy` se teď jmenuje `/letaky`, protože ukazuje akční letáky.
 
 ## 1.2 · 2026-11-20 · Slevy v supermarketech
