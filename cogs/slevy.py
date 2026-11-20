@@ -39,6 +39,7 @@ VIEW_DRINKS = "napoje"
 VIEW_BEER = "pivo"
 ALL = "vse"
 MAX_DEALS = 10  # akcí na obchod
+DEFAULT_ONLY_DISCOUNT = True  # výpisy akcí se otevírají rovnou s filtrem "jen se slevou"
 MAX_LEAFLETS = 5
 SHORT_DAYS = ["po", "út", "st", "čt", "pá", "so", "ne"]
 
@@ -150,8 +151,7 @@ def _leaflets_embed(store: Store, pages: dict[str, kupi.StorePage | None], day: 
     valid.sort(key=lambda l: (bool(l.valid_from and l.valid_from > day), l.valid_from or day, l.valid_to or date.max))
 
     lines = []
-    if len(store.branches) > 1:
-        lines.append("📍 " + ", ".join(b.label for b in store.branches))
+    lines.append("📍 " + ", ".join(b.label for b in store.branches))
     hours = _hours_line(store, pages, day)
     if hours:
         lines.append(hours)
@@ -341,9 +341,11 @@ def build_view(view: str, flt: str = ALL, only_discount: bool = False) -> discor
     current = view == VIEW_LEAFLETS
     ui.add_item(SlevyButton(VIEW_LEAFLETS, ALL, False, "g", label="Letáky", emoji="📰",
                             style=style(current), disabled=current, row=0))
+    # přepínač "jen se slevou" se mezi výpisy akcí přenáší, z letáků se jde do výchozího stavu
+    carry_only = only_discount if view in DEAL_VIEWS else DEFAULT_ONLY_DISCOUNT
     for dv in DEAL_VIEWS.values():
         current = view == dv.key and flt == ALL
-        ui.add_item(SlevyButton(dv.key, ALL, only_discount, "g", label=dv.button[1], emoji=dv.button[0],
+        ui.add_item(SlevyButton(dv.key, ALL, carry_only, "g", label=dv.button[1], emoji=dv.button[0],
                                 style=style(current), disabled=current, row=0))
     ui.add_item(SlevyButton(view, flt, only_discount, "r", label="Obnovit", emoji="🔄",
                             style=discord.ButtonStyle.secondary, row=0))
@@ -385,14 +387,15 @@ class Slevy(commands.Cog):
 
     async def _send(self, interaction: discord.Interaction, view: str) -> None:
         await interaction.response.defer(thinking=True)
-        content, embeds, ui = await build_message(self.shops, view)
+        only = DEFAULT_ONLY_DISCOUNT and view in DEAL_VIEWS
+        content, embeds, ui = await build_message(self.shops, view, only_discount=only)
         await interaction.followup.send(content=content, embeds=embeds, view=ui)
 
-    @app_commands.command(name="letaky", description="📰 Akční letáky: Lidl, BILLA Srbská, Albert Semilasso, Globus Ivanovice")
+    @app_commands.command(name="letaky", description="📰 Akční letáky: Lidl, BILLA, Albert, Globus")
     async def letaky(self, interaction: discord.Interaction) -> None:
         await self._send(interaction, VIEW_LEAFLETS)
 
-    @app_commands.command(name="maso", description="🥩 Slevy na maso: Lidl, BILLA Srbská, Albert Semilasso, Globus Ivanovice")
+    @app_commands.command(name="maso", description="🥩 Slevy na maso: Lidl, BILLA, Albert, Globus")
     async def maso(self, interaction: discord.Interaction) -> None:
         await self._send(interaction, VIEW_MEAT)
 

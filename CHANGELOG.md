@@ -16,6 +16,8 @@ Nejnovější verze je vždy nahoře.
 - 🍺 Nový command `/pivo` ukáže pivo v akci v Lidlu, BILLE Srbská, Albertu Semilasso a Globusu Ivanovice.
 - 🍾 🥫 📦 Tlačítky se dá vybrat jen lahve, plechovky, nebo basy a multipacky. U multipacků je cena za litr, ať se dá porovnat, co se vyplatí víc.
 - 🚫 PET lahve, sudy a dárková balení s krýglem se nezobrazují.
+- 🏷️ `/maso`, `/napoje` i `/pivo` se teď otevírají rovnou s filtrem **Jen se slevou**. Tlačítkem se dá vypnout a ukázat všechny akce.
+- 🛒 Obchody se jmenují obecně (BILLA, Albert, Globus), protože akce platí pro celý řetězec. Konkrétní pobočka je vidět u `/letaky`, kde se letáky a otevírací doba opravdu liší.
 
 ## 1.3 · 2026-11-20 · Nápoje bez cukru
 

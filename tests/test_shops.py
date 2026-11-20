@@ -206,3 +206,25 @@ def test_parse_real_beer_page():
     assert has_next
     multipack = next(d for d in deals if d.amount.startswith("6x"))
     assert multipack.unit_price.endswith("/ 1 l")
+
+
+def _ids(ui):
+    return [getattr(getattr(i, "item", i), "custom_id", None) for i in ui.children]
+
+
+def test_deal_views_default_to_only_discount():
+    assert slevy.DEFAULT_ONLY_DISCOUNT
+    # z letáků vedou tlačítka do výpisů akcí rovnou se zapnutým "jen se slevou"
+    ids = _ids(slevy.build_view(slevy.VIEW_LEAFLETS))
+    assert "slevy:maso:vse:1:g" in ids and "slevy:pivo:vse:1:g" in ids
+    # když ho uživatel vypne, přenáší se vypnutý i do ostatních výpisů
+    ids = _ids(slevy.build_view(slevy.VIEW_MEAT, slevy.ALL, only_discount=False))
+    assert "slevy:pivo:vse:0:g" in ids
+
+
+def test_generic_store_names_branch_in_leaflets():
+    assert [s.name for s in STORES.values()] == ["Lidl", "BILLA", "Albert", "Globus"]
+    page = kupi.parse_store(read("kupi_billa_srbska.html"), DAY)
+    embed = slevy._leaflets_embed(STORES["billa"], {STORES["billa"].branches[0].kupi_path: page}, DAY)
+    assert embed.title == "🛒 BILLA"
+    assert embed.description.startswith("📍 Srbská\n🕐 Dnes 7:00–22:00")

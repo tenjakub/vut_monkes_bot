@@ -133,8 +133,10 @@ class Store:
     branches: tuple[Branch, ...]
 
 
-# Pobočky dohledané na Kupi.cz. Akce řetězců jsou většinou celostátní; letáky a otevírací doba
-# jsou z konkrétní pobočky (např. BILLA Srbská má "malý leták", Albert Kosmova je supermarket).
+# Pobočky dohledané na Kupi.cz. Akce (maso, nápoje, pivo) jsou na Kupi.cz za celý řetězec, proto
+# se obchody jmenují obecně ("BILLA"). Letáky a otevírací doba jsou z konkrétní pobočky a ta se
+# u letáků ukazuje (BILLA Srbská má "malý leták", Albert na Semilasse je supermarket -> bez
+# hypermarketových akcí).
 STORES: dict[str, Store] = {
     s.key: s
     for s in [
@@ -147,16 +149,16 @@ STORES: dict[str, Store] = {
             ),
         ),
         Store(
-            "billa", "BILLA Srbská", "🛒", 0xED1C24, "billa", ("BILLA",),
+            "billa", "BILLA", "🛒", 0xED1C24, "billa", ("BILLA",),
             (Branch("Srbská", "billa/billa-brno-srbska"),),
         ),
         Store(
             # Albert na Semilasse = "Albert Brno, Kosmova" (supermarket) -> bez hypermarketových akcí
-            "albert", "Albert Semilasso", "🛒", 0x009FE3, "albert", ("Albert", "Albert supermarket"),
-            (Branch("Kosmova", "albert/albert-brno-kosmova"),),
+            "albert", "Albert", "🛒", 0x009FE3, "albert", ("Albert", "Albert supermarket"),
+            (Branch("Semilasso (Kosmova)", "albert/albert-brno-kosmova"),),
         ),
         Store(
-            "globus", "Globus Ivanovice", "🛒", 0x00843D, "globus", ("Globus",),
+            "globus", "Globus", "🛒", 0x00843D, "globus", ("Globus",),
             (Branch("Ivanovice", "globus/globus-brno-ivanovice"),),
         ),
     ]

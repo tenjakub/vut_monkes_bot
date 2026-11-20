@@ -171,6 +171,10 @@ Postup, když jsou nová oprávnění potřeba:
 - Pivo (`BEER_CATEGORIES`, `shops.service.beer_pack`): balení se pozná z balení akce (`Deal.amount`, např. „6x 0.5 l“)
   a poznámky („plech“, „+3 Kč záloha na láhev“ = lahev, „záloha na láhve“ = multipack). Vyřazené: PET, objem > 1 l (sudy),
   dárková balení (krýgl, sklenice, metr piv…) a cena nad 150 Kč/l. Řadí se podle slevy a pak ceny za litr (`Deal.unit_price`).
+- Výpisy akcí se otevírají s „jen se slevou“ (`DEFAULT_ONLY_DISCOUNT`). Pozor: BILLA a Globus u piva slevu v % neuvádějí,
+  takže tam pak bývá prázdno – je to záměr uživatele.
+- Obchody se v akcích jmenují obecně („BILLA“, „Albert“, „Globus“), protože akce na Kupi.cz jsou za celý řetězec;
+  pobočka je jen v řádku 📍 u letáků (letáky a otevírací doba jsou za pobočku).
 - Výpisy akcí (`cogs/slevy.DEAL_VIEWS`) sdílí kód; nový výpis = `DealView` (kategorie Kupi, tlačítka filtru, funkce
   `classify` akce → klíč filtru / None, `loader` v `Shops`) + kategorie v `shops/service.py`.
   Tlačítka mají stav v custom_id `slevy:<pohled>:<filtr>:<jen se slevou 0/1>:<slot>`, příznak 0/1 je volitelný
