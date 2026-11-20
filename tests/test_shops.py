@@ -196,7 +196,7 @@ def test_beer_view_lines_and_filters():
     packs = slevy.store_deals(deals, billa, BEER_PACK, DAY, view=slevy.VIEW_BEER)
     assert [d.product for d in packs] == ["Pivo Originál 10° Gambrinus"]
     line = slevy._deal_line(packs[0], slevy.DEAL_VIEWS[slevy.VIEW_BEER], DAY)
-    assert line == "`\u2007\u2007\u2007\u2007–` 📦 **Gambrinus** Originál 10° 6× 0,5 l — **95,90 Kč** (32 Kč/l) · do 24. 11."
+    assert line == "`\u2007\u2007\u2007\u2007–` 📦 **Gambrinus** Originál 10° 6× 0,5 l — **95,90 Kč** (15,98 Kč/0,5 l) · do 24. 11."
     # bez slevy v % řadí podle ceny za litr (Braník 21,80 Kč/l před Gambrinusem 31,97 Kč/l)
     no_pct = [d.product for d in slevy.store_deals(deals, billa, slevy.ALL, DAY, view=slevy.VIEW_BEER)[1:]]
     assert no_pct == ["Pivo světlé Braník", "Pivo Originál 10° Gambrinus"]
@@ -293,3 +293,15 @@ def test_cheapest_per_kind_across_stores():
         "🐖 Vepřové: **Krkovice** — **149,90 Kč/kg** · Albert supermarket",
         "🍗 Drůbež: **Kuře Vocílka** — **49,90 Kč/kg** · BILLA",
     ]
+
+
+
+def test_beer_prices_per_half_liter():
+    view = slevy.DEAL_VIEWS[slevy.VIEW_BEER]
+    bottle = _beer("Pivo světlé Braník", note="+3 Kč záloha na láhev", price="10,90 Kč", unit="21,80 Kč / 1 l", shop="Lidl")
+    can = _beer("Pivo Pilsner Urquell", "0.33 l", "plech", "24,90 Kč", "75,45 Kč / 1 l")
+    # 0,5 l kus: cena za kus, bez přepočtu; 0,33 l plechovka: přepočet na půllitr
+    assert "(" not in slevy._deal_line(bottle, view, DAY)
+    assert "(37,73 Kč/0,5 l)" in slevy._deal_line(can, view, DAY)
+    lines = slevy.cheapest_lines(view, list(STORES.values()), [bottle, can], slevy.ALL, False, DAY)
+    assert lines[0] == "🍾 Lahve: **Braník světlé** — **10,90 Kč/0,5 l** · Lidl"

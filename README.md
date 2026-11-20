@@ -28,12 +28,12 @@ Výpis je v embedech a pod ním jsou tlačítka na přepínání.
 | `/mhd-purkyne` | Totéž u kolejí Purkyňova: Červinkova (tramvaje) a Skácelova (autobusy a trolejbusy zvlášť na východ a na západ) |
 | `/letaky` | Akční letáky a dnešní otevírací doba: Lidl (Palackého, Šumavská, Bayerova), BILLA (Srbská), Albert (Semilasso), Globus (Ivanovice) |
 | `/maso` | Slevy na maso v těch samých obchodech, seřazené podle slevy, s přepínačem vepřové / hovězí / drůbež a „jen se slevou“; nahoře 🏆 nejlevnější kus podle Kč/kg |
-| `/pivo` | Pivo v akci: lahve, plechovky, basy a multipacky (s cenou za litr), bez PET lahví, sudů a dárkových balení; nahoře 🏆 nejlevnější podle Kč/l |
+| `/pivo` | Pivo v akci: lahve, plechovky, basy a multipacky (s cenou za 0,5 l), bez PET lahví, sudů a dárkových balení; nahoře 🏆 nejlevnější za 0,5 l |
 | `/napoje` | Energetické nápoje a limonády bez cukru v akci (✅ výslovně bez cukru, 🤷 různé druhy značky, která má i verzi bez cukru) |
-| `/domu` | Jak se dostat z centra (Česká, Malinovského nám., Hlavní nádraží) na PPV a Purkyňovy koleje: nejbližší, poslední denní a noční spoje |
-| `/obed` | Hlasování „Kdo jde na oběd?“ – tlačítka s menzami a restauracemi, časy, „Jdu teď“ |
+| `/domu` | Jak se dostat z České nebo Hlavního nádraží na PPV a Purkyňovy koleje: tramvaje, poslední denní spoj a noční N99 |
+| `/obed` | Hlasování „Kdo jde na oběd?“ – tlačítka s menzami a restauracemi, časy, „Jdu teď“; svolat jde i tlačítkem pod menzami a restauracemi |
 | `/co-jist` | Náhodné jídlo z dnešních menz a restaurací (znovu / jen menzy / jen Economy / jen restaurace) |
-| `/pocasi` | Počasí u FITu a kolejí (Open-Meteo): teď, dalších 18 h, dnes a zítra, rady na oblečení |
+| `/pocasi` | Počasí u FITu a kolejí (Open-Meteo): teď, dalších 18 h, dnes a zítra, rady na oblečení, večer rada k otevřenému oknu |
 | `/novinky` | Co je nového v posledních verzích bota (z [CHANGELOG.md](CHANGELOG.md)), s listováním ke starším |
 
 Všechny tři menzové commandy mají volitelný parametr `vse: True`. Ten místo Economy ukáže

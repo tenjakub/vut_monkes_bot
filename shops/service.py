@@ -194,6 +194,22 @@ def unit_price(deal: kupi.Deal) -> tuple[float, str] | None:
     return (float(m.group(1).replace(" ", "").replace(",", ".")), m.group(2)) if m else None
 
 
+def beer_size(deal: kupi.Deal) -> tuple[int, float] | None:
+    """Balení piva z akce: "6x 0.5 l" -> (6, 0.5), "0.33 l" -> (1, 0.33), jinak None."""
+    amount = deal.amount.lower()
+    pack = _PACK_COUNT_RE.search(amount)
+    if pack:
+        return int(pack.group(1)), float(pack.group(2).replace(",", "."))
+    m = _VOLUME_RE.search(amount)
+    return (1, float(m.group(1).replace(",", "."))) if m else None
+
+
+def price_per_half_liter(deal: kupi.Deal) -> float | None:
+    """Cena za 0,5 l (u piva jsme zvyklí počítat na půllitry, ne na litry)."""
+    per_liter = price_per_liter(deal)
+    return per_liter / 2 if per_liter else None
+
+
 def price_per_liter(deal: kupi.Deal) -> float | None:
     up = unit_price(deal)
     return up[0] if up and up[1] == "l" else None

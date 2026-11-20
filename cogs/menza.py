@@ -11,6 +11,7 @@ from discord.ext import commands, tasks
 
 from lunch import kam, service
 from lunch.models import Menu
+from cogs.obed import ObedNewButton
 from utils import loading, render
 
 log = logging.getLogger(__name__)
@@ -113,6 +114,7 @@ def build_view(group: str, mode: str) -> discord.ui.View:
         )
     view.add_item(MenzaButton(group, mode, "r", label="Obnovit", emoji="🔄", style=discord.ButtonStyle.secondary, row=1))
     view.add_item(discord.ui.Button(label="Web KaM", url=kam.OVERVIEW_URL, row=1))
+    view.add_item(ObedNewButton(row=1))  # rovnou svolat, kdo jde na oběd
     return view
 
 

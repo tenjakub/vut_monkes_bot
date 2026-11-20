@@ -84,6 +84,7 @@ class Connection:
     emoji: str
     origin: str  # název výchozí zastávky
     destination: str  # název cílové zastávky
+    route_type: int = 3  # 0 = tramvaj, 3 = bus, 11 = trolejbus
 
     @property
     def night(self) -> bool:
@@ -142,6 +143,7 @@ class Timetable:
                             emoji=route.emoji,
                             origin=self.stop_names.get(stop_id, ""),
                             destination=self.stop_names.get(dest[1], ""),
+                            route_type=route.type,
                         )
                     )
         # stejná linka ze stejné zastávky ve stejnou minutu = jeden spoj (jízdní řád ho občas má dvakrát)

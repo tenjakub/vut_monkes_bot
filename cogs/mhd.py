@@ -19,7 +19,9 @@ from transit.service import (
     AREAS,
     BOARDS,
     GROUPS,
+    HOME_NIGHT_LINES,
     HOME_ORIGINS,
+    HOME_ROUTE_TYPES,
     HOMES,
     Board,
     Transit,
@@ -230,6 +232,8 @@ def home_trips(timetable: Timetable, home: str, now: datetime) -> list[Connectio
     preference = {name: i for i, name in enumerate(HOME_ORIGINS)}
     best: dict[tuple[str, datetime], Connection] = {}
     for c in timetable.connections(origins, dests, now, _night_end(now)):
+        if c.route_type not in HOME_ROUTE_TYPES and c.line not in HOME_NIGHT_LINES:
+            continue  # autobusy a jiné noční linky nechceme (viz HOME_ROUTE_TYPES, HOME_NIGHT_LINES)
         key = (c.trip_id, c.arrival)
         if key not in best or preference.get(c.origin, 99) < preference.get(best[key].origin, 99):
             best[key] = c

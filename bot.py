@@ -19,7 +19,7 @@ log = logging.getLogger("bot")
 EXTENSIONS = ["cogs.menza", "cogs.restaurace", "cogs.mhd", "cogs.slevy", "cogs.cojist", "cogs.obed", "cogs.pocasi", "cogs.novinky"]
 
 
-LOADING_SUFFIX = " · ⏳ načítám data"
+LOADING_SUFFIX = " · ⏳"
 
 
 def status_text(loading: bool = False) -> str:

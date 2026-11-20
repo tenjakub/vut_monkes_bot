@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from urllib.parse import urlencode
 
 # FIT VUT, Božetěchova – koleje PPV i Purkyňovy jsou kousek (Královo Pole)
@@ -16,7 +16,7 @@ URL = "https://api.open-meteo.com/v1/forecast?" + urlencode(
         "latitude": LATITUDE,
         "longitude": LONGITUDE,
         "current": "temperature_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,is_day",
-        "hourly": "temperature_2m,precipitation_probability,weather_code,is_day",
+        "hourly": "temperature_2m,precipitation_probability,weather_code,is_day,wind_speed_10m",
         "daily": "temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset,weather_code",
         "timezone": "Europe/Prague",
         "forecast_days": 2,
@@ -73,6 +73,7 @@ class Hour:
     rain_chance: int  # %
     code: int
     is_day: bool
+    wind: float = 0.0  # km/h
 
 
 @dataclass(frozen=True)
@@ -110,6 +111,7 @@ def parse(text: str) -> Forecast:
             rain_chance=hourly["precipitation_probability"][i] or 0,
             code=hourly["weather_code"][i],
             is_day=bool(hourly["is_day"][i]),
+            wind=(hourly.get("wind_speed_10m") or [0.0] * len(hourly["time"]))[i] or 0.0,
         )
         for i, t in enumerate(hourly["time"])
         if datetime.fromisoformat(t) >= this_hour
@@ -157,3 +159,37 @@ def advice(f: Forecast, horizon: int = 12) -> list[str]:
     if f.wind >= 40:
         tips.append("💨 hodně fouká")
     return tips
+
+
+WINDOW_FROM_HOUR = 21  # od kolika večer radit s oknem
+MORNING_HOUR = 7
+
+
+def window_advice(f: Forecast) -> str | None:
+    """Večer (po 21:00, a v noci do 4:00): nechat přes noc otevřené okno? Hlavně jestli nepromrznu a nenaprší dovnitř."""
+    hour = f.time.hour
+    if not (hour >= WINDOW_FROM_HOUR or hour < 4):
+        return None
+    morning = f.time.replace(hour=MORNING_HOUR, minute=0)
+    if hour >= MORNING_HOUR:
+        morning += timedelta(days=1)
+    night = [h for h in f.hours if h.time <= morning]
+    if not night:
+        return None
+    t_min = round(min(h.temperature for h in night))
+    rain = max(h.rain_chance for h in night)
+    wind = round(max(h.wind for h in night))
+    t_text = f"{t_min} °C".replace("-", "−")
+    if t_min <= 0:
+        text = f"❄️ radši zavři, v noci mrzne (až {t_text})"
+    elif rain >= 60:
+        text = f"🌧️ zavři, nebo jen na ventilačku, v noci asi bude pršet ({rain} %)"
+    elif t_min <= 5:
+        text = f"🥶 jen na ventilačku, venku bude jen {t_text}"
+    elif rain >= 30:
+        text = f"🌦️ klidně na ventilačku, déšť není vyloučený ({rain} %), min {t_text}"
+    else:
+        text = f"✅ klidně nech otevřené, v noci min {t_text} a bez deště"
+    if wind >= 40:
+        text += f", fouká až {wind} km/h"
+    return text

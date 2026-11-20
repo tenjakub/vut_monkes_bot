@@ -40,6 +40,9 @@ def weather_embed(f: openmeteo.Forecast) -> discord.Embed:
     tips = openmeteo.advice(f)
     if tips:
         lines.append("\n💡 " + " · ".join(tips))
+    window = openmeteo.window_advice(f)
+    if window:
+        lines.append(f"🪟 **Okno přes noc:** {window}")
     embed = discord.Embed(title=f"Počasí – {openmeteo.PLACE}", url=openmeteo.SOURCE_URL, description="\n".join(lines),
                           color=0x339AF0)
 

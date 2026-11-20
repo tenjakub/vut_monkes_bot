@@ -188,6 +188,7 @@ Postup, když jsou nová oprávnění potřeba:
   a poznámky („plech“, „+3 Kč záloha na láhev“ = lahev, „záloha na láhve“ = multipack). Název se zkracuje na značku
   (`beer_short_name`, slovník `BEER_BRANDS` – Velkopopovický Kozel → Kozel, Pilsner Urquell → Plzeň) + styl na konec. Vyřazené: PET, objem > 1 l (sudy),
   dárková balení (krýgl, sklenice, metr piv…) a cena nad 150 Kč/l. Řadí se podle slevy a pak ceny za litr (`Deal.unit_price`).
+  **Uživatelům se ceny piva ukazují za 0,5 l** (`price_per_half_liter`), ne za litr – na půllitry jsou zvyklí.
 - Řádek akce: sleva vlevo ve stejně širokém `kódu` (doplněno mezerou U+2007, Discord ji neořízne), datum bez dne
   v týdnu, „📅 od …“ místo 🔜 (Discord ho kreslí jako nečitelnou šipku). Stejná akce (produkt, balení, cena) se
   slučuje. Obchody bez akcí se nevykreslují jako karta, jen se vyjmenují v hlavičce.
@@ -225,10 +226,11 @@ Postup, když jsou nová oprávnění potřeba:
   o který chce uživatel požádat.
 
 **Počasí – Open-Meteo** (`weather/openmeteo.py`): zdarma bez klíče, data CC BY 4.0 → v embedu musí zůstat
-uvedený zdroj („Data: Open-Meteo.com“). Souřadnice FITu, obnova na pozadí každých 15 min.
+uvedený zdroj („Data: Open-Meteo.com“). Souřadnice FITu, obnova na pozadí každých 15 min. Po 21:00 (do 4:00)
+`window_advice` radí s otevřeným oknem podle předpovědi do 7:00 (mráz, déšť, chladno, vítr).
 
-**/domu** (`cogs/mhd.py`, `Timetable.connections`): spoje z `HOME_ORIGINS` (Česká, Malinovského nám., Hlavní nádraží)
-do `HOMES` (PPV, Purkyňovy koleje). Loader drží `trip_visits` = průjezdy sledovanými zastávkami včetně konečné.
+**/domu** (`cogs/mhd.py`, `Timetable.connections`): spoje z `HOME_ORIGINS` (Česká, Hlavní nádraží – z Malinovského
+nám. se nejezdí) do `HOMES` (PPV, Purkyňovy koleje), jen tramvaje (`HOME_ROUTE_TYPES`) a noční `HOME_NIGHT_LINES` (N99). Loader drží `trip_visits` = průjezdy sledovanými zastávkami včetně konečné.
 Hledá se i přes půlnoc: služba včerejška (časy 24:xx), dnešní i zítřejší (0:xx), noc končí ve 4:00. Noční linky = `N…`.
 
 **/obed** (`cogs/obed.py`): stav hlasování (kdo, kam, v kolik) je **jen v embedu zprávy** – tlačítka ho přečtou
@@ -247,7 +249,7 @@ hotové výsledky (desítky ms). Pravidla:
 - Každá obnova na pozadí běží v `async with loading.track(self.bot, "<název>")` (`utils/loading.py`) a při startu
   smyčky se registruje `loading.expect(...)`; když se zrovna nestahuje (mimo obědy), volá `loading.skip(...)`.
   Tracker loguje „✅ Načteno: … za X s“ (po startu vždy, pak jen pomalé obnovy), jednou souhrn „🚀 Všechna data po startu
-  načtena“ a při načítání delším než 2 s přidá do statusu bota „⏳ načítám data“ (`ObedBot.update_presence`).
+  načtena“ a při načítání delším než 2 s přidá na konec statusu bota „⏳“ (`ObedBot.update_presence`).
 
 ## Nasazení
 

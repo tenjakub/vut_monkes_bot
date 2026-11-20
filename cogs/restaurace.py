@@ -11,6 +11,7 @@ from discord.ext import commands, tasks
 
 from lunch import service
 from lunch.models import Menu
+from cogs.obed import ObedNewButton
 from utils import loading, render
 
 
@@ -62,6 +63,7 @@ class RefreshButton(discord.ui.DynamicItem[discord.ui.Button], template=r"restau
 def build_view() -> discord.ui.View:
     view = discord.ui.View(timeout=None)
     view.add_item(RefreshButton())
+    view.add_item(ObedNewButton(row=1))  # rovnou svolat, kdo jde na oběd
     for r in service.RESTAURANTS:
         view.add_item(discord.ui.Button(label=r.place.name, emoji=r.place.emoji, url=r.place.url, row=0))
     return view

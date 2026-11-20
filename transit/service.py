@@ -99,7 +99,10 @@ AREAS: dict[str, tuple[str, tuple[str, ...]]] = {
 
 # /domu: spoje z centra ke kolejím. Výchozí zastávky v pořadí, ve kterém se preferují, když jeden
 # spoj projede několika z nich (12 a N99 jedou Hlavní nádraží -> Česká -> …).
-HOME_ORIGINS: tuple[str, ...] = ("Česká", "Malinovského náměstí", "Hlavní nádraží")
+HOME_ORIGINS: tuple[str, ...] = ("Česká", "Hlavní nádraží")
+# Jen tramvaje (12, občas 10…) a z nočních jen N99 – jinými se z centra na koleje nejezdí (N93 jede stejně).
+HOME_ROUTE_TYPES: tuple[int, ...] = (0,)
+HOME_NIGHT_LINES: tuple[str, ...] = ("N99",)
 HOMES: dict[str, tuple[str, tuple[str, ...]]] = {
     "ppv": ("PPV", ("Technologický park", "Kolejní")),
     "purkyne": ("Purkyňovy koleje", ("Červinkova", "Skácelova")),

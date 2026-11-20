@@ -147,6 +147,25 @@ class ObedButton(discord.ui.DynamicItem[discord.ui.Button], template=r"obed:(?P<
             await interaction.response.edit_message(embed=build_embed(state, creator_of(embed)), view=build_view())
 
 
+class ObedNewButton(discord.ui.DynamicItem[discord.ui.Button], template=r"obed:new"):
+    """Tlačítko "Svolat oběd" pod výpisem menz a restaurací – pošle nové hlasování jako /obed."""
+
+    def __init__(self, row: int | None = None) -> None:
+        super().__init__(
+            discord.ui.Button(custom_id="obed:new", label="Svolat oběd", emoji="🍽️",
+                              style=discord.ButtonStyle.success, row=row)
+        )
+
+    @classmethod
+    async def from_custom_id(
+        cls, interaction: discord.Interaction, item: discord.ui.Button, match: re.Match[str], /
+    ) -> ObedNewButton:
+        return cls()
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        await interaction.response.send_message(embed=build_embed({}, str(interaction.user.id)), view=build_view())
+
+
 def build_view() -> discord.ui.View:
     view = discord.ui.View(timeout=None)
     for i, spot in enumerate(SPOTS.values()):
@@ -165,10 +184,10 @@ class Obed(commands.Cog):
         self.bot = bot
 
     async def cog_load(self) -> None:
-        self.bot.add_dynamic_items(ObedButton)
+        self.bot.add_dynamic_items(ObedButton, ObedNewButton)
 
     async def cog_unload(self) -> None:
-        self.bot.remove_dynamic_items(ObedButton)
+        self.bot.remove_dynamic_items(ObedButton, ObedNewButton)
 
     @app_commands.command(name="obed", description="🍽️ Kdo jde na oběd? Hlasování, kam a v kolik")
     async def obed(self, interaction: discord.Interaction) -> None:

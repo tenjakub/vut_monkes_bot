@@ -28,6 +28,8 @@ from shops.service import (
     Store,
     beer_pack,
     beer_short_name,
+    beer_size,
+    price_per_half_liter,
     price_per_liter,
     unit_price,
     sugar_free,
@@ -83,7 +85,7 @@ DEAL_VIEWS: dict[str, DealView] = {
             VIEW_BEER, "🍺 Pivo v akci", ("🍺", "Pivo"), BEER_CATEGORIES, BEER_PACKS,
             beer_pack, "beer_deals",
             "Teď tu žádné pivo v akci není. 😢", "pivo",
-            "🍾 lahve · 🥫 plechovky · 📦 multipacky (Kč/l)", cheapest=True,
+            "🍾 lahve · 🥫 plechovky · 📦 multipacky (s cenou za 0,5 l)", cheapest=True,
         ),
     ]
 }
@@ -196,9 +198,10 @@ def _deal_line(d: kupi.Deal, view: DealView, day: date) -> str:
         icon = BEER_PACKS.get(pack, ("🍺",))[0]
         brand, rest = beer_short_name(d.product)
         name = f"**{brand}** {rest}".strip() if brand else rest
-        per_liter = price_per_liter(d)
-        if pack == BEER_PACK and per_liter:
-            extra = f" ({per_liter:.0f} Kč/l)"
+        # u multipacků a jiných velikostí než 0,5 l přepočet na půllitr (u 0,5 l je to rovnou cena)
+        half = price_per_half_liter(d)
+        if half and (pack == BEER_PACK or beer_size(d) not in (None, (1, 0.5))):
+            extra = f" ({_czk(half)}/0,5 l)"
     else:
         icon = emoji.for_name(d.product)
         if icon == emoji.FALLBACK:
@@ -287,6 +290,10 @@ def _deals_embed(
     return embed
 
 
+def _czk(value: float) -> str:
+    return f"{value:.2f}".replace(".", ",") + " Kč"
+
+
 def _short_name(d: kupi.Deal, view: DealView) -> str:
     if view.key == VIEW_BEER:
         brand, rest = beer_short_name(d.product)
@@ -313,8 +320,9 @@ def cheapest_lines(
         if kind not in best:
             continue
         value, unit, d, store = best[kind]
-        price = f"{value:.0f}" if unit == "l" else f"{value:.2f}".replace(".", ",")
-        lines.append(f"{icon} {label}: **{_short_name(d, view)}** — **{price} Kč/{unit}** · {store.name}")
+        # pivo za půllitr (u 0,5 l lahve/plechovky je to přímo cena za kus), maso za kilo
+        price = f"{_czk(value / 2)}/0,5 l" if unit == "l" else f"{_czk(value)}/{unit}"
+        lines.append(f"{icon} {label}: **{_short_name(d, view)}** — **{price}** · {store.name}")
     return lines
 
 

@@ -255,3 +255,21 @@ def test_home_embed_sections():
     # po posledním denním spoji už jen noční – bez zdvojeného řádku 🦉
     night_only = mhd._home_embed("ppv", trips[1:], now).description
     assert "Denní spoje už dnes nejedou" in night_only and "🦉" not in night_only
+
+
+def test_home_trips_only_trams_and_n99():
+    from datetime import timedelta
+    from types import SimpleNamespace
+
+    now = at(2026, 11, 20, 22, 30)
+
+    def con(minutes, line, route_type, origin="Česká"):
+        dep = now + timedelta(minutes=minutes)
+        return gtfs.Connection(f"{line}{minutes}", dep, dep + timedelta(minutes=15), line, "🚌", origin, "Skácelova",
+                               route_type)
+
+    fake = SimpleNamespace(
+        stops_named=lambda name: [name],
+        connections=lambda *a: [con(5, "12", 0), con(8, "67", 3), con(33, "N93", 3), con(33, "N99", 3)],
+    )
+    assert [c.line for c in mhd.home_trips(fake, "purkyne", now)] == ["12", "N99"]
