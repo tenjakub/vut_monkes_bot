@@ -19,8 +19,8 @@ polévky a všechna hlavní jídla (saláty, přílohy a dezerty vynechá).
 Tlačítka pod zprávou přepínají skupinu menz, Economy/vše a obnovují data. Stav je uložený
 přímo v ID tlačítka, takže tlačítka fungují i po restartu bota.
 
-Každé jídlo je ve výpisu jako kartička: emoji, štítek (`E1`…), cena a název. U menz se kartičky
-na desktopu skládají do mřížky po třech, u restaurací (dlouhé názvy) je jedno jídlo na řádek.
+Každé jídlo je ve výpisu jako kartička: emoji, štítek (`E1`…), cena a název. Kartičky se na desktopu
+skládají do mřížky po třech, polévky jsou nahoře přes celou šířku.
 Čas stažení dat je v hlavičce zprávy jako Discord timestamp (každý ho vidí ve svém čase
 a relativní „před X minutami“ se průběžně aktualizuje).
 Emoji se vybírá podle klíčových slov v názvu jídla, pravidla jsou v `lunch/emoji.py`

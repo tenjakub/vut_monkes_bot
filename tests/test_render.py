@@ -35,3 +35,19 @@ def test_header_has_discord_timestamps():
     unix = int(ts.timestamp())
     assert f"<t:{unix}:t>" in text and f"<t:{unix}:R>" in text
     assert text.startswith("### 🍽️ Economy menu – ")
+
+
+def test_caps_title_split():
+    assert render._split_caps_title("CHICKEN MADRAS Kuřecí kostky s omáčkou") == (
+        "Chicken Madras",
+        "Kuřecí kostky s omáčkou",
+    )
+    assert render._split_caps_title("PADAGALI SPECIAL MIX THALI Všechna tři jídla")[0] == "Padagali Special Mix Thali"
+    # běžné názvy zůstávají, jak jsou
+    for name in ["Kuřecí plátek 150g", "Trhané vepřové maso Pulled Pork v BBQ omáčce", "BBQ"]:
+        assert render._split_caps_title(name) == (None, name)
+
+
+def test_caps_title_rendered_bold():
+    field = render.dish_field(Dish("CHICKEN KORMA Kuřecí kostky", "165 Kč", label="2"))
+    assert field.value == "**Chicken Korma**\nKuřecí kostky"

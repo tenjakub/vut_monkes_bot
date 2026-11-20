@@ -42,13 +42,36 @@ class Field:
         return len(self.name) + len(self.value)
 
 
+def _split_caps_title(name: str) -> tuple[str | None, str]:
+    """'CHICKEN MADRAS Kuřecí kostky…' -> ('Chicken Madras', 'Kuřecí kostky…').
+
+    Některé restaurace (Padagali) píšou název jídla velkými písmeny a za ním popis.
+    """
+    words = name.split()
+    n = 0
+    for w in words:
+        letters = "".join(c for c in w if c.isalpha())
+        if len(letters) < 2 or not letters.isupper():
+            break
+        n += 1
+    caps = "".join(words[:n])
+    if n == 0 or n == len(words) or sum(c.isalpha() for c in caps) < 4:
+        return None, name
+    return " ".join(words[:n]).title(), " ".join(words[n:])
+
+
 def dish_field(d: Dish, inline: bool = True) -> Field:
     head = " · ".join(p for p in (d.label, d.price) if p)
-    return Field(f"{emoji.for_dish(d)} {head}".strip(), d.name[:FIELD_VALUE_LIMIT], inline)
+    title, rest = _split_caps_title(d.name)
+    value = f"**{title}**\n{rest}" if title else d.name
+    return Field(f"{emoji.for_dish(d)} {head}".strip(), value[:FIELD_VALUE_LIMIT], inline)
 
 
 def _soup_name(name: str) -> str:
     """'Polévka rajčatová s těstovinou' -> 'Rajčatová s těstovinou' (nadpis už říká Polévka)."""
+    title, rest = _split_caps_title(name)
+    if title:
+        name = f"{title} {rest}"
     short = re.sub(r"^polévka\s+", "", name, flags=re.IGNORECASE)
     return short[:1].upper() + short[1:] if short else name
 

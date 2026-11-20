@@ -14,8 +14,8 @@ from utils import render
 
 
 def restaurant_fields(menu: Menu) -> list[render.Field]:
-    # Názvy jídel v restauracích jsou dlouhé, takže tady jedno jídlo na řádek místo mřížky
-    return render.soup_field(menu.soups) + [render.dish_field(d, inline=False) for d in menu.mains]
+    # stejná mřížka kartiček jako u menz, polévka přes celou šířku nahoře
+    return render.soup_field(menu.soups) + [render.dish_field(d) for d in menu.mains]
 
 
 async def build_message(
