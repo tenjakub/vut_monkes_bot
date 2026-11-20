@@ -18,7 +18,7 @@ EXTENSIONS = ["cogs.menza", "cogs.restaurace", "cogs.mhd"]
 
 
 def status_text() -> str:
-    return f"🍽️ /ppv · 🚏 /mhd · verze {config.BOT_VERSION}"
+    return f"verze {config.BOT_VERSION}"
 
 
 class ObedBot(commands.Bot):

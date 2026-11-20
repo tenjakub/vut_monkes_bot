@@ -163,7 +163,7 @@ Návrh textu:
 
 ### Status s verzí
 
-Pod jménem bota je vlastní status `🍽️ /ppv · 🚏 /mhd · verze <hash>`. Na serveru je to krátký hash
+Pod jménem bota je vlastní status `verze <hash>`. Na serveru je to krátký hash
 commitu, ze kterého je sestavený Docker image (stejný jako tag `sha-<hash>`). Lokálně je to `dev <hash>`
 podle aktuálního commitu. Stejnou verzi bot vypíše v logu při startu a v chybové hlášce, ve které je
 i odkaz na GitHub Issues.
