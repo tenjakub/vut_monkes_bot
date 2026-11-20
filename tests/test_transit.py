@@ -105,12 +105,18 @@ def test_calendar_exceptions(tt):
     assert tt.active_services(date(2026, 11, 22)) == set()
 
 
-def test_cards_mark_terminating_and_continuing(tt):
+def test_cards_continuing_first_terminating_last(tt):
     deps = tt.departures(tt.stops_named("Kolejní"), at(2026, 11, 20, 10, 0))
     cards = mhd._cards(deps)
-    assert [c.name for c in cards] == ["🚌 72 → Poliklinika Lesná", "🚌 72 → Technologický park"]
-    assert cards[0].value.startswith("↪ _přes Technologický park_")
+    assert [c.name for c in cards] == ["🚌 72 ↪ jede dál", "🚌 72 → Technologický park"]
+    assert cards[0].value.startswith("_přes Technologický park_\n**10:03**")
     assert cards[1].value.startswith("🛑")
+
+
+def test_board_embeds_have_unique_urls():
+    # Discord by embedy se stejnou URL sloučil a jedna zastávka by zmizela
+    urls = {mhd._board_embed(b, [], 1000).url for b in mhd.BOARDS.values()}
+    assert len(urls) == len(mhd.BOARDS)
 
 
 def _feed_with_alert() -> bytes:

@@ -27,28 +27,42 @@ GROUP_LABELS = {"vse": "Obě zastávky", **{k: b.name for k, b in BOARDS.items()
 
 
 def _cards(departures: list[Departure]) -> list[render.Field]:
-    """Kartička = linka + kam se tím vozem reálně dojede, s nejbližšími odjezdy."""
-    groups: dict[tuple[str, str, str | None], list[Departure]] = defaultdict(list)
-    for d in departures:
-        via = d.last_stop if d.continues_to else None
-        groups[(d.line, d.destination, via)].append(d)
-    # linky, u kterých některé spoje pokračují dál – u ostatních pak stojí za to napsat "končí"
+    """Kartičky s nejbližšími odjezdy.
+
+    U linek, kde část spojů na konečné pokračuje dál (72 z Kolejní přes Technologický park),
+    je jedno, kam přesně pak vůz jede – rozlišujeme jen "jede dál" a "končí". Končící spoje
+    jsou až na konci a nevýrazně (jen ať je vidět, že existují).
+    """
     continuing_lines = {d.line for d in departures if d.continues_to}
+    groups: dict[tuple[str, str, bool], list[Departure]] = defaultdict(list)
+    for d in departures:
+        if d.line in continuing_lines:
+            if d.continues_to:
+                groups[(d.line, "↪ jede dál", False)].append(d)
+            else:
+                groups[(d.line, f"→ {d.headsign}", True)].append(d)
+        else:
+            groups[(d.line, f"→ {d.headsign}", False)].append(d)
 
     fields = []
-    for (line, dest, via), deps in sorted(groups.items(), key=lambda kv: kv[1][0].when):
-        lines = []
-        if via:
-            lines.append(f"↪ _přes {via}_")
-        elif line in continuing_lines:
-            lines.append("🛑 _dál nejede_")
-        lines += [f"**{d.when:%H:%M}** · <t:{int(d.when.timestamp())}:R>" for d in deps[:PER_CARD]]
-        fields.append(render.Field(f"{deps[0].emoji} {line} → {dest}", "\n".join(lines)))
+    # nejdřív normální kartičky podle nejbližšího odjezdu, končící spoje až na konec
+    for (line, label, ends), deps in sorted(groups.items(), key=lambda kv: (kv[0][2], kv[1][0].when)):
+        if ends:
+            lines = ["🛑 _končí, dál nejede_"]
+            lines += [f"{d.when:%H:%M} · <t:{int(d.when.timestamp())}:R>" for d in deps[:2]]
+        else:
+            via = deps[0].last_stop if deps[0].continues_to else None
+            lines = [f"_přes {via}_"] if via else []
+            lines += [f"**{d.when:%H:%M}** · <t:{int(d.when.timestamp())}:R>" for d in deps[:PER_CARD]]
+        fields.append(render.Field(f"{deps[0].emoji} {line} {label}", "\n".join(lines)))
     return fields[:MAX_CARDS]
 
 
 def _board_embed(board: Board, departures: list[Departure], limit: int) -> discord.Embed:
-    embed = discord.Embed(title=f"{board.emoji} {board.name}", url=DEPARTURES_URL, color=board.color)
+    # Pozor: Discord slučuje embedy se stejnou URL do jednoho, proto unikátní kotva pro každou zastávku
+    embed = discord.Embed(
+        title=f"{board.emoji} {board.name}", url=f"{DEPARTURES_URL}#{board.key}", color=board.color
+    )
     fields = _cards(departures)
     if fields:
         render.add_fields(embed, fields, limit)
