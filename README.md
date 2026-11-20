@@ -26,8 +26,9 @@ Výpis je v embedech a pod ním jsou tlačítka na přepínání.
 | `/restaurace` | Polední menu: U 3 opic, Padagali, La Strada, U Karla, Portoriko |
 | `/mhd` | PPV (koleje Pod Palackého vrchem): odjezdy z Technologického parku (tramvaje) a z Kolejní + výluky na těch linkách |
 | `/mhd-purkyne` | Totéž u kolejí Purkyňova: Červinkova (tramvaje) a Skácelova (autobusy a trolejbusy zvlášť na východ a na západ) |
-| `/slevy` | Akční letáky a dnešní otevírací doba: Lidl (Palackého, Šumavská, Bayerova), BILLA Srbská, Albert Semilasso, Globus Ivanovice |
-| `/maso` | Slevy na maso v těch samých obchodech, seřazené podle slevy, s přepínačem vepřové / hovězí / drůbež |
+| `/letaky` | Akční letáky a dnešní otevírací doba: Lidl (Palackého, Šumavská, Bayerova), BILLA Srbská, Albert Semilasso, Globus Ivanovice |
+| `/maso` | Slevy na maso v těch samých obchodech, seřazené podle slevy, s přepínačem vepřové / hovězí / drůbež a „jen se slevou“ |
+| `/napoje` | Energetické nápoje a limonády bez cukru v akci (✅ výslovně bez cukru, 🤷 různé druhy značky, která má i verzi bez cukru) |
 | `/novinky` | Co je nového v posledních verzích bota (z [CHANGELOG.md](CHANGELOG.md)), s listováním ke starším |
 
 Všechny tři menzové commandy mají volitelný parametr `vse: True`. Ten místo Economy ukáže
@@ -273,7 +274,7 @@ cogs/menza.py       # /ppv, /purkyne, /menzy + tlačítka
 cogs/restaurace.py  # /restaurace + tlačítko obnovit
 cogs/mhd.py         # /mhd, /mhd-purkyne + tlačítka
 cogs/novinky.py     # /novinky (changelog s listováním)
-cogs/slevy.py       # /slevy (letáky) a /maso (slevy na maso)
+cogs/slevy.py       # /letaky, /maso, /napoje
 lunch/              # stahování a parsování (bez závislosti na Discordu)
   kam.py            #   menzy VUT – seznam menz a skupin (ppv, purkyne, vse)
   emoji.py          #   výběr emoji k jídlu podle klíčových slov

@@ -11,6 +11,12 @@ Formát (bot ho čte, viz utils/changelog.py):
 Nejnovější verze je vždy nahoře.
 -->
 
+## 1.3 · 2026-11-20 · Nápoje bez cukru
+
+- 🥤 Nový command `/napoje` ukáže energetické nápoje a limonády bez cukru v akci ve stejných obchodech jako `/maso`. ✅ znamená výslovně bez cukru (Zero, bez cukru…), 🤷 akci na „různé druhy“ značky, která verzi bez cukru vyrábí.
+- 🏷️ U `/maso` a `/napoje` je nový přepínač **Jen se slevou**, který ukáže jen akce s uvedenou slevou v %.
+- 📰 `/slevy` se teď jmenuje `/letaky`, protože ukazuje akční letáky.
+
 ## 1.2 · 2026-11-20 · Slevy v supermarketech
 
 - 🛒 Nový command `/slevy` ukáže aktuální akční letáky pro Lidl (Palackého, Šumavská, Bayerova), BILLA Srbská, Albert Semilasso a Globus Ivanovice. U každého obchodu je i dnešní otevírací doba.

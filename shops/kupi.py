@@ -40,6 +40,7 @@ class Deal:
     valid_to: date | None
     category: str  # slug kategorie Kupi ("drubez", …)
     url: str  # detail produktu na Kupi.cz
+    note: str = ""  # poznámka k akci ("různé druhy, plech", "regular", …)
 
     def is_current(self, today: date) -> bool:
         return (self.valid_from is None or self.valid_from <= today) and (
@@ -125,6 +126,7 @@ def parse_deals(html: str, category: str, today: date, page: int = 1) -> tuple[l
                     valid_to=valid_to,
                     category=category,
                     url=url,
+                    note=_text(row.select_one(".discount_note")),
                 )
             )
     has_next = soup.select_one(f"a[href='/slevy/{category}?page={page + 1}']") is not None

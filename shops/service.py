@@ -8,7 +8,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 import time
+import unicodedata
 from dataclasses import dataclass, field
 
 from lunch.fetcher import Fetcher
@@ -30,6 +32,42 @@ MEAT_CATEGORIES: dict[str, tuple[str, str]] = {
     "drubez": ("🍗", "Drůbež"),
     "ostatni-maso": ("🍖", "Ostatní maso"),
 }
+
+# Nápoje: z těchhle kategorií se berou jen nápoje bez cukru (viz sugar_free()).
+DRINK_CATEGORIES: dict[str, tuple[str, str]] = {
+    "energeticke-a-iontove-napoje": ("⚡", "Energetické"),
+    "limonady": ("🥤", "Limonády"),
+}
+
+# Kupi.cz často varianty neuvádí ("různé druhy"). Bez cukru je jisté jen tehdy, když to říká název
+# nebo poznámka; u "různých druhů" značek, které verzi bez cukru vyrábějí, to je "možná".
+_SUGAR_FREE_RE = re.compile(
+    r"\bzero\b|bez cukru|sugar ?free|zero sugar|no sugar|\bnulka\b|\bmax\b|\blight\b|\bdiet\b|\bultra\b|0 ?% cukru"
+)
+_MIXED_RE = re.compile(r"(ruzne|vybrane|vsechny) druhy|\d+ druhy|ruzne prichute|vice druhu")
+ZERO_BRANDS = (
+    "red bull", "monster", "big shock", "semtex", "tiger", "rockstar", "burn", "hell", "powerade",
+    "coca cola", "coca-cola", "pepsi", "kofola", "sprite", "fanta", "schweppes", "dr. pepper", "7up",
+    "mirinda", "royal crown", "rc cola", "kinley", "mountain dew",
+)
+
+SUGAR_FREE = "yes"
+MAYBE_SUGAR_FREE = "maybe"
+
+
+def _simplify(text: str) -> str:
+    decomposed = unicodedata.normalize("NFKD", text.lower())
+    return "".join(c for c in decomposed if not unicodedata.combining(c))
+
+
+def sugar_free(deal: kupi.Deal) -> str | None:
+    """SUGAR_FREE (jistě bez cukru), MAYBE_SUGAR_FREE (různé druhy značky, která má i bez cukru), jinak None."""
+    name, note = _simplify(deal.product), _simplify(deal.note)
+    if _SUGAR_FREE_RE.search(name) or _SUGAR_FREE_RE.search(note):
+        return SUGAR_FREE
+    if _MIXED_RE.search(note) and any(brand in name for brand in ZERO_BRANDS):
+        return MAYBE_SUGAR_FREE
+    return None
 
 
 @dataclass(frozen=True)
@@ -97,13 +135,13 @@ class Shops:
         html, fetched = await self.fetcher.get(url, ttl=ttl, force=force)
         return html, fetched, fetched >= started
 
-    async def meat_deals(self, force: bool = False) -> DealsResult:
-        """Akce na čerstvé maso ze všech kategorií (všechny obchody, filtruje se až při zobrazení)."""
+    async def deals(self, categories: tuple[str, ...], force: bool = False) -> DealsResult:
+        """Akce z daných kategorií Kupi.cz (všechny obchody, filtruje se až při zobrazení)."""
         async with self._lock:
             result = DealsResult()
             seen: set[str] = set()
             day = today()
-            for category in MEAT_CATEGORIES:
+            for category in categories:
                 try:
                     for page in range(1, MAX_PAGES + 1):
                         url = f"{kupi.BASE}/slevy/{category}" + (f"?page={page}" if page > 1 else "")
@@ -122,6 +160,12 @@ class Shops:
                     log.exception("Načtení slev z kategorie %s selhalo", category)
                     result.errors.append(f"{category}: {type(exc).__name__}")
             return result
+
+    async def meat_deals(self, force: bool = False) -> DealsResult:
+        return await self.deals(tuple(MEAT_CATEGORIES), force)
+
+    async def drink_deals(self, force: bool = False) -> DealsResult:
+        return await self.deals(tuple(DRINK_CATEGORIES), force)
 
     async def store_pages(self, force: bool = False) -> dict[str, kupi.StorePage | None]:
         """Stránky poboček (letáky + otevírací doba). Klíč = Branch.kupi_path."""
@@ -142,4 +186,5 @@ class Shops:
     async def warm_up(self) -> None:
         """Obnoví cache na pozadí (volá se pravidelně), aby commandy odpovídaly hned."""
         await self.meat_deals(force=True)
+        await self.drink_deals(force=True)
         await self.store_pages(force=True)

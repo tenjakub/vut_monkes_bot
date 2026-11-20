@@ -102,8 +102,47 @@ def test_leaflets_embed_merges_branches():
 
 
 def test_buttons_unique_for_every_state():
-    for view, flt in [(slevy.VIEW_LEAFLETS, slevy.ALL)] + [(slevy.VIEW_MEAT, f) for f in slevy.MEAT_FILTERS]:
-        ui = slevy.build_view(view, flt)
+    states = [(slevy.VIEW_LEAFLETS, slevy.ALL, False)] + [
+        (v, f, only) for v, dv in slevy.DEAL_VIEWS.items() for f in (slevy.ALL, *dv.filters) for only in (False, True)
+    ]
+    for view, flt, only in states:
+        ui = slevy.build_view(view, flt, only)
         ids = [getattr(getattr(i, "item", i), "custom_id", None) for i in ui.children]
         ids = [i for i in ids if i]
-        assert len(ids) == len(set(ids))
+        assert len(ids) == len(set(ids)), (view, flt, only)
+        assert len(ui.children) <= 10
+
+
+def test_old_button_ids_still_match():
+    """Tlačítka na zprávách z verze 1.2 (bez příznaku "jen se slevou") musí fungovat dál."""
+    import re as _re
+
+    pattern = slevy.SlevyButton.__discord_ui_compiled_template__
+    old = _re.fullmatch(pattern, "slevy:maso:drubez:f")
+    assert old and old["only"] is None and old["filter"] == "drubez"
+    new = _re.fullmatch(pattern, "slevy:napoje:limonady:1:o")
+    assert new and new["only"] == "1"
+
+
+def test_only_discount_filter():
+    deals = [_deal("BILLA", 30, name="A"), _deal("BILLA", None, name="B")]
+    assert [d.product for d in slevy.store_deals(deals, STORES["billa"], slevy.ALL, DAY, only_discount=True)] == ["A"]
+
+
+def test_drinks_only_sugar_free_sure_first():
+    def drink(name, note="", pct=None, cat="limonady"):
+        return kupi.Deal(name + note, name, "", "Lidl", "19,90 Kč", pct, None, date(2026, 11, 24), cat, kupi.BASE, note)
+
+    deals = [
+        drink("Limonáda Pepsi", "regular", 50),  # výslovně s cukrem -> pryč
+        drink("Energetický nápoj Red Bull", "různé druhy, plech", 40, "energeticke-a-iontove-napoje"),  # možná
+        drink("Limonáda Coca Cola Zero", "plech"),  # jistě
+        drink("Kofola Nulka bez cukru"),  # jistě
+        drink("Limonáda Top Topic", "různé druhy"),  # značka bez verze zero -> pryč
+    ]
+    got = slevy.store_deals(deals, STORES["lidl"], slevy.ALL, DAY, view=slevy.VIEW_DRINKS)
+    assert [d.product for d in got] == ["Kofola Nulka bez cukru", "Limonáda Coca Cola Zero", "Energetický nápoj Red Bull"]
+    embed = slevy._deals_embed(STORES["lidl"], slevy.DEAL_VIEWS["napoje"], deals, slevy.ALL, False, DAY, 1500, False)
+    text = embed.description
+    assert text.index("✅ Bez cukru") < text.index("Coca Cola Zero") < text.index("🤷") < text.index("Red Bull")
+    assert "Limonáda" not in text and "Energetický nápoj" not in text  # zkrácené názvy

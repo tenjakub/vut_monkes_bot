@@ -6,7 +6,7 @@ Tenhle soubor je pro AI, která na projektu pracuje. Lidský návod je v [README
 
 - **VUT Monkes bot** – Discord bot pro kamarádský server studentů VUT (FIT). Python 3.14, discord.py 2.x.
 - Commandy: `/ppv`, `/purkyne`, `/menzy` (menzy VUT), `/restaurace` (polední menu), `/mhd`, `/mhd-purkyne` (odjezdy MHD Brno),
-  `/slevy`, `/maso` (letáky a slevy supermarketů), `/novinky` (changelog).
+  `/letaky`, `/maso`, `/napoje` (letáky a slevy supermarketů), `/novinky` (changelog).
 - **Celý kód píše AI.** Majitel repa zadává požadavky, testuje na Discordu a rozhoduje. Kód nepíše, ale čte ho.
 - **Jazyk:** komunikace s uživatelem, texty v botovi, komentáře, docstringy i commit zprávy jsou **česky**.
   Identifikátory v kódu jsou anglicky.
@@ -112,7 +112,7 @@ Pravidla:
 
 ## Oprávnění a intenty – kontrola při každé změně
 
-Aktuální stav (ověřeno pro verzi s `/ppv`, `/purkyne`, `/menzy`, `/restaurace`, `/mhd`, `/mhd-purkyne`, `/slevy`, `/maso`, `/novinky`):
+Aktuální stav (ověřeno pro verzi s `/ppv`, `/purkyne`, `/menzy`, `/restaurace`, `/mhd`, `/mhd-purkyne`, `/letaky`, `/maso`, `/napoje`, `/novinky`):
 
 - **Intenty:** `discord.Intents.default()`, žádné privilegované (Message Content, Server Members, Presence vypnuté).
 - **Oprávnění bota:** View Channels, Send Messages, Embed Links → číselně `19456`.
@@ -165,6 +165,12 @@ Postup, když jsou nová oprávnění potřeba:
 - Albert má akce „Albert“, „Albert supermarket“ a „Albert hypermarket“. Albert Semilasso (Kosmova) je supermarket,
   hypermarketové akce se k němu nezapočítávají.
 - Maso = čerstvé maso po podkategoriích (`MEAT_CATEGORIES`). Šunky, salámy, párky a ryby schválně ne, jsou jich stovky.
+- Nápoje (`DRINK_CATEGORIES`: energetické + limonády) jen bez cukru (`shops.service.sugar_free`). Kupi.cz varianty
+  často neuvádí („různé druhy“), proto dvě úrovně: `SUGAR_FREE` = název/poznámka říká zero/bez cukru/max…,
+  `MAYBE_SUGAR_FREE` = „různé/vybrané druhy“ značky ze seznamu `ZERO_BRANDS`. Ostatní (např. „regular“) se nezobrazují.
+- Výpisy akcí (`cogs/slevy.DEAL_VIEWS`) sdílí kód; nový výpis = `DealView` + kategorie v `shops/service.py`.
+  Tlačítka mají stav v custom_id `slevy:<pohled>:<filtr>:<jen se slevou 0/1>:<slot>`, příznak 0/1 je volitelný
+  kvůli tlačítkům ze starších zpráv.
 - Akce řetězců jsou většinou celostátní; letáky a otevírací doba jsou ze stránky konkrétní pobočky
   (BILLA Srbská má „malý leták“). Otevírací doba je v JSON-LD (`openingHours`).
 
