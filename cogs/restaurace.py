@@ -36,7 +36,7 @@ class RefreshButton(discord.ui.DynamicItem[discord.ui.Button], template=r"restau
                 label="Obnovit",
                 emoji="🔄",
                 style=discord.ButtonStyle.secondary,
-                row=0,
+                row=1,
             )
         )
 
@@ -72,7 +72,7 @@ class Restaurace(commands.Cog):
 
     @app_commands.command(
         name="restaurace",
-        description="Polední menu restaurací (U 3 opic, Padagali, La Strada)",
+        description="Polední menu restaurací (U 3 opic, Padagali, La Strada, U Karla, Portoriko)",
     )
     async def restaurace(self, interaction: discord.Interaction) -> None:
         await interaction.response.defer(thinking=True)

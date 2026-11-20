@@ -81,3 +81,10 @@ def test_lastrada_holiday():
 def test_lastrada_weekend():
     menu = lastrada.parse(read("lastrada.html"), place("lastrada"), date(2026, 11, 21))
     assert menu.dishes == [] and menu.note
+
+
+def test_menicka_strips_allergens():
+    menu = menicka.parse(read("menicka_portoriko.html"), place("portoriko"), DAY)
+    assert menu.soups[0].name == "Vývar s kořenovou zeleninou a nudlemi"
+    assert menu.mains[0].name == "Trhané kuře na paprice s kolínky a nebo houskovým knedlíkem"
+    assert len(menu.mains) == 5

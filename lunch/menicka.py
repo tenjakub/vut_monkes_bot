@@ -46,6 +46,8 @@ def parse(html: str, place: Place, today: date) -> Menu:
         if order is not None:
             label = norm(order.get_text()).rstrip(".") or None
             order.decompose()
+        for allergen in item.find_all("em"):  # alergeny jako <em title="Lepek">1</em>
+            allergen.decompose()
         name = norm(item.get_text(" "))
         if not name:
             continue

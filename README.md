@@ -11,7 +11,7 @@ Výpis je v embedech a pod ním jsou tlačítka na přepínání.
 | `/ppv` | Economy: Menza Kolejní, Pizzerie Mozzarella, Menza Starý pivovar |
 | `/purkyne` | Economy: Menza Purkyňova + Starý pivovar |
 | `/menzy` | Economy ze všech menz, kde ho vaří (Kolejní, Mozzarella, SP, Purkyňova, Q Technická, FCH, Rybkova) |
-| `/restaurace` | Polední menu: U 3 opic, Padagali, La Strada |
+| `/restaurace` | Polední menu: U 3 opic, Padagali, La Strada, U Karla, Portoriko |
 | `/mhd` | Nejbližší odjezdy z Technologického parku (tramvaje) a z Kolejní + výluky na těch linkách |
 
 Všechny tři menzové commandy mají volitelný parametr `vse: True`. Ten místo Economy ukáže
@@ -45,7 +45,8 @@ Ceny u menz jsou pro **studenty VUT** (1. cena na webu KaM). Změníš je v `lun
 
 - **Menzy:** `https://www.kam.vut.cz/?p=menu&provoz=<ID>`. ID provozů najdeš na
   [přehledu KaM](https://www.kam.vut.cz/?p=otdo). Economy jídla se poznají podle prefixu `Economy N:`.
-- **U 3 opic** (ID 3225) a **Padagali** (ID 4116, Kotlářská): [menicka.cz](https://www.menicka.cz)
+- **U 3 opic** (ID 3225), **Padagali** (ID 4116, Kotlářská), **U Karla** (ID 6695) a **Portoriko**
+  (ID 8467, Srbská): [menicka.cz](https://www.menicka.cz)
 - **La Strada** (Kounicova): [lastrada-brno.cz/poledni-menu](https://lastrada-brno.cz/poledni-menu/).
   Na menicka.cz není, takže má vlastní scraper.
 

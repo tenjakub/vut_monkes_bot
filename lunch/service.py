@@ -47,6 +47,16 @@ RESTAURANTS: list[Restaurant] = [
         lastrada.URL,
         lastrada.parse,
     ),
+    Restaurant(
+        Place("ukarla", "U Karla", "https://www.menicka.cz/6695.html", "🍺", 0xC92A2A),
+        menicka.URL.format(id=6695),
+        menicka.parse,
+    ),
+    Restaurant(
+        Place("portoriko", "Portoriko", "https://www.menicka.cz/8467.html", "🌴", 0x0CA678),
+        menicka.URL.format(id=8467),
+        menicka.parse,
+    ),
 ]
 
 
