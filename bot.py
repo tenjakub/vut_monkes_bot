@@ -17,10 +17,19 @@ log = logging.getLogger("bot")
 EXTENSIONS = ["cogs.menza", "cogs.restaurace", "cogs.mhd"]
 
 
+def status_text() -> str:
+    return f"🍽️ /ppv · 🚏 /mhd · verze {config.BOT_VERSION}"
+
+
 class ObedBot(commands.Bot):
     def __init__(self) -> None:
         # Slash commandy nepotřebují žádné privilegované intenty
-        super().__init__(command_prefix=commands.when_mentioned, intents=discord.Intents.default())
+        super().__init__(
+            command_prefix=commands.when_mentioned,
+            intents=discord.Intents.default(),
+            # vlastní status pod jménem bota – verze, ať je hned vidět, co běží
+            activity=discord.CustomActivity(name=status_text()),
+        )
         self.fetcher = Fetcher()
 
     async def setup_hook(self) -> None:
@@ -59,7 +68,10 @@ class ObedBot(commands.Bot):
         self, interaction: discord.Interaction, error: app_commands.AppCommandError
     ) -> None:
         log.exception("Chyba v commandu", exc_info=error)
-        msg = "Něco se pokazilo 😵 Zkus to prosím za chvíli znovu."
+        msg = (
+            "Něco se pokazilo 😵 Zkus to prosím za chvíli znovu.\n"
+            f"-# Když to nepřestane, nahlas to prosím na {config.ISSUES_URL} (verze {config.BOT_VERSION})"
+        )
         if interaction.response.is_done():
             await interaction.followup.send(msg, ephemeral=True)
         else:

@@ -141,6 +141,9 @@ Obecně: na weby chodíme s cache (`lunch/fetcher.py`) a slušným User-Agentem,
   Používáme fork **`nickfedor/watchtower`**, protože původní `containrrr/watchtower` je archivovaný a s novým Dockerem
   nefunguje. Watchtower má scope `vut-monkes-bot` a hlídá jen tenhle stack.
 - SELinux: bot má named volume (`bot_data`), Watchtower má `security_opt: label=disable` kvůli `docker.sock`.
+- Verze: `config.BOT_VERSION` = env `BOT_VERSION` (CI ho do image vloží jako krátký hash = tag `sha-…`),
+  lokálně `dev <git hash>`. Zobrazuje se ve statusu bota, v logu při startu a v chybové hlášce (s odkazem na Issues).
+- Bio bota = popis aplikace v Developer Portalu (nastavuje uživatel ručně, text je v README).
 - Healthcheck: bot každých 30 s „dotkne“ `HEALTH_FILE`, jen když je připojený. `healthcheck.py` kontroluje stáří.
 - Dva boti: **vývojový** (lokálně, testovací server) a **produkční** (Docker, hlavní server). Stejný kód,
   jiný token a `GUILD_IDS`.

@@ -146,6 +146,28 @@ Jen nikdy nespouštěj dvě instance se **stejným** tokenem, jinak by na comman
 Když je vyplněné `GUILD_IDS`, bot zaregistruje commandy jen na těch serverech (hned) a případné
 staré globální commandy smaže, aby se v nabídce neukazovaly dvakrát.
 
+### Bio (About Me)
+
+Bio bota je **popis aplikace**: Developer Portal → **General Information → Description** (max 400 znaků).
+Na profilu bota se pak ukáže jako „About Me“ a projeví se hned. Nastavuje se zvlášť pro každého bota.
+Návrh textu:
+
+```
+🐒 Bot pro VUT Monkes – obědy v menzách a restauracích a odjezdy MHD.
+
+🍽️ /ppv · /purkyne · /menzy · /restaurace
+🚏 /mhd · /mhd-purkyne
+
+🐛 Něco nefunguje nebo máš nápad? Napiš issue: https://github.com/tenjakub/vut_monkes_bot/issues
+```
+
+### Status s verzí
+
+Pod jménem bota je vlastní status `🍽️ /ppv · 🚏 /mhd · verze <hash>`. Na serveru je to krátký hash
+commitu, ze kterého je sestavený Docker image (stejný jako tag `sha-<hash>`). Lokálně je to `dev <hash>`
+podle aktuálního commitu. Stejnou verzi bot vypíše v logu při startu a v chybové hlášce, ve které je
+i odkaz na GitHub Issues.
+
 ### Jméno, profilovka a banner
 
 Úpravy v Developer Portalu (záložka **Bot** → Username, Icon, Banner) se projeví hned, bota není
