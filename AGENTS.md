@@ -109,12 +109,15 @@ Postup, když jsou nová oprávnění potřeba:
 **MHD – KORDIS JMK** (`transit/`), otevřená data CC BY:
 - Statické GTFS `https://kordis-jmk.cz/gtfs/gtfs.zip` (~6 MB, `stop_times` ~28 MB). Načítá se jen to, co je
   potřeba pro zastávky z `BOARDS`, mimo event loop (`asyncio.to_thread`), uloží se do `data/` (volume v Dockeru).
-- Tabule a oblasti jsou v `transit/service.py` (`BOARDS`, `AREAS`). Kartičky skládá `cogs/mhd._cards` podle `Board.layout`:
-  `merge` = jedna kartička na nástupiště/směr, `primary_line` bez značky, jiné linky s `` `číslo` ``
-  (Technopark, Červinkova); `lines` = kartička na linku + nástupiště, řazeno podle čísla linky, nadpis = obvyklá
-  konečná z celého JŘ (`Timetable.usual_headsign`), jiné konečné jako značka (Skácelova); `auto` = podle linky a cíle,
-  `merged_lines` bez cíle (65), `continuing` = popisek směru pokračujících spojů, připnuté první (72 → Semilasso),
-  končící spoje nevýrazně na konci (Kolejní).
+- Tabule a oblasti jsou v `transit/service.py` (`BOARDS`, `AREAS`). Tabule může být jen část zastávky
+  (`platforms` = stop_id nástupišť, např. Skácelova → východ `U1567Z6` / západ `U1567Z5`). Kartičky skládá
+  `cogs/mhd._cards` podle `Board.layout`:
+  `merge` = jedna kartička na nástupiště „Tram → <směr>“ (směr z `directions`, jinak obvyklá konečná), u každého
+  času `` `linka` `` (Technopark, Červinkova); `lines` = kartička na linku + nástupiště, řazeno podle čísla linky,
+  nadpis = obvyklá konečná z celého JŘ (`Timetable.usual_headsign`), jiné konečné jako značka (Skácelova);
+  `auto` = podle linky a cíle, `merged_lines` bez cíle (65), `continuing` = popisek směru pokračujících spojů,
+  připnuté první (72 → Semilasso), končící spoje nevýrazně na konci (Kolejní).
+- Oblast `vse` = „PPV“ (koleje Pod Palackého vrchem), `purkyne` = koleje Purkyňova.
 - Klíč oblasti `vse` (Technopark + Kolejní) se nesmí přejmenovat – je v `custom_id` tlačítek na starších zprávách.
 - GTFS nemá `block_id`. Navazující spoj se odvozuje: příjezd na nástupiště P v čase A → spoj stejné linky
   z P v okně A…A+5 min. Na lince 72 (Technologický park: Z4 = jede dál, Z3 = končí) to sedí.

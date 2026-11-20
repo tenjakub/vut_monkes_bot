@@ -38,19 +38,23 @@ def _most_common(values) -> str:
     return Counter(values).most_common(1)[0][0]
 
 
-def _merge_cards(departures: list[Departure], board: Board) -> list[render.Field]:
-    """Jedna kartička na směr (nástupiště); výchozí linka bez označení, ostatní s číslem."""
+def _merge_cards(
+    departures: list[Departure], board: Board, usual: UsualHeadsign | None = None
+) -> list[render.Field]:
+    """Jedna kartička na směr (nástupiště) pro všechny linky: "🚋 Tram → Centrum",
+    u každého času číslo linky."""
     by_platform: dict[str, list[Departure]] = defaultdict(list)
     for d in departures:
         by_platform[d.stop_id].append(d)
+    labels = dict(board.directions)
     cards = []
-    for deps in sorted(by_platform.values(), key=lambda ds: ds[0].when):
-        primary = board.primary_line
-        main = [d for d in deps if d.line == primary] or deps
-        line = primary if main is not deps else _most_common(d.line for d in deps)
-        title = f"{deps[0].emoji} {line} → {_most_common(d.headsign for d in main)}"
-        rows = [_time_row(d, tag=d.line if d.line != line else None) for d in deps[:PER_CARD]]
-        cards.append(render.Field(title, "\n".join(rows)))
+    for stop_id, deps in sorted(by_platform.items(), key=lambda kv: kv[1][0].when):
+        line = _most_common(d.line for d in deps)
+        direction = labels.get(stop_id) or (usual(stop_id, line) if usual else None) or _most_common(
+            d.headsign for d in deps
+        )
+        rows = [_time_row(d, tag=d.line) for d in deps[:PER_CARD]]
+        cards.append(render.Field(f"{deps[0].emoji} {board.vehicle} → {direction}", "\n".join(rows)))
     return cards
 
 
@@ -118,7 +122,7 @@ def _cards(
     departures: list[Departure], board: Board, usual: UsualHeadsign | None = None
 ) -> list[render.Field]:
     if board.layout == "merge":
-        cards = _merge_cards(departures, board)
+        cards = _merge_cards(departures, board, usual)
     elif board.layout == "lines":
         cards = _line_cards(departures, usual)
     else:
@@ -131,7 +135,7 @@ def _board_embed(
 ) -> discord.Embed:
     # Pozor: Discord slučuje embedy se stejnou URL do jednoho, proto unikátní kotva pro každou zastávku
     embed = discord.Embed(
-        title=f"{board.emoji} {board.name}", url=f"{DEPARTURES_URL}#{board.key}", color=board.color
+        title=f"{board.emoji} {board.label}", url=f"{DEPARTURES_URL}#{board.key}", color=board.color
     )
     fields = _cards(departures, board, usual)
     if fields:
@@ -150,7 +154,7 @@ def _alerts_embed(alerts: list[alerts_mod.Alert], lines: set[str]) -> discord.Em
         text = a.text if len(a.text) <= 300 else a.text[:300].rsplit(" ", 1)[0] + "…"
         embed.add_field(name=f"{affected} · {a.title}"[:256], value=text or "—", inline=False)
     if len(alerts) > MAX_ALERTS:
-        embed.set_footer(text=f"…a dalších {len(alerts) - MAX_ALERTS} na idsjmk.cz")
+        embed.set_footer(text=f"+ další výluky ({len(alerts) - MAX_ALERTS}) na idsjmk.cz")
     return embed
 
 
@@ -161,7 +165,8 @@ async def build_message(
     now = datetime.now(TZ)
     boards = [BOARDS[k] for k in GROUPS[group]]
     per_board = [
-        timetable.departures(timetable.stops_named(b.name), now, route_types=b.route_types) for b in boards
+        timetable.departures(b.platforms or timetable.stops_named(b.name), now, route_types=b.route_types)
+        for b in boards
     ]
 
     try:
@@ -238,7 +243,7 @@ def build_view(group: str) -> discord.ui.View:
     for key, (label, _) in AREAS.items():
         view.add_item(button(key, label, 0))
     for key in AREAS[area][1]:
-        view.add_item(button(key, BOARDS[key].name, 1))
+        view.add_item(button(key, BOARDS[key].label, 1))
     view.add_item(MhdButton(group, "r", label="Obnovit", emoji="🔄", style=discord.ButtonStyle.secondary, row=1))
     view.add_item(discord.ui.Button(label="IDS JMK", url=DEPARTURES_URL, row=1))
     return view
@@ -270,11 +275,11 @@ class Mhd(commands.Cog):
         content, embeds, view = await build_message(self.transit, group)
         await interaction.followup.send(content=content, embeds=embeds, view=view)
 
-    @app_commands.command(name="mhd", description="Odjezdy MHD: Technologický park (tramvaje) a Kolejní")
+    @app_commands.command(name="mhd", description="Odjezdy MHD u PPV: Technologický park (tramvaje) a Kolejní")
     @app_commands.describe(zastavka="Kterou zastávku ukázat (výchozí: obě)")
     @app_commands.choices(
         zastavka=[app_commands.Choice(name="Obě zastávky", value="vse")]
-        + [app_commands.Choice(name=BOARDS[k].name, value=k) for k in AREAS["vse"][1]]
+        + [app_commands.Choice(name=BOARDS[k].label, value=k) for k in AREAS["vse"][1]]
     )
     async def mhd(self, interaction: discord.Interaction, zastavka: str = "vse") -> None:
         await self._send(interaction, zastavka)

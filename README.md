@@ -24,8 +24,8 @@ Výpis je v embedech a pod ním jsou tlačítka na přepínání.
 | `/purkyne` | Economy: Menza Purkyňova + Starý pivovar |
 | `/menzy` | Economy ze všech menz, kde ho vaří (Kolejní, Mozzarella, SP, Purkyňova, Q Technická, FCH, Rybkova) |
 | `/restaurace` | Polední menu: U 3 opic, Padagali, La Strada, U Karla, Portoriko |
-| `/mhd` | Nejbližší odjezdy z Technologického parku (tramvaje) a z Kolejní + výluky na těch linkách |
-| `/mhd-purkyne` | Totéž u kolejí Purkyňova: Červinkova (tramvaje) a Skácelova (autobusy, trolejbusy) |
+| `/mhd` | PPV (koleje Pod Palackého vrchem): odjezdy z Technologického parku (tramvaje) a z Kolejní + výluky na těch linkách |
+| `/mhd-purkyne` | Totéž u kolejí Purkyňova: Červinkova (tramvaje) a Skácelova (autobusy a trolejbusy zvlášť na východ a na západ) |
 
 Všechny tři menzové commandy mají volitelný parametr `vse: True`. Ten místo Economy ukáže
 polévky a všechna hlavní jídla (saláty, přílohy a dezerty vynechá).
@@ -48,12 +48,12 @@ a jednotlivými zastávkami. Každá zastávka má vlastní způsob zobrazení:
 
 | Zastávka | Zobrazení |
 |---|---|
-| Technologický park, Červinkova | jen tramvaje, **jedna kartička na směr**. Bez označení je to 12, u jiné linky je za časem její číslo (`10`, `4`). |
+| Technologický park, Červinkova | jen tramvaje, **jedna kartička na směr**: „🚋 Tram → Centrum“ / „🚋 Tram → Technologický park“, u každého času číslo linky (`12`, `10`, `4`). |
 | Kolejní | **72 → Semilasso** (spoje, které z Technoparku jedou dál) je vždy první. **65** má jednu kartičku bez ohledu na cíl. Končící 72 jsou nevýrazně na konci („🛑 dál nejede“). |
-| Skácelova | autobusy a trolejbusy, **kartička pro každou linku a směr**, seřazené podle čísla linky. V nadpisu je obvyklá konečná, jiná konečná je jen značka za časem. |
+| Skácelova → východ / západ | autobusy a trolejbusy, rozdělené podle nástupiště: **východ** (další zastávka Slovanské náměstí) a **západ** (Záhřebská). Kartička pro každou linku, seřazené podle čísla linky. V nadpisu je obvyklá konečná, jiná konečná je jen značka za časem. |
 
-Všechno se nastavuje v `BOARDS` a `AREAS` v `transit/service.py` (zastávka, typy vozidel, způsob
-zobrazení `layout`, výchozí linka, sloučené linky, popisek směru u pokračujících spojů).
+Všechno se nastavuje v `BOARDS` a `AREAS` v `transit/service.py` (zastávka, případně jen některá nástupiště,
+typy vozidel, způsob zobrazení `layout`, popisky směrů, sloučené linky, popisek směru u pokračujících spojů).
 
 Odjezdy jsou **podle jízdního řádu, bez zpoždění**. Realtime feed KORDIS sice obsahuje polohy
 vozidel, ale nemá zpoždění a jeho ID spojů zatím nesedí na jízdní řád. Výluky z něj ale bot bere.
