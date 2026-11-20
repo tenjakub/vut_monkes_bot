@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 
 import discord
 from discord import app_commands
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 import config
 from lunch.fetcher import Fetcher
@@ -23,6 +24,8 @@ class ObedBot(commands.Bot):
         self.fetcher = Fetcher()
 
     async def setup_hook(self) -> None:
+        log.info("Startuje VUT Monkes bot, verze %s", config.BOT_VERSION)
+        self.heartbeat.start()
         for ext in EXTENSIONS:
             await self.load_extension(ext)
         self.tree.on_error = self.on_app_command_error
@@ -38,6 +41,12 @@ class ObedBot(commands.Bot):
             synced = await self.tree.sync()
             log.info("Synchronizováno %d globálních commandů", len(synced))
 
+    @tasks.loop(seconds=30)
+    async def heartbeat(self) -> None:
+        """Pro Docker healthcheck: soubor se obnovuje, jen když je bot připojený k Discordu."""
+        if self.is_ready() and not self.is_closed():
+            Path(config.HEALTH_FILE).touch()
+
     async def on_ready(self) -> None:
         log.info("Přihlášen jako %s (%s)", self.user, self.user.id if self.user else "?")
 
@@ -52,6 +61,7 @@ class ObedBot(commands.Bot):
             await interaction.response.send_message(msg, ephemeral=True)
 
     async def close(self) -> None:
+        self.heartbeat.cancel()
         await self.fetcher.close()
         await super().close()
 

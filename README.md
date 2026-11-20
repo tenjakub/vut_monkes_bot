@@ -66,12 +66,66 @@ Ceny u menz jsou pro **studenty VUT** (1. cena na webu KaM). Změníš je v `lun
 Stažené stránky se cachují (menzy 5 min, restaurace 30 min). Tlačítko „Obnovit“ stáhne data znovu,
 nejvýš jednou za minutu.
 
-## Spuštění
+## Discord aplikace
 
 1. Na <https://discord.com/developers/applications> vytvoř aplikaci, v záložce **Bot** vygeneruj token.
 2. V **OAuth2 → URL Generator** zaškrtni scopes `bot` + `applications.commands`
    a permissions `Send Messages`, `Embed Links`. Vygenerovaným odkazem pozvi bota na server.
-3. Nainstaluj a spusť:
+
+## Nasazení (Docker, homelab)
+
+Jak to funguje: každý push do `main` spustí [GitHub Actions](.github/workflows/ci.yml). Ty pustí testy
+a když projdou, sestaví Docker image a nahrají ho do GitHub Container Registry jako
+`ghcr.io/tenjakub/vut_monkes_bot:latest` (a navíc `:sha-<commit>`). Na serveru běží vedle bota
+[Watchtower](https://watchtower.nickfedor.com/), který každých 5 minut zkontroluje, jestli je nový image,
+a když ano, bota sám restartuje s novou verzí. Na serveru se nic nesestavuje a nic se neotevírá ven.
+
+### Portainer
+
+1. **Stacks → Add stack**, pojmenuj ho třeba `vut-monkes-bot`.
+2. Build method **Repository**: URL `https://github.com/tenjakub/vut_monkes_bot`, reference
+   `refs/heads/main`, compose path `docker-compose.yml`. (Nebo **Web editor** a vlož obsah
+   [docker-compose.yml](docker-compose.yml).)
+3. **Environment variables**: `DISCORD_TOKEN` a ideálně `GUILD_IDS`. Volitelně `BOT_TAG`
+   a `WATCHTOWER_POLL_INTERVAL` (viz [.env.example](.env.example)).
+4. **Deploy the stack**. Nastartují dva kontejnery: `vut-monkes-bot` a `vut-monkes-watchtower`.
+
+### Bez Portaineru
+
+Na serveru stačí složka s `docker-compose.yml` a `.env` (podle `.env.example`):
+
+```bash
+docker compose up -d
+```
+
+### Aktualizace a návrat ke starší verzi
+
+- **Automaticky:** do ~5 minut po zeleném CI na GitHubu.
+- **Hned:** v Portaineru u stacku **Pull and redeploy**, nebo `docker compose pull && docker compose up -d`.
+- **Návrat zpět:** nastav `BOT_TAG` na konkrétní verzi, např. `sha-fbc4bee`
+  ([seznam verzí](https://github.com/tenjakub/vut_monkes_bot/pkgs/container/vut_monkes_bot)),
+  a redeployni. Dokud je tam konkrétní tag, Watchtower bota nemění. Pro návrat k automatice dej zpět `latest`.
+- Jakou verzi bot právě běží, je vidět v logu hned na začátku (`Startuje VUT Monkes bot, verze …`).
+
+### Logy a stav
+
+- Portainer → kontejner `vut-monkes-bot` → **Logs**, nebo `docker logs -f vut-monkes-bot`.
+- Kontejner má healthcheck. „healthy“ znamená, že je bot opravdu připojený k Discordu, nejen že proces běží.
+- Stažený jízdní řád MHD je ve volume `bot_data`, takže přežije restart i update.
+
+### Poznámky k AlmaLinuxu (SELinux)
+
+- Bot používá named volume, takže nic se SELinuxem řešit nemusí.
+- Watchtower potřebuje přístup k `/var/run/docker.sock`. Kvůli SELinuxu má v compose `security_opt: label=disable`,
+  jinak by ho SELinux zablokoval.
+
+### Lokální sestavení image (test před pushem)
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.build.yml up --build bot
+```
+
+## Spuštění lokálně bez Dockeru (vývoj)
 
 ```bash
 python3 -m venv .venv
@@ -95,8 +149,13 @@ pak se commandy objeví hned. Bez něj se registrují globálně, což může tr
 ## Struktura
 
 ```
-bot.py              # vstupní bod, načte cogy, synchronizuje slash commandy
+bot.py              # vstupní bod, načte cogy, synchronizuje slash commandy, heartbeat
 config.py           # načtení .env
+healthcheck.py      # Docker healthcheck (je bot připojený?)
+Dockerfile          # image bota
+docker-compose.yml  # nasazení: bot + Watchtower (automatické aktualizace)
+docker-compose.build.yml  # lokální sestavení image místo stažení z GHCR
+.github/workflows/  # CI: testy + build a push image do GHCR
 cogs/menza.py       # /ppv, /purkyne, /menzy + tlačítka
 cogs/restaurace.py  # /restaurace + tlačítko obnovit
 cogs/mhd.py         # /mhd + tlačítka

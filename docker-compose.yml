@@ -1,0 +1,41 @@
+# VUT Monkes bot – produkční nasazení (homelab / Portainer)
+#
+# Stačí vedle tohohle souboru .env (nebo proměnné v Portaineru) a:  docker compose up -d
+# Image staví GitHub Actions při každém pushi do main a nahrává ho do GHCR.
+# Watchtower pak každých pár minut zkontroluje, jestli je nový image, a bota sám aktualizuje.
+
+services:
+  bot:
+    image: ghcr.io/tenjakub/vut_monkes_bot:${BOT_TAG:-latest}
+    container_name: vut-monkes-bot
+    restart: unless-stopped
+    environment:
+      DISCORD_TOKEN: ${DISCORD_TOKEN:?Chybí DISCORD_TOKEN}
+      GUILD_IDS: ${GUILD_IDS:-}
+    volumes:
+      - bot_data:/app/data # stažený jízdní řád MHD (přežije update i restart)
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+      com.centurylinklabs.watchtower.scope: vut-monkes-bot
+
+  # Automatické aktualizace: hlídá jen kontejnery se scope "vut-monkes-bot", nic jiného na serveru.
+  # (Původní containrrr/watchtower je archivovaný a s novým Dockerem nefunguje, tohle je jeho udržovaný fork.)
+  watchtower:
+    image: nickfedor/watchtower:latest
+    container_name: vut-monkes-watchtower
+    restart: unless-stopped
+    environment:
+      WATCHTOWER_SCOPE: vut-monkes-bot
+      WATCHTOWER_LABEL_ENABLE: "true"
+      WATCHTOWER_POLL_INTERVAL: ${WATCHTOWER_POLL_INTERVAL:-300}
+      WATCHTOWER_CLEANUP: "true" # mazat staré verze image
+      TZ: Europe/Prague
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    security_opt:
+      - label=disable # SELinux (AlmaLinux): jinak kontejner nesmí na docker.sock
+    labels:
+      com.centurylinklabs.watchtower.scope: vut-monkes-bot
+
+volumes:
+  bot_data:
