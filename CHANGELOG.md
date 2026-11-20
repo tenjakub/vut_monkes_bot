@@ -11,6 +11,10 @@ Formát (bot ho čte, viz utils/changelog.py):
 Nejnovější verze je vždy nahoře.
 -->
 
+## 1.6 · 2026-11-20 · Pizza dne v La Stradě 🍕
+
+- 🍕 V `/restaurace` je pizza dne La Strady zvlášť pod ostatními jídly a u každé ze 4 pizz jsou ingredience.
+
 ## 1.5 · 2026-11-20 · Rychlost ⚡
 
 - ⚡ Všechny commandy odpovídají hned, slevy dřív trvaly i několik sekund. Bot si data stahuje průběžně sám: menzy každých 10 minut, restaurace každou půlhodinu, výluky MHD každých 5 minut a slevy s letáky každou hodinu. Tlačítko 🔄 Obnovit stáhne data hned.

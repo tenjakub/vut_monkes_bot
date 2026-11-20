@@ -18,8 +18,11 @@ log = logging.getLogger(__name__)
 
 
 def restaurant_fields(menu: Menu) -> list[render.Field]:
-    # stejná mřížka kartiček jako u menz, polévka přes celou šířku nahoře
-    return render.soup_field(menu.soups) + [render.dish_field(d) for d in menu.mains]
+    # stejná mřížka kartiček jako u menz, polévka přes celou šířku nahoře,
+    # jídla s výběrem (pizza dne v La Stradě) přes celou šířku pod mřížkou, i s popisem každé možnosti
+    simple = [render.dish_field(d) for d in menu.mains if not d.options]
+    with_options = [render.options_field(d) for d in menu.mains if d.options]
+    return render.soup_field(menu.soups) + simple + with_options
 
 
 async def build_message(

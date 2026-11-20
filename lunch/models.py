@@ -41,6 +41,8 @@ class Dish:
     category: Category = Category.MAIN
     label: str | None = None  # např. "E1" u Economy, "1" u restaurací
     economy: bool = False
+    # na výběr v rámci jednoho menu (pizza dne v La Stradě): (název, popis)
+    options: list[tuple[str, str]] = field(default_factory=list)
 
 
 @dataclass

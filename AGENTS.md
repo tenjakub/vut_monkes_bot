@@ -164,6 +164,8 @@ Postup, když jsou nová oprávnění potřeba:
 - menicka.cz (`menicka.py`): blok `div.menicka` se hledá podle data v nadpisu, ne podle pořadí.
   Alergeny bývají jako `<em>1</em>` uvnitř názvu a vyhazují se. Nová restaurace = ID z URL + řádek v `RESTAURANTS`.
 - La Strada má vlastní web (`lastrada.py`): týdenní karty `.ls-card`, ceny v `.ls-pricing`. Je to nejkřehčí scraper.
+  Karta „Menu č. 3 – výběr pizzy“ (4 pizzy týdne s ingrediencemi) se načte do `Dish.options` a v `/restaurace`
+  se vykreslí zvlášť přes celou šířku (`render.options_field`).
 
 **Slevy a letáky – Kupi.cz** (`shops/`):
 - Jen veřejné HTML stránky, které povoluje `robots.txt`: kategorie `/slevy/<kategorie>?page=N` a stránky poboček

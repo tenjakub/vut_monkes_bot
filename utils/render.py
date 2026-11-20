@@ -67,6 +67,13 @@ def dish_field(d: Dish, inline: bool = True) -> Field:
     return Field(f"{emoji.for_dish(d)} {head}".strip(), value[:FIELD_VALUE_LIMIT], inline)
 
 
+def options_field(d: Dish) -> Field:
+    """Jídlo s výběrem (pizza dne) přes celou šířku: nadpis jako u kartičky, pod ním každá možnost s popisem."""
+    head = " · ".join(p for p in (d.label, d.price, d.name) if p)
+    lines = [f"• **{name}**" + (f" – {desc}" if desc else "") for name, desc in d.options]
+    return Field(f"{emoji.for_dish(d)} {head}"[:256], "\n".join(lines)[:FIELD_VALUE_LIMIT], inline=False)
+
+
 def _soup_name(name: str) -> str:
     """'Polévka rajčatová s těstovinou' -> 'Rajčatová s těstovinou' (nadpis už říká Polévka)."""
     title, rest = _split_caps_title(name)

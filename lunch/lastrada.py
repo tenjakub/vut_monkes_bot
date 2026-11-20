@@ -20,13 +20,16 @@ _ITEM_RE = re.compile(r"^(\d+[a-z]?)\)\s*(.*)$")
 _PRICE_RE = re.compile(r"MENU\s*([\d,\s]+?)\s*\D*?(\d+)\s*Kč", re.IGNORECASE)
 
 
-def _short_pizza(text: str) -> str:
-    """'3a) Pizza Fresca (pomodoro, …)' -> 'Fresca'"""
+def _pizza(text: str) -> tuple[str, str]:
+    """'3d) Pizza Vegan La Strada (vegan smetana, …, olivy) 🌱 VEGAN' -> ('Vegan La Strada 🌱', 'vegan smetana, …, olivy')"""
     m = _ITEM_RE.match(text)
     text = m.group(2) if m else text
-    text = re.sub(r"\(.*?\)", "", text)
-    text = re.sub(r"^Pizza\s+", "", text, flags=re.IGNORECASE)
-    return norm(text.replace("🌱", "").replace("VEGAN", ""))
+    vegan = "🌱" in text or "VEGAN" in text
+    text = norm(text.replace("🌱", "").replace("VEGAN", ""))
+    description = ", ".join(norm(x) for x in re.findall(r"\(([^)]*)\)", text))
+    name = norm(re.sub(r"\(.*?\)", "", text))
+    name = re.sub(r"^Pizza\s+", "", name, flags=re.IGNORECASE)
+    return (f"{name} 🌱" if vegan else name), description
 
 
 def parse(html: str, place: Place, today: date) -> Menu:
@@ -40,14 +43,15 @@ def parse(html: str, place: Place, today: date) -> Menu:
                 prices[num] = f"{m.group(2)} Kč"
 
     day_card = None
-    pizzas: list[str] = []
+    pizzas: list[tuple[str, str]] = []
     for card in soup.select(".ls-card"):
         h3 = card.find("h3")
         if h3 is None:
             continue
         heading = norm(h3.get_text(" "))
         if "pizz" in heading.lower() and "výběr" in heading.lower():
-            pizzas = [_short_pizza(norm(li.get_text(" "))) for li in card.find_all("li")]
+            pizzas = [_pizza(norm(li.get_text(" "))) for li in card.find_all("li")]
+            pizzas = [p for p in pizzas if p[0]]
             continue
         m = _DAY_RE.match(heading)
         if m and (int(m[1]), int(m[2])) == (today.day, today.month):
@@ -79,8 +83,8 @@ def parse(html: str, place: Place, today: date) -> Menu:
     if chip_text:
         dishes.append(Dish(name=chip_text, category=Category.SOUP))
     for num, text in items:
-        if pizzas and "pizza" in text.lower() and "výběr" in text.lower():
-            text = f"{text} – {', '.join(p for p in pizzas if p)}"
-        dishes.append(Dish(name=text, price=prices.get(num), label=num))
+        # "Pizza dle výběru ze 4 druhů" -> konkrétní pizzy týdne jako možnosti (zobrazí se zvlášť)
+        options = pizzas if pizzas and "pizza" in text.lower() and "výběr" in text.lower() else []
+        dishes.append(Dish(name=text, price=prices.get(num), label=num, options=list(options)))
 
     return Menu(place, dishes=dishes)

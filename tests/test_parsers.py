@@ -71,7 +71,11 @@ def test_lastrada_today():
     assert [d.label for d in menu.mains] == ["1", "2", "3", "4"]
     assert menu.mains[0].price == "165 Kč"
     assert menu.mains[3].price == "175 Kč"
-    assert "Fresca" in menu.mains[2].name
+    pizza = menu.mains[2]
+    assert pizza.label == "3" and pizza.price == "175 Kč"
+    assert pizza.options[0] == ("Fresca", "pomodoro, mozzarella, balkánský sýr, rukola")
+    assert pizza.options[3] == ("Vegan La Strada 🌱", "vegan smetana, vegan mozzarella, sušená rajčata, olivy")
+    assert [d.options for d in menu.mains if d is not pizza] == [[], [], []]
 
 
 def test_lastrada_holiday():
@@ -136,3 +140,14 @@ def test_menza_menus_attach_hours_and_survive_errors(monkeypatch):
     assert (sp.hours_label, sp.hours) == ("🕐 Dnes", "11:00–14:30")
     # Kolejní se "nestáhla" -> chyba jen u ní, otevírací doba se i tak ukáže
     assert by_key["kolejni"].error and by_key["kolejni"].hours == "11:00–14:30"
+
+
+def test_lastrada_pizza_rendered_separately():
+    from cogs.restaurace import restaurant_fields
+
+    menu = lastrada.parse(read("lastrada.html"), place("lastrada"), DAY)
+    fields = restaurant_fields(menu)
+    assert [f.inline for f in fields] == [False, True, True, True, False]  # polévka, mřížka 1/2/4, pizza
+    pizza = fields[-1]
+    assert pizza.name.startswith("🍕 3 · 175 Kč · Pizza dle výběru")
+    assert pizza.value.split("\n")[0] == "• **Fresca** – pomodoro, mozzarella, balkánský sýr, rukola"
