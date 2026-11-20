@@ -68,10 +68,52 @@ nejvýš jednou za minutu.
 
 ## Discord aplikace
 
-1. Na <https://discord.com/developers/applications> vytvoř aplikaci, v záložce **Bot** vygeneruj token.
-2. V **OAuth2 → URL Generator** zaškrtni scopes `bot` + `applications.commands`
-   a permissions `Send Messages`, `Embed Links`. Vygenerovaným odkazem pozvi bota na server.
-3. V záložce **Bot** vypni **Public Bot**, ať si ho nemůže pozvat kdokoli jiný.
+Postup je stejný pro vývojového i produkčního bota, jen se udělá dvakrát (každý bot = vlastní aplikace).
+
+### 1. Založení a nastavení aplikace
+
+Na <https://discord.com/developers/applications> → **New Application**. Pak nastav:
+
+| Záložka | Nastavení |
+|---|---|
+| **Bot** | **Reset Token** → token do `.env` / Portaineru (ukáže se jen jednou, nikomu ho neposílej) |
+| **Bot** | **Public Bot**: vypnout (pozvat ho pak můžeš jen ty) |
+| **Bot** | **Requires OAuth2 Code Grant**: vypnout |
+| **Bot** | **Privileged Gateway Intents** (Presence, Server Members, Message Content): **všechny vypnout**. Bot používá jen slash commandy a tlačítka, nic z toho nepotřebuje. |
+| **Installation** | **Installation Contexts**: jen **Guild Install** (User Install vypnout) |
+| **Installation** | **Install Link**: *None* (pozývá se odkazem níže) |
+
+### 2. Oprávnění
+
+Bot potřebuje jen základní oprávnění:
+
+- **View Channels**: vidět kanál, kde se command použil
+- **Send Messages**: odpovídat
+- **Embed Links**: kartičky s jídly a odjezdy jsou embedy
+
+Nic dalšího (správa zpráv, rolí, administrátor apod.) nedávej. Číselně je to `19456`.
+
+### 3. Pozvání na server
+
+Pozvánka nezávisí na tom, kde bot běží. Vývojového bota, který běží lokálně, pozveš úplně stejně
+jako produkčního, jen jeho vlastním odkazem na testovací server.
+
+1. Zkopíruj **Application ID** (záložka **General Information**).
+2. Otevři v prohlížeči tenhle odkaz, místo `APP_ID` dej to číslo:
+
+   ```
+   https://discord.com/oauth2/authorize?client_id=APP_ID&scope=bot+applications.commands&permissions=19456&integration_type=0
+   ```
+
+   Případně si stejný odkaz naklikej v **OAuth2 → URL Generator**: scopes `bot` + `applications.commands`,
+   oprávnění ze seznamu výše, Integration Type *Guild Install*.
+3. Vyber server a potvrď. Musíš na něm mít oprávnění **Spravovat server**.
+4. ID serveru (pravý klik na server → **Kopírovat ID serveru**, potřebuje zapnutý *Režim vývojáře*
+   v Nastavení → Pokročilé) dej do `GUILD_IDS`.
+5. Spusť bota (lokálně `python bot.py`, na serveru redeploy stacku). Commandy se na serveru objeví hned.
+
+Kdo smí které commandy používat a ve kterých kanálech, se dá na serveru omezit v
+**Nastavení serveru → Integrace → (bot)**.
 
 ### Vývojový a produkční bot
 
