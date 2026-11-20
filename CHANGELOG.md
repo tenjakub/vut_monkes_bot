@@ -11,6 +11,11 @@ Formát (bot ho čte, viz utils/changelog.py):
 Nejnovější verze je vždy nahoře.
 -->
 
+## 1.2 · 2026-11-20 · Slevy v supermarketech
+
+- 🛒 Nový command `/slevy` ukáže aktuální akční letáky pro Lidl (Palackého, Šumavská, Bayerova), BILLA Srbská, Albert Semilasso a Globus Ivanovice. U každého obchodu je i dnešní otevírací doba.
+- 🥩 Nový command `/maso` ukáže slevy na maso v těchhle obchodech, seřazené podle výše slevy. Tlačítky se dá vybrat jen vepřové, hovězí nebo drůbež. U akcí, které teprve začnou, je vidět, odkdy platí.
+
 ## 1.1 · 2026-11-20 · Novinky v botovi
 
 - 🆕 Nový command `/novinky` ukáže, co je nového v posledních verzích bota. Tlačítky se dá listovat i ke starším verzím.

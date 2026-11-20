@@ -6,7 +6,7 @@ Tenhle soubor je pro AI, která na projektu pracuje. Lidský návod je v [README
 
 - **VUT Monkes bot** – Discord bot pro kamarádský server studentů VUT (FIT). Python 3.14, discord.py 2.x.
 - Commandy: `/ppv`, `/purkyne`, `/menzy` (menzy VUT), `/restaurace` (polední menu), `/mhd`, `/mhd-purkyne` (odjezdy MHD Brno),
-  `/novinky` (changelog).
+  `/slevy`, `/maso` (letáky a slevy supermarketů), `/novinky` (changelog).
 - **Celý kód píše AI.** Majitel repa zadává požadavky, testuje na Discordu a rozhoduje. Kód nepíše, ale čte ho.
 - **Jazyk:** komunikace s uživatelem, texty v botovi, komentáře, docstringy i commit zprávy jsou **česky**.
   Identifikátory v kódu jsou anglicky.
@@ -83,6 +83,7 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
 bot.py            ObedBot: načte cogy, sync commandů, heartbeat pro healthcheck
 cogs/             Discord vrstva – každý cog má build_message() -> (content, embeds, view)
 lunch/            menzy a restaurace, BEZ závislosti na discord.py
+shops/            slevy a letáky z Kupi.cz, BEZ závislosti na discord.py
 transit/          MHD (GTFS), BEZ závislosti na discord.py
 utils/render.py   Field (kartička), mřížka, limity embedů, header s časem
 ```
@@ -111,7 +112,7 @@ Pravidla:
 
 ## Oprávnění a intenty – kontrola při každé změně
 
-Aktuální stav (ověřeno pro verzi s `/ppv`, `/purkyne`, `/menzy`, `/restaurace`, `/mhd`, `/mhd-purkyne`, `/novinky`):
+Aktuální stav (ověřeno pro verzi s `/ppv`, `/purkyne`, `/menzy`, `/restaurace`, `/mhd`, `/mhd-purkyne`, `/slevy`, `/maso`, `/novinky`):
 
 - **Intenty:** `discord.Intents.default()`, žádné privilegované (Message Content, Server Members, Presence vypnuté).
 - **Oprávnění bota:** View Channels, Send Messages, Embed Links → číselně `19456`.
@@ -151,6 +152,21 @@ Postup, když jsou nová oprávnění potřeba:
 - menicka.cz (`menicka.py`): blok `div.menicka` se hledá podle data v nadpisu, ne podle pořadí.
   Alergeny bývají jako `<em>1</em>` uvnitř názvu a vyhazují se. Nová restaurace = ID z URL + řádek v `RESTAURANTS`.
 - La Strada má vlastní web (`lastrada.py`): týdenní karty `.ls-card`, ceny v `.ls-pricing`. Je to nejkřehčí scraper.
+
+**Slevy a letáky – Kupi.cz** (`shops/`):
+- Jen veřejné HTML stránky, které povoluje `robots.txt`: kategorie `/slevy/<kategorie>?page=N` a stránky poboček
+  `/obchod/<řetězec>/<pobočka>`. **Nepoužívej** interní endpointy `/get-slevy`, `/get-letaky`, `/get-akce` …
+  (robots.txt je zakazuje), řazení `?ord=` ani vícenásobné filtry obchodů.
+- Stahuje se postupně s pauzou (`PAGE_DELAY`), cache 4–6 h, na pozadí se obnovuje každé 3 h (`Slevy.warm_up`).
+  Uživatelské commandy čtou z cache. Nepřidávej stahování „na každé kliknutí“.
+- Kategorie: řádek slevy (`div.discount_row`) = jedna akce v jednom obchodě. Nahoře bývají sponzorované produkty
+  jiných řetězců, proto se akce **vždy filtrují podle názvu obchodu** (`Store.shop_labels`). Další stránka =
+  odkaz přesně na `?page=N+1`.
+- Albert má akce „Albert“, „Albert supermarket“ a „Albert hypermarket“. Albert Semilasso (Kosmova) je supermarket,
+  hypermarketové akce se k němu nezapočítávají.
+- Maso = čerstvé maso po podkategoriích (`MEAT_CATEGORIES`). Šunky, salámy, párky a ryby schválně ne, jsou jich stovky.
+- Akce řetězců jsou většinou celostátní; letáky a otevírací doba jsou ze stránky konkrétní pobočky
+  (BILLA Srbská má „malý leták“). Otevírací doba je v JSON-LD (`openingHours`).
 
 **MHD – KORDIS JMK** (`transit/`), otevřená data CC BY:
 - Statické GTFS `https://kordis-jmk.cz/gtfs/gtfs.zip` (~6 MB, `stop_times` ~28 MB). Načítá se jen to, co je

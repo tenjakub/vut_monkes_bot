@@ -26,6 +26,8 @@ Výpis je v embedech a pod ním jsou tlačítka na přepínání.
 | `/restaurace` | Polední menu: U 3 opic, Padagali, La Strada, U Karla, Portoriko |
 | `/mhd` | PPV (koleje Pod Palackého vrchem): odjezdy z Technologického parku (tramvaje) a z Kolejní + výluky na těch linkách |
 | `/mhd-purkyne` | Totéž u kolejí Purkyňova: Červinkova (tramvaje) a Skácelova (autobusy a trolejbusy zvlášť na východ a na západ) |
+| `/slevy` | Akční letáky a dnešní otevírací doba: Lidl (Palackého, Šumavská, Bayerova), BILLA Srbská, Albert Semilasso, Globus Ivanovice |
+| `/maso` | Slevy na maso v těch samých obchodech, seřazené podle slevy, s přepínačem vepřové / hovězí / drůbež |
 | `/novinky` | Co je nového v posledních verzích bota (z [CHANGELOG.md](CHANGELOG.md)), s listováním ke starším |
 
 Všechny tři menzové commandy mají volitelný parametr `vse: True`. Ten místo Economy ukáže
@@ -74,6 +76,9 @@ Ceny u menz jsou pro **studenty VUT** (1. cena na webu KaM). Změníš je v `lun
 - **La Strada** (Kounicova): [lastrada-brno.cz/poledni-menu](https://lastrada-brno.cz/poledni-menu/).
   Na menicka.cz není, takže má vlastní scraper.
 
+- **Slevy a letáky:** [Kupi.cz](https://www.kupi.cz). Bot čte jen veřejné stránky, které `robots.txt`
+  povoluje (kategorie slev a stránky poboček), postupně se sekundovou pauzou. Data obnovuje na pozadí
+  každé 3 hodiny. Obchody a pobočky se nastavují v `STORES` v `shops/service.py`.
 - **MHD:** otevřená data KORDIS JMK (licence CC BY) – jízdní řád ve formátu GTFS
   (`kordis-jmk.cz/gtfs/gtfs.zip`, ukládá se do `data/` a obnovuje každých 12 h) a výluky
   z GTFS Realtime (`kordis-jmk.cz/gtfs/gtfsReal.dat`, cache 5 min).
@@ -268,6 +273,7 @@ cogs/menza.py       # /ppv, /purkyne, /menzy + tlačítka
 cogs/restaurace.py  # /restaurace + tlačítko obnovit
 cogs/mhd.py         # /mhd, /mhd-purkyne + tlačítka
 cogs/novinky.py     # /novinky (changelog s listováním)
+cogs/slevy.py       # /slevy (letáky) a /maso (slevy na maso)
 lunch/              # stahování a parsování (bez závislosti na Discordu)
   kam.py            #   menzy VUT – seznam menz a skupin (ppv, purkyne, vse)
   emoji.py          #   výběr emoji k jídlu podle klíčových slov
@@ -275,6 +281,9 @@ lunch/              # stahování a parsování (bez závislosti na Discordu)
   lastrada.py       #   La Strada
   service.py        #   seznam restaurací, paralelní načítání
   fetcher.py        #   HTTP + cache
+shops/              # slevy a letáky z Kupi.cz (bez závislosti na Discordu)
+  kupi.py           #   parser stránek Kupi.cz
+  service.py        #   obchody a pobočky (STORES), stahování a cache
 transit/            # MHD (bez závislosti na Discordu)
   gtfs.py           #   načtení jízdního řádu, odjezdy, navazující spoje
   alerts.py         #   výluky z GTFS Realtime
