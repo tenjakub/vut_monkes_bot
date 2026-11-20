@@ -49,7 +49,8 @@ class Menu:
     dishes: list[Dish] = field(default_factory=list)
     note: str | None = None  # info pro uživatele (zavřeno, svátek, …)
     error: str | None = None  # nepodařilo se stáhnout / naparsovat
-    hours: str | None = None  # výdejní doba, pokud ji zdroj uvádí
+    hours: str | None = None  # výdejní/otevírací doba, pokud ji zdroj uvádí
+    hours_label: str = "Menu:"  # co se v patičce napíše před hours
     fetched_at: datetime | None = None
 
     @property

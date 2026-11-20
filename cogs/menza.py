@@ -131,17 +131,17 @@ class Menza(commands.Cog):
     # Každá skupina menz má vlastní command, takže stačí napsat /ppv + Enter.
     # Mezi skupinami se pak dá přepínat i tlačítky pod zprávou.
 
-    @app_commands.command(name="ppv", description="Economy: Kolejní, Mozzarella, Starý pivovar")
+    @app_commands.command(name="ppv", description="🍽️ Economy obědy v menzách Kolejní, Mozzarella a Starý pivovar")
     @app_commands.describe(vse=VSE_DESCRIPTION)
     async def ppv(self, interaction: discord.Interaction, vse: bool = False) -> None:
         await self._send(interaction, "ppv", vse)
 
-    @app_commands.command(name="purkyne", description="Economy: Purkyňova, Starý pivovar")
+    @app_commands.command(name="purkyne", description="🍽️ Economy obědy v menzách Purkyňova a Starý pivovar")
     @app_commands.describe(vse=VSE_DESCRIPTION)
     async def purkyne(self, interaction: discord.Interaction, vse: bool = False) -> None:
         await self._send(interaction, "purkyne", vse)
 
-    @app_commands.command(name="menzy", description="Economy ze všech menz VUT, kde ho vaří")
+    @app_commands.command(name="menzy", description="🍽️ Economy obědy ve všech menzách VUT, kde je vaří")
     @app_commands.describe(vse=VSE_DESCRIPTION)
     async def menzy(self, interaction: discord.Interaction, vse: bool = False) -> None:
         await self._send(interaction, "vse", vse)

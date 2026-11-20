@@ -93,7 +93,7 @@ BOARDS: dict[str, Board] = {
 # Oblasti = co ukazuje jeden command (klíč "vse" zůstává kvůli tlačítkům na starších zprávách)
 AREAS: dict[str, tuple[str, tuple[str, ...]]] = {
     "vse": ("PPV", ("technopark", "kolejni")),  # koleje Pod Palackého vrchem
-    "purkyne": ("Koleje Purkyňova", ("cervinkova", "skacelova_vychod", "skacelova_zapad")),
+    "purkyne": ("Purkyně", ("cervinkova", "skacelova_vychod", "skacelova_zapad")),
 }
 
 # skupiny pro command a tlačítka: celé oblasti i jednotlivé zastávky

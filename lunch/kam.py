@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from datetime import date, timedelta
 
 from bs4 import BeautifulSoup
 
@@ -125,3 +126,70 @@ def parse(html: str, menza: Menza) -> Menu:
     # Economy chceme vždy nahoře (sort je stabilní, pořadí z webu zůstane)
     dishes.sort(key=lambda d: 0 if d.economy else 1)
     return Menu(menza, dishes=dishes)
+
+
+# ---------------------------------------------------------------------------
+# Otevírací doby z přehledu https://www.kam.vut.cz/?p=otdo
+#
+# Tabulka table.ntab má sloupce: provoz | A (stav) | PO – ČT* | PÁ | SO + NE**
+#   *  v pracovní den před státním svátkem platí doba jako v PÁ
+#   ** platí i pro státní svátky
+# Stav "A" je aktuální (mimo otevírací dobu tam bývá "z"), proto z něj bereme jen
+# x = dočasně přerušen provoz a a = pro veřejnost zavřeno (akce).
+
+_INTERVAL_RE = re.compile(r"(\d{1,2}:\d{2})\s*[–-]\s*(\d{1,2}:\d{2})")
+_PROVOZ_RE = re.compile(r"provoz=(\d+)")
+_STATE_NOTES = {"x": "dočasně přerušen provoz", "a": "pro veřejnost zavřeno (akce)"}
+
+
+def _easter(year: int) -> date:
+    """Velikonoční neděle (anonymní gregoriánský algoritmus)."""
+    a, b, c = year % 19, year // 100, year % 100
+    d, e = b // 4, b % 4
+    g = (8 * b + 13) // 25
+    h = (19 * a + b - d - g + 15) % 30
+    i, k = c // 4, c % 4
+    l = (32 + 2 * e + 2 * i - h - k) % 7
+    m = (a + 11 * h + 19 * l) // 433
+    month = (h + l - 7 * m + 90) // 25
+    day = (h + l - 7 * m + 33 * month + 19) % 32
+    return date(year, month, day)
+
+
+def cz_holidays(year: int) -> set[date]:
+    fixed = [(1, 1), (5, 1), (5, 8), (7, 5), (7, 6), (9, 28), (10, 28), (11, 17), (12, 24), (12, 25), (12, 26)]
+    easter = _easter(year)
+    return {date(year, m, d) for m, d in fixed} | {easter - timedelta(days=2), easter + timedelta(days=1)}
+
+
+def _hours_column(day: date) -> int:
+    """Index sloupce s časy (0 = PO–ČT, 1 = PÁ, 2 = SO+NE) pro daný den."""
+    holidays = cz_holidays(day.year) | cz_holidays(day.year + 1)
+    if day.weekday() >= 5 or day in holidays:
+        return 2
+    if day.weekday() == 4 or (day + timedelta(days=1)) in holidays:
+        return 1
+    return 0
+
+
+def parse_hours(html: str, day: date) -> dict[int, str]:
+    """{provoz: "11:00–14:30" | "11:00–14:30, 17:00–20:00" | "zavřeno" | "zavřeno (důvod)"} pro daný den."""
+    soup = BeautifulSoup(html, "html.parser")
+    table = soup.find("table", class_="ntab")
+    if table is None:
+        return {}
+    column = _hours_column(day)
+    result: dict[int, str] = {}
+    for tr in table.find_all("tr"):
+        link = tr.find("a", href=_PROVOZ_RE)
+        cells = tr.find_all("td", recursive=False)
+        if link is None or len(cells) < 5:
+            continue
+        provoz = int(_PROVOZ_RE.search(link["href"]).group(1))
+        state = norm(cells[1].get_text()).lower()
+        intervals = [f"{a}–{b}" for a, b in _INTERVAL_RE.findall(cells[2 + column].get_text(" "))]
+        hours = ", ".join(intervals) if intervals else "zavřeno"
+        if state in _STATE_NOTES:
+            hours = f"zavřeno ({_STATE_NOTES[state]})"
+        result[provoz] = hours
+    return result

@@ -100,6 +100,9 @@ Postup, když jsou nová oprávnění potřeba:
 - Economy jídla = název začíná `Economy N:`. Typ: `P` polévka, `H` hlavní, `O` ostatní (saláty, přílohy) – ty se nezobrazují.
 - Ceny: `slcen1` student VUT (zobrazujeme), `slcen2` zaměstnanec, `slcen3` externí, `slcen4` student jiné VŠ.
 - KaM průběžně maže vyprodaná jídla, proto krátká cache (5 min).
+- Otevírací doby: `kam.parse_hours` z `?p=otdo` (`table.ntab`, sloupce PO–ČT / PÁ / SO+NE). Den před státním
+  svátkem = PÁ, svátek = SO+NE (`kam.cz_holidays`, včetně Velikonoc). Sloupec stavu je jen aktuální stav
+  (mimo provoz „z“), používá se jen `x` a `a`. Zobrazuje se v patičce kartičky menzy („🕐 Dnes …“).
 
 **Restaurace** (`lunch/service.py` → `RESTAURANTS`):
 - menicka.cz (`menicka.py`): blok `div.menicka` se hledá podle data v nadpisu, ne podle pořadí.

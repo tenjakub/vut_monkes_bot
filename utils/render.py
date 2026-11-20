@@ -125,7 +125,7 @@ def menu_embed(menu: Menu, fields: list[Field], limit: int, empty_text: str) -> 
     place = menu.place
     embed = discord.Embed(title=f"{place.emoji} {place.name}", url=place.url, color=place.color)
     if menu.hours:
-        embed.set_footer(text=f"Menu: {menu.hours}")
+        embed.set_footer(text=f"{menu.hours_label} {menu.hours}")
 
     if menu.error:
         embed.description = f"⚠️ {menu.error}"

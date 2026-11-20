@@ -58,6 +58,9 @@ typy vozidel, způsob zobrazení `layout`, popisky směrů, sloučené linky, po
 Odjezdy jsou **podle jízdního řádu, bez zpoždění**. Realtime feed KORDIS sice obsahuje polohy
 vozidel, ale nemá zpoždění a jeho ID spojů zatím nesedí na jízdní řád. Výluky z něj ale bot bere.
 
+Pod každou menzou je malým písmem dnešní otevírací doba (z [přehledu KaM](https://www.kam.vut.cz/?p=otdo),
+včetně pátků, víkendů a státních svátků).
+
 Ceny u menz jsou pro **studenty VUT** (1. cena na webu KaM). Změníš je v `lunch/kam.py`
 (`PRICE_CLASS` / `PRICE_LABEL`).
 

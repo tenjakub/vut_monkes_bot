@@ -71,16 +71,33 @@ async def _load(fetcher: Fetcher, place: Place, url: str, ttl: float, force: boo
         return Menu(place, error=f"Nepodařilo se načíst ({type(exc).__name__}).")
 
 
+HOURS_TTL = 60 * 60
+
+
+async def _menza_hours(fetcher: Fetcher, force: bool) -> dict[int, str]:
+    """Otevírací doby menz pro dnešek; když se nepovede, prostě se nezobrazí."""
+    try:
+        html, _ = await fetcher.get(kam.OVERVIEW_URL, ttl=HOURS_TTL, force=force)
+        return kam.parse_hours(html, today())
+    except Exception:
+        log.exception("Načtení otevíracích dob menz selhalo")
+        return {}
+
+
 async def menza_menus(fetcher: Fetcher, group: str, force: bool = False) -> list[Menu]:
     menzy = [kam.MENZY[k] for k in kam.GROUPS[group].menzy]
-    return list(
-        await asyncio.gather(
-            *(
-                _load(fetcher, m, m.url, MENZA_TTL, force, lambda html, m=m: kam.parse(html, m))
-                for m in menzy
-            )
-        )
+    hours, *menus = await asyncio.gather(
+        _menza_hours(fetcher, force),
+        *(
+            _load(fetcher, m, m.url, MENZA_TTL, force, lambda html, m=m: kam.parse(html, m))
+            for m in menzy
+        ),
     )
+    for menza, menu in zip(menzy, menus):
+        if menza.provoz in hours:
+            menu.hours = hours[menza.provoz]
+            menu.hours_label = "🕐 Dnes"
+    return list(menus)
 
 
 async def restaurant_menus(fetcher: Fetcher, force: bool = False) -> list[Menu]:

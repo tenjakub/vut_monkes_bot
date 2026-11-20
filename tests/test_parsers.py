@@ -3,6 +3,8 @@
 from datetime import date
 from pathlib import Path
 
+import pytest
+
 from lunch import kam, lastrada, menicka, service
 from lunch.models import Category
 
@@ -88,3 +90,49 @@ def test_menicka_strips_allergens():
     assert menu.soups[0].name == "Vývar s kořenovou zeleninou a nudlemi"
     assert menu.mains[0].name == "Trhané kuře na paprice s kolínky a nebo houskovým knedlíkem"
     assert len(menu.mains) == 5
+
+
+@pytest.mark.parametrize(
+    ("day", "stary_pivovar", "purkynova"),
+    [
+        (date(2026, 11, 19), "11:00–14:30", "11:00–14:30, 17:00–20:00"),  # čtvrtek
+        (date(2026, 11, 20), "11:00–14:00", "11:00–14:00"),  # pátek
+        (date(2026, 11, 21), "zavřeno", "zavřeno"),  # sobota
+        (date(2026, 11, 17), "zavřeno", "zavřeno"),  # státní svátek = jako víkend
+        (date(2026, 11, 16), "11:00–14:00", "11:00–14:00"),  # den před svátkem = jako pátek
+    ],
+)
+def test_kam_opening_hours(day, stary_pivovar, purkynova):
+    hours = kam.parse_hours(read("kam_otdo.html"), day)
+    assert hours[kam.MENZY["stary_pivovar"].provoz] == stary_pivovar
+    assert hours[kam.MENZY["purkynova"].provoz] == purkynova
+
+
+def test_cz_holidays_include_easter():
+    holidays = kam.cz_holidays(2026)
+    assert date(2026, 4, 3) in holidays and date(2026, 4, 6) in holidays  # Velký pátek, Velikonoční pondělí
+    assert date(2026, 11, 17) in holidays and len(holidays) == 13
+
+
+class _FakeFetcher:
+    """Vrací uložené stránky místo stahování: přehled otevíracích dob + jídelníček Starého pivovaru."""
+
+    async def get(self, url, ttl, force=False):
+        if url == kam.OVERVIEW_URL:
+            return read("kam_otdo.html"), 0.0
+        if url == kam.MENZY["stary_pivovar"].url:
+            return read("kam_stary_pivovar.html"), 0.0
+        raise ConnectionError(url)
+
+
+def test_menza_menus_attach_hours_and_survive_errors(monkeypatch):
+    import asyncio
+
+    monkeypatch.setattr(service, "today", lambda: date(2026, 11, 19))
+    menus = asyncio.run(service.menza_menus(_FakeFetcher(), "ppv"))
+    by_key = {m.place.key: m for m in menus}
+    sp = by_key["stary_pivovar"]
+    assert sp.error is None and len(sp.economy) == 4
+    assert (sp.hours_label, sp.hours) == ("🕐 Dnes", "11:00–14:30")
+    # Kolejní se "nestáhla" -> chyba jen u ní, otevírací doba se i tak ukáže
+    assert by_key["kolejni"].error and by_key["kolejni"].hours == "11:00–14:30"
