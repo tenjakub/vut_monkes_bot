@@ -31,12 +31,17 @@ class ObedBot(commands.Bot):
         self.tree.on_error = self.on_app_command_error
 
         if config.GUILD_IDS:
-            # synchronizace do konkrétního serveru je okamžitá (globální trvá až hodinu)
-            for gid in config.GUILD_IDS:
-                guild = discord.Object(id=gid)
+            # Synchronizace do konkrétních serverů je okamžitá (globální trvá až hodinu).
+            guilds = [discord.Object(id=gid) for gid in config.GUILD_IDS]
+            for guild in guilds:
                 self.tree.copy_global_to(guild=guild)
+            # Globální commandy z dřívějška (třeba z běhu bez GUILD_IDS) smazat,
+            # jinak by se na serveru ukazovaly dvakrát (globální + serverová kopie).
+            self.tree.clear_commands(guild=None)
+            await self.tree.sync()
+            for guild in guilds:
                 synced = await self.tree.sync(guild=guild)
-                log.info("Synchronizováno %d commandů na server %s", len(synced), gid)
+                log.info("Synchronizováno %d commandů na server %s", len(synced), guild.id)
         else:
             synced = await self.tree.sync()
             log.info("Synchronizováno %d globálních commandů", len(synced))

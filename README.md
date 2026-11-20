@@ -71,6 +71,32 @@ nejvýš jednou za minutu.
 1. Na <https://discord.com/developers/applications> vytvoř aplikaci, v záložce **Bot** vygeneruj token.
 2. V **OAuth2 → URL Generator** zaškrtni scopes `bot` + `applications.commands`
    a permissions `Send Messages`, `Embed Links`. Vygenerovaným odkazem pozvi bota na server.
+3. V záložce **Bot** vypni **Public Bot**, ať si ho nemůže pozvat kdokoli jiný.
+
+### Vývojový a produkční bot
+
+Používají se dvě samostatné aplikace v Developer Portalu. Kód je stejný, liší se jen token a server:
+
+| | Vývojový bot | Produkční bot |
+|---|---|---|
+| kde běží | lokálně (`python bot.py`) | homelab, Docker z `main` |
+| token a server | `.env` ve složce projektu | proměnné stacku v Portaineru |
+| `GUILD_IDS` | ID testovacího serveru | ID vašeho serveru |
+
+Díky tomu se dá zkoušet nová verze na testovacím serveru, zatímco na hlavním serveru běží ta stabilní.
+Tlačítka pod zprávami patří vždy botovi, který zprávu poslal, takže se instance nepletou.
+Jen nikdy nespouštěj dvě instance se **stejným** tokenem, jinak by na commandy odpovídaly obě.
+
+Když je vyplněné `GUILD_IDS`, bot zaregistruje commandy jen na těch serverech (hned) a případné
+staré globální commandy smaže, aby se v nabídce neukazovaly dvakrát.
+
+### Jméno, profilovka a banner
+
+Úpravy v Developer Portalu (záložka **Bot** → Username, Icon, Banner) se projeví hned, bota není
+potřeba restartovat ani znovu nasazovat. Discord klient si ale obrázky cachuje, takže je někdy uvidíš
+až po `Ctrl+R`. Jméno jde měnit jen párkrát za hodinu. Pokud má bot na serveru nastavenou přezdívku,
+zobrazuje se místo jména ta (Nastavení serveru → Členové). Název a ikona v **General Information**
+patří aplikaci. Ty jsou vidět u slash commandů a v profilu aplikace.
 
 ## Nasazení (Docker, homelab)
 
