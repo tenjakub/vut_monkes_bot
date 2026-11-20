@@ -5,7 +5,8 @@ Tenhle soubor je pro AI, která na projektu pracuje. Lidský návod je v [README
 ## O projektu
 
 - **VUT Monkes bot** – Discord bot pro kamarádský server studentů VUT (FIT). Python 3.14, discord.py 2.x.
-- Commandy: `/ppv`, `/purkyne`, `/menzy` (menzy VUT), `/restaurace` (polední menu), `/mhd`, `/mhd-purkyne` (odjezdy MHD Brno).
+- Commandy: `/ppv`, `/purkyne`, `/menzy` (menzy VUT), `/restaurace` (polední menu), `/mhd`, `/mhd-purkyne` (odjezdy MHD Brno),
+  `/novinky` (changelog).
 - **Celý kód píše AI.** Majitel repa zadává požadavky, testuje na Discordu a rozhoduje. Kód nepíše, ale čte ho.
 - **Jazyk:** komunikace s uživatelem, texty v botovi, komentáře, docstringy i commit zprávy jsou **česky**.
   Identifikátory v kódu jsou anglicky.
@@ -19,6 +20,45 @@ Tenhle soubor je pro AI, která na projektu pracuje. Lidský návod je v [README
   (typicky: „v Discordu jsem to neviděl“).
 - Preference: příkazy na jedno kliknutí (raději víc commandů než parametry), přehledné kartičky v mřížce,
   emoji. Méně důležité informace spíš nevýrazně než vůbec.
+
+## Branche a vydávání verzí
+
+`main` = produkce. Každý push do `main` se do pár minut nasadí na server kamarádů (CI → GHCR → Watchtower).
+
+- **Na `main` se přímo nevyvíjí.** Každá nová funkce nebo oprava vzniká ve vlastní branchi založené z aktuálního `main`:
+  `feature/<krátký-popis>` pro novinky, `fix/<krátký-popis>` pro opravy (anglicky nebo česky bez diakritiky,
+  malými písmeny, s pomlčkami). Na začátku práce zkontroluj `git status` a branch. Pokud jsi na `main`,
+  založ branch dřív, než cokoli změníš.
+- Jedna branch = jedna ucelená změna. Nesouvisející věci patří do jiné branche.
+- Lokální vývojový bot může běžet z jakékoli branche, na produkci jde jen `main`.
+- Push feature branche je bezpečný (CI v ní jen pustí testy, nic nenasazuje), ale i tak jen na žádost uživatele.
+- **Historie je lineární, bez merge commitů.** Před začleněním branch přeskládej na aktuální `main`
+  a do `main` ji pusť jen jako fast-forward:
+
+  ```bash
+  git fetch origin
+  git rebase origin/main            # ve feature branchi; konflikty vyřešit, pustit testy
+  git switch main && git pull --ff-only
+  git merge --ff-only feature/xyz   # žádný merge commit
+  git push origin main              # = nasazení, jen na výslovný pokyn uživatele
+  git branch -d feature/xyz && git push origin --delete feature/xyz   # úklid (pokud byla pushnutá)
+  ```
+
+  Pull requesty nejsou povinné (vyvíjí jeden člověk). Pokud ho uživatel přesto chce, sloučit přes **Rebase and merge**.
+- Rebase jen vlastních, ještě nezačleněných branchí. `main` se nikdy nepřepisuje (žádný force push).
+
+### CHANGELOG.md a verze
+
+- [CHANGELOG.md](CHANGELOG.md) je pro **uživatele na Discordu**. Bot ho ukazuje v `/novinky` a nejnovější verze
+  je ve statusu bota (`verze 1.1 · <commit>`). Píše se česky, srozumitelně, klidně s emoji. Nepatří tam
+  refaktoring, testy, CI, dokumentace ani drobné QoL úpravy, které uživatel nepozná.
+- Formát nadpisu musí přesně odpovídat `## <verze> · <RRRR-MM-DD> · <krátký název>`, nejnovější nahoře.
+  Hlídá to `tests/test_changelog.py`.
+- Číslo verze: nová funkce → `1.x` (minor, např. 1.1 → 1.2), oprava chyby → `1.x.y` (např. 1.2 → 1.2.1).
+  Velké předělávky → `2.0` (jen po domluvě).
+- Změna viditelná pro uživatele = v její branchi přidej (nebo rozšiř) záznam nahoře v CHANGELOG.md.
+  Datum je den vydání. Když se branch začleňuje později, datum při rebase před začleněním aktualizuj.
+- Commit hash (`BOT_VERSION`) dál slouží k přesné identifikaci buildu a sedí s tagem image `sha-<hash>`.
 
 ## Vývoj a testy
 
@@ -71,7 +111,7 @@ Pravidla:
 
 ## Oprávnění a intenty – kontrola při každé změně
 
-Aktuální stav (ověřeno pro verzi s `/ppv`, `/purkyne`, `/menzy`, `/restaurace`, `/mhd`, `/mhd-purkyne`):
+Aktuální stav (ověřeno pro verzi s `/ppv`, `/purkyne`, `/menzy`, `/restaurace`, `/mhd`, `/mhd-purkyne`, `/novinky`):
 
 - **Intenty:** `discord.Intents.default()`, žádné privilegované (Message Content, Server Members, Presence vypnuté).
 - **Oprávnění bota:** View Channels, Send Messages, Embed Links → číselně `19456`.
@@ -144,7 +184,7 @@ Obecně: na weby chodíme s cache (`lunch/fetcher.py`) a slušným User-Agentem,
   Používáme fork **`nickfedor/watchtower`**, protože původní `containrrr/watchtower` je archivovaný a s novým Dockerem
   nefunguje. Watchtower má scope `vut-monkes-bot` a hlídá jen tenhle stack.
 - SELinux: bot má named volume (`bot_data`), Watchtower má `security_opt: label=disable` kvůli `docker.sock`.
-- Verze: `config.BOT_VERSION` = env `BOT_VERSION` (CI ho do image vloží jako krátký hash = tag `sha-…`),
+- Verze: číslo verze z `CHANGELOG.md` (`utils/changelog.py`) + `config.BOT_VERSION` = env `BOT_VERSION` (CI ho do image vloží jako krátký hash = tag `sha-…`),
   lokálně `dev <git hash>`. Zobrazuje se ve statusu bota, v logu při startu a v chybové hlášce (s odkazem na Issues).
 - Bio bota = popis aplikace v Developer Portalu (nastavuje uživatel ručně, text je v README).
 - Healthcheck: bot každých 30 s „dotkne“ `HEALTH_FILE`, jen když je připojený. `healthcheck.py` kontroluje stáří.

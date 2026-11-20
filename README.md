@@ -26,6 +26,7 @@ Výpis je v embedech a pod ním jsou tlačítka na přepínání.
 | `/restaurace` | Polední menu: U 3 opic, Padagali, La Strada, U Karla, Portoriko |
 | `/mhd` | PPV (koleje Pod Palackého vrchem): odjezdy z Technologického parku (tramvaje) a z Kolejní + výluky na těch linkách |
 | `/mhd-purkyne` | Totéž u kolejí Purkyňova: Červinkova (tramvaje) a Skácelova (autobusy a trolejbusy zvlášť na východ a na západ) |
+| `/novinky` | Co je nového v posledních verzích bota (z [CHANGELOG.md](CHANGELOG.md)), s listováním ke starším |
 
 Všechny tři menzové commandy mají volitelný parametr `vse: True`. Ten místo Economy ukáže
 polévky a všechna hlavní jídla (saláty, přílohy a dezerty vynechá).
@@ -165,7 +166,8 @@ Návrh textu:
 
 ### Status s verzí
 
-Pod jménem bota je vlastní status `verze <hash>`. Na serveru je to krátký hash
+Pod jménem bota je vlastní status `verze <číslo> · <hash>`. Číslo je nejnovější verze z [CHANGELOG.md](CHANGELOG.md),
+hash na serveru je krátký hash
 commitu, ze kterého je sestavený Docker image (stejný jako tag `sha-<hash>`). Lokálně je to `dev <hash>`
 podle aktuálního commitu. Stejnou verzi bot vypíše v logu při startu a v chybové hlášce, ve které je
 i odkaz na GitHub Issues.
@@ -180,8 +182,8 @@ patří aplikaci. Ty jsou vidět u slash commandů a v profilu aplikace.
 
 ## Nasazení (Docker, homelab)
 
-Jak to funguje: každý push do `main` spustí [GitHub Actions](.github/workflows/ci.yml). Ty pustí testy
-a když projdou, sestaví Docker image a nahrají ho do GitHub Container Registry jako
+Jak to funguje: každý push do jakékoli branche spustí [GitHub Actions](.github/workflows/ci.yml) s testy.
+U pushe do `main` navíc, když testy projdou, sestaví Docker image a nahrají ho do GitHub Container Registry jako
 `ghcr.io/tenjakub/vut_monkes_bot:latest` (a navíc `:sha-<commit>`). Na serveru běží vedle bota
 [Watchtower](https://watchtower.nickfedor.com/), který každých 5 minut zkontroluje, jestli je nový image,
 a když ano, bota sám restartuje s novou verzí. Na serveru se nic nesestavuje a nic se neotevírá ven.
@@ -265,6 +267,7 @@ docker-compose.build.yml  # lokální sestavení image místo stažení z GHCR
 cogs/menza.py       # /ppv, /purkyne, /menzy + tlačítka
 cogs/restaurace.py  # /restaurace + tlačítko obnovit
 cogs/mhd.py         # /mhd, /mhd-purkyne + tlačítka
+cogs/novinky.py     # /novinky (changelog s listováním)
 lunch/              # stahování a parsování (bez závislosti na Discordu)
   kam.py            #   menzy VUT – seznam menz a skupin (ppv, purkyne, vse)
   emoji.py          #   výběr emoji k jídlu podle klíčových slov
@@ -277,6 +280,8 @@ transit/            # MHD (bez závislosti na Discordu)
   alerts.py         #   výluky z GTFS Realtime
   service.py        #   zastávky (BOARDS), stahování a obnova dat
 utils/render.py     # převod na Discord embedy (limity délky apod.)
+utils/changelog.py  # čtení CHANGELOG.md
+CHANGELOG.md        # novinky pro uživatele (/novinky, číslo verze ve statusu)
 tests/              # testy parserů, emoji, vykreslování a MHD
 AGENTS.md           # kontext a pravidla pro AI agenty (CLAUDE.md na něj odkazuje)
 ```

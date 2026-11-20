@@ -11,14 +11,17 @@ from discord.ext import commands, tasks
 
 import config
 from lunch.fetcher import Fetcher
+from utils import changelog
 
 log = logging.getLogger("bot")
 
-EXTENSIONS = ["cogs.menza", "cogs.restaurace", "cogs.mhd"]
+EXTENSIONS = ["cogs.menza", "cogs.restaurace", "cogs.mhd", "cogs.novinky"]
 
 
 def status_text() -> str:
-    return f"verze {config.BOT_VERSION}"
+    """Status pod jménem bota: verze z CHANGELOG.md + commit, např. "verze 1.1 · 3227e1b"."""
+    release = changelog.current_version()
+    return f"verze {release} · {config.BOT_VERSION}" if release else f"verze {config.BOT_VERSION}"
 
 
 class ObedBot(commands.Bot):
@@ -33,7 +36,7 @@ class ObedBot(commands.Bot):
         self.fetcher = Fetcher()
 
     async def setup_hook(self) -> None:
-        log.info("Startuje VUT Monkes bot, verze %s", config.BOT_VERSION)
+        log.info("Startuje VUT Monkes bot, %s", status_text())
         self.heartbeat.start()
         for ext in EXTENSIONS:
             await self.load_extension(ext)

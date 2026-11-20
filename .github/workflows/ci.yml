@@ -1,10 +1,10 @@
-# Testy při každém pushi a PR. Při pushi do main se navíc sestaví Docker image
-# a nahraje do GHCR jako :latest a :sha-<commit>. Homelab si ho pak stáhne přes Watchtower.
+# Testy při každém pushi (do jakékoli branche) a PR. Jen při pushi do main se navíc sestaví
+# Docker image a nahraje do GHCR jako :latest a :sha-<commit>. Homelab si ho pak stáhne přes Watchtower.
 name: CI
 
 on:
   push:
-    branches: [main]
+    branches: ["**"]
   pull_request:
   workflow_dispatch:
 
