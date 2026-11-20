@@ -43,7 +43,7 @@ Emoji se vybírá podle klíčových slov v názvu jídla, pravidla jsou v `lunc
 ### /mhd
 
 Odjezdy na hodinu dopředu v kartičkách. Časy jsou Discord timestampy („in 5 minutes“ se samo
-odpočítává). Tlačítky se přepíná mezi oblastmi (Technopark + Kolejní / Koleje Purkyňova)
+odpočítává). Tlačítky se přepíná mezi oblastmi (PPV / Purkyně)
 a jednotlivými zastávkami. Každá zastávka má vlastní způsob zobrazení:
 
 | Zastávka | Zobrazení |

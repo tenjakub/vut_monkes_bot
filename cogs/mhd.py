@@ -225,7 +225,7 @@ class MhdButton(discord.ui.DynamicItem[discord.ui.Button], template=r"mhd:(?P<gr
 
 
 def build_view(group: str) -> discord.ui.View:
-    """1. řada: oblasti (Technopark + Kolejní / Koleje Purkyňova), 2. řada: zastávky oblasti, obnovit, odkaz."""
+    """1. řada: oblasti (PPV / Purkyně), 2. řada: zastávky oblasti, obnovit, odkaz."""
     view = discord.ui.View(timeout=None)
     area = area_of(group)
 
