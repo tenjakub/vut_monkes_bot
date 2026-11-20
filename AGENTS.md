@@ -6,7 +6,8 @@ Tenhle soubor je pro AI, která na projektu pracuje. Lidský návod je v [README
 
 - **VUT Monkes bot** – Discord bot pro kamarádský server studentů VUT (FIT). Python 3.14, discord.py 2.x.
 - Commandy: `/ppv`, `/purkyne`, `/menzy` (menzy VUT), `/restaurace` (polední menu), `/mhd`, `/mhd-purkyne` (odjezdy MHD Brno),
-  `/letaky`, `/maso`, `/napoje`, `/pivo` (letáky a slevy supermarketů), `/novinky` (changelog).
+  `/letaky`, `/maso`, `/napoje`, `/pivo` (letáky a slevy supermarketů), `/domu` (spoje z centra na koleje),
+  `/obed` (kdo jde na oběd), `/co-jist` (náhodné jídlo), `/pocasi`, `/novinky` (changelog).
 - **Celý kód píše AI.** Majitel repa zadává požadavky, testuje na Discordu a rozhoduje. Kód nepíše, ale čte ho.
 - **Jazyk:** komunikace s uživatelem, texty v botovi, komentáře, docstringy i commit zprávy jsou **česky**.
   Identifikátory v kódu jsou anglicky.
@@ -96,6 +97,7 @@ bot.py            ObedBot: načte cogy, sync commandů, heartbeat pro healthchec
 cogs/             Discord vrstva – každý cog má build_message() -> (content, embeds, view)
 lunch/            menzy a restaurace, BEZ závislosti na discord.py
 shops/            slevy a letáky z Kupi.cz, BEZ závislosti na discord.py
+weather/          počasí z Open-Meteo, BEZ závislosti na discord.py
 transit/          MHD (GTFS), BEZ závislosti na discord.py
 utils/render.py   Field (kartička), mřížka, limity embedů, header s časem
 ```
@@ -124,7 +126,7 @@ Pravidla:
 
 ## Oprávnění a intenty – kontrola při každé změně
 
-Aktuální stav (ověřeno pro verzi s `/ppv`, `/purkyne`, `/menzy`, `/restaurace`, `/mhd`, `/mhd-purkyne`, `/letaky`, `/maso`, `/napoje`, `/pivo`, `/novinky`):
+Aktuální stav (ověřeno pro verzi s `/ppv`, `/purkyne`, `/menzy`, `/restaurace`, `/mhd`, `/mhd-purkyne`, `/letaky`, `/maso`, `/napoje`, `/pivo`, `/domu`, `/obed`, `/co-jist`, `/pocasi`, `/novinky`):
 
 - **Intenty:** `discord.Intents.default()`, žádné privilegované (Message Content, Server Members, Presence vypnuté).
 - **Oprávnění bota:** View Channels, Send Messages, Embed Links → číselně `19456`.
@@ -221,6 +223,16 @@ Postup, když jsou nová oprávnění potřeba:
 - **Nepoužívej API mapy `mapa.idsjmk.cz`** (vyžaduje `X-Access-Token` z webu, jde o neautorizovaný přístup)
   ani nedokumentované `/api/departures` na idsjmk.cz. Živá zpoždění až s oficiálním přístupem od KORDIS,
   o který chce uživatel požádat.
+
+**Počasí – Open-Meteo** (`weather/openmeteo.py`): zdarma bez klíče, data CC BY 4.0 → v embedu musí zůstat
+uvedený zdroj („Data: Open-Meteo.com“). Souřadnice FITu, obnova na pozadí každých 15 min.
+
+**/domu** (`cogs/mhd.py`, `Timetable.connections`): spoje z `HOME_ORIGINS` (Česká, Malinovského nám., Hlavní nádraží)
+do `HOMES` (PPV, Purkyňovy koleje). Loader drží `trip_visits` = průjezdy sledovanými zastávkami včetně konečné.
+Hledá se i přes půlnoc: služba včerejška (časy 24:xx), dnešní i zítřejší (0:xx), noc končí ve 4:00. Noční linky = `N…`.
+
+**/obed** (`cogs/obed.py`): stav hlasování (kdo, kam, v kolik) je **jen v embedu zprávy** – tlačítka ho přečtou
+(`read_state`), upraví a přepíšou. Žádná databáze, přežije restart. Názvy polí musí odpovídat `SPOTS`.
 
 Obecně: na weby chodíme s cache (`lunch/fetcher.py`) a slušným User-Agentem, žádné agresivní dotazování.
 

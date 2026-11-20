@@ -27,9 +27,13 @@ Výpis je v embedech a pod ním jsou tlačítka na přepínání.
 | `/mhd` | PPV (koleje Pod Palackého vrchem): odjezdy z Technologického parku (tramvaje) a z Kolejní + výluky na těch linkách |
 | `/mhd-purkyne` | Totéž u kolejí Purkyňova: Červinkova (tramvaje) a Skácelova (autobusy a trolejbusy zvlášť na východ a na západ) |
 | `/letaky` | Akční letáky a dnešní otevírací doba: Lidl (Palackého, Šumavská, Bayerova), BILLA (Srbská), Albert (Semilasso), Globus (Ivanovice) |
-| `/maso` | Slevy na maso v těch samých obchodech, seřazené podle slevy, s přepínačem vepřové / hovězí / drůbež a „jen se slevou“ |
-| `/pivo` | Pivo v akci: lahve, plechovky, basy a multipacky (s cenou za litr), bez PET lahví, sudů a dárkových balení |
+| `/maso` | Slevy na maso v těch samých obchodech, seřazené podle slevy, s přepínačem vepřové / hovězí / drůbež a „jen se slevou“; nahoře 🏆 nejlevnější kus podle Kč/kg |
+| `/pivo` | Pivo v akci: lahve, plechovky, basy a multipacky (s cenou za litr), bez PET lahví, sudů a dárkových balení; nahoře 🏆 nejlevnější podle Kč/l |
 | `/napoje` | Energetické nápoje a limonády bez cukru v akci (✅ výslovně bez cukru, 🤷 různé druhy značky, která má i verzi bez cukru) |
+| `/domu` | Jak se dostat z centra (Česká, Malinovského nám., Hlavní nádraží) na PPV a Purkyňovy koleje: nejbližší, poslední denní a noční spoje |
+| `/obed` | Hlasování „Kdo jde na oběd?“ – tlačítka s menzami a restauracemi, časy, „Jdu teď“ |
+| `/co-jist` | Náhodné jídlo z dnešních menz a restaurací (znovu / jen menzy / jen Economy / jen restaurace) |
+| `/pocasi` | Počasí u FITu a kolejí (Open-Meteo): teď, dalších 18 h, dnes a zítra, rady na oblečení |
 | `/novinky` | Co je nového v posledních verzích bota (z [CHANGELOG.md](CHANGELOG.md)), s listováním ke starším |
 
 Všechny tři menzové commandy mají volitelný parametr `vse: True`. Ten místo Economy ukáže
@@ -81,6 +85,7 @@ Ceny u menz jsou pro **studenty VUT** (1. cena na webu KaM). Změníš je v `lun
 - **Slevy a letáky:** [Kupi.cz](https://www.kupi.cz). Bot čte jen veřejné stránky, které `robots.txt`
   povoluje (kategorie slev a stránky poboček), postupně se sekundovou pauzou. Data obnovuje na pozadí
   každé 3 hodiny. Obchody a pobočky se nastavují v `STORES` v `shops/service.py`.
+- **Počasí:** [Open-Meteo](https://open-meteo.com) (zdarma, bez klíče, CC BY 4.0), souřadnice FITu, obnova každých 15 min.
 - **MHD:** otevřená data KORDIS JMK (licence CC BY) – jízdní řád ve formátu GTFS
   (`kordis-jmk.cz/gtfs/gtfs.zip`, ukládá se do `data/` a obnovuje každých 12 h) a výluky
   z GTFS Realtime (`kordis-jmk.cz/gtfs/gtfsReal.dat`, cache 5 min).
@@ -285,6 +290,9 @@ cogs/menza.py       # /ppv, /purkyne, /menzy + tlačítka
 cogs/restaurace.py  # /restaurace + tlačítko obnovit
 cogs/mhd.py         # /mhd, /mhd-purkyne + tlačítka
 cogs/novinky.py     # /novinky (changelog s listováním)
+cogs/obed.py        # /obed (hlasování, stav je přímo v embedu zprávy)
+cogs/cojist.py      # /co-jist (náhodné jídlo)
+cogs/pocasi.py      # /pocasi
 cogs/slevy.py       # /letaky, /maso, /napoje, /pivo
 lunch/              # stahování a parsování (bez závislosti na Discordu)
   kam.py            #   menzy VUT – seznam menz a skupin (ppv, purkyne, vse)
@@ -296,6 +304,7 @@ lunch/              # stahování a parsování (bez závislosti na Discordu)
 shops/              # slevy a letáky z Kupi.cz (bez závislosti na Discordu)
   kupi.py           #   parser stránek Kupi.cz
   service.py        #   obchody a pobočky (STORES), stahování a cache
+weather/            # počasí z Open-Meteo (bez závislosti na Discordu)
 transit/            # MHD (bez závislosti na Discordu)
   gtfs.py           #   načtení jízdního řádu, odjezdy, navazující spoje
   alerts.py         #   výluky z GTFS Realtime
