@@ -15,6 +15,8 @@ from utils import render
 MODE_ECO = "eco"
 MODE_ALL = "all"
 
+VSE_DESCRIPTION = "Ukázat i polévky a ostatní hlavní jídla, ne jen Economy (saláty a přílohy se vynechávají)"
+
 # krátké popisky na tlačítka (limit 80 znaků, ale chceme to čitelné)
 GROUP_BUTTONS = {
     "ppv": "Kolejní · Mozzarella · SP",
@@ -23,17 +25,14 @@ GROUP_BUTTONS = {
 }
 
 
-def menza_lines(menu: Menu, mode: str) -> list[str]:
-    economy = [render.dish_line(d) for d in menu.economy]
+def menza_fields(menu: Menu, mode: str) -> list[render.Field]:
+    economy = [render.dish_field(d) for d in menu.economy]
     if mode == MODE_ECO:
         return economy
-    # "vše" = polévky + hlavní jídla, bez salátů/příloh/dezertů
-    others = [render.dish_line(d) for d in menu.mains if not d.economy]
-    return (
-        render.section(None, [render.soup_line(d) for d in menu.soups])
-        + render.section("Economy", economy)
-        + render.section("Hlavní jídla", others)
-    )
+    # "vše" = polévky + hlavní jídla, bez salátů/příloh/dezertů.
+    # Economy mají štítek E1, E2…, ostatní jídla jen cenu.
+    others = [render.dish_field(d) for d in menu.mains if not d.economy]
+    return render.soup_field(menu.soups) + economy + others
 
 
 async def build_message(
@@ -42,7 +41,7 @@ async def build_message(
     menus = await service.menza_menus(bot.fetcher, group, force=force)
     limit = render.per_embed_limit(len(menus))
     empty = "Dnes tu není žádné Economy jídlo." if mode == MODE_ECO else "Dnes tu nejsou žádná hlavní jídla."
-    embeds = [render.menu_embed(m, menza_lines(m, mode), limit, empty) for m in menus]
+    embeds = [render.menu_embed(m, menza_fields(m, mode), limit, empty) for m in menus]
     embeds = render.finish(embeds, f"Ceny: {kam.PRICE_LABEL} · kam.vut.cz", menus)
 
     title = "Economy menu" if mode == MODE_ECO else "Jídla v menzách"
@@ -126,18 +125,28 @@ class Menza(commands.Cog):
     async def cog_unload(self) -> None:
         self.bot.remove_dynamic_items(MenzaButton)
 
-    @app_commands.command(name="menza", description="Co je dnes k obědu v menzách VUT (Economy menu)")
-    @app_commands.describe(
-        kde="Které menzy vypsat (výchozí: ppv = Kolejní, Mozzarella, Starý pivovar)",
-        vse_jidla="Ukázat všechna hlavní jídla a polévky, ne jen Economy (saláty a přílohy se vynechávají)",
-    )
-    @app_commands.choices(
-        kde=[app_commands.Choice(name=f"{g.key} – {g.label}", value=g.key) for g in kam.GROUPS.values()]
-    )
-    async def menza(self, interaction: discord.Interaction, kde: str = "ppv", vse_jidla: bool = False) -> None:
+    async def _send(self, interaction: discord.Interaction, group: str, vse: bool) -> None:
         await interaction.response.defer(thinking=True)
-        content, embeds, view = await build_message(self.bot, kde, MODE_ALL if vse_jidla else MODE_ECO)
+        content, embeds, view = await build_message(self.bot, group, MODE_ALL if vse else MODE_ECO)
         await interaction.followup.send(content=content, embeds=embeds, view=view)
+
+    # Každá skupina menz má vlastní command, takže stačí napsat /menza + Enter.
+    # Mezi skupinami se pak dá přepínat i tlačítky pod zprávou.
+
+    @app_commands.command(name="menza", description="Economy: Kolejní, Mozzarella, Starý pivovar")
+    @app_commands.describe(vse=VSE_DESCRIPTION)
+    async def menza(self, interaction: discord.Interaction, vse: bool = False) -> None:
+        await self._send(interaction, "ppv", vse)
+
+    @app_commands.command(name="purkyne", description="Economy: Purkyňova, Starý pivovar")
+    @app_commands.describe(vse=VSE_DESCRIPTION)
+    async def purkyne(self, interaction: discord.Interaction, vse: bool = False) -> None:
+        await self._send(interaction, "purkyne", vse)
+
+    @app_commands.command(name="menzy", description="Economy ze všech menz VUT, kde ho vaří")
+    @app_commands.describe(vse=VSE_DESCRIPTION)
+    async def menzy(self, interaction: discord.Interaction, vse: bool = False) -> None:
+        await self._send(interaction, "vse", vse)
 
 
 async def setup(bot: commands.Bot) -> None:

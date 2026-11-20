@@ -8,14 +8,21 @@ a pod ním jsou tlačítka na přepínání.
 
 | Command | Co dělá |
 |---|---|
-| `/menza` | Economy menu: Menza Kolejní, Pizzerie Mozzarella, Menza Starý pivovar (`kde: ppv`, výchozí) |
-| `/menza kde: purkyne` | Menza Purkyňova + Starý pivovar |
-| `/menza kde: vse` | Všechny menzy, kde bývá Economy (Kolejní, Mozzarella, SP, Purkyňova, Q Technická, FCH, Rybkova) |
-| `/menza vse_jidla: True` | Místo jen Economy ukáže polévky a všechna hlavní jídla (saláty, přílohy a dezerty vynechá) |
+| `/menza` | Economy: Menza Kolejní, Pizzerie Mozzarella, Menza Starý pivovar |
+| `/purkyne` | Economy: Menza Purkyňova + Starý pivovar |
+| `/menzy` | Economy ze všech menz, kde ho vaří (Kolejní, Mozzarella, SP, Purkyňova, Q Technická, FCH, Rybkova) |
 | `/restaurace` | Polední menu: U 3 opic, Padagali, La Strada |
+
+Všechny tři menzové commandy mají volitelný parametr `vse: True`. Ten místo Economy ukáže
+polévky a všechna hlavní jídla (saláty, přílohy a dezerty vynechá).
 
 Tlačítka pod zprávou přepínají skupinu menz, Economy/vše a obnovují data. Stav je uložený
 přímo v ID tlačítka, takže tlačítka fungují i po restartu bota.
+
+Každé jídlo je ve výpisu jako kartička: emoji, štítek (`E1`…), cena a název. U menz se kartičky
+na desktopu skládají do mřížky po třech, u restaurací (dlouhé názvy) je jedno jídlo na řádek.
+Emoji se vybírá podle klíčových slov v názvu jídla, pravidla jsou v `lunch/emoji.py`
+(stačí připsat řádek s emoji a regexem).
 
 Ceny u menz jsou pro **studenty VUT** (1. cena na webu KaM). Změníš je v `lunch/kam.py`
 (`PRICE_CLASS` / `PRICE_LABEL`).
@@ -62,10 +69,11 @@ pak se commandy objeví hned. Bez něj se registrují globálně, což může tr
 ```
 bot.py              # vstupní bod, načte cogy, synchronizuje slash commandy
 config.py           # načtení .env
-cogs/menza.py       # /menza + tlačítka
+cogs/menza.py       # /menza, /purkyne, /menzy + tlačítka
 cogs/restaurace.py  # /restaurace + tlačítko obnovit
 lunch/              # stahování a parsování (bez závislosti na Discordu)
   kam.py            #   menzy VUT – seznam menz a skupin (ppv, purkyne, vse)
+  emoji.py          #   výběr emoji k jídlu podle klíčových slov
   menicka.py        #   menicka.cz
   lastrada.py       #   La Strada
   service.py        #   seznam restaurací, paralelní načítání
@@ -78,7 +86,7 @@ tests/              # testy parserů nad uloženými HTML stránkami
 a přidej položku do `RESTAURANTS` v `lunch/service.py`.
 
 **Přidání menzy nebo skupiny:** uprav `MENZY` / `GROUPS` v `lunch/kam.py`. Popisek tlačítka
-pro novou skupinu přidej do `GROUP_BUTTONS` v `cogs/menza.py`.
+pro novou skupinu přidej do `GROUP_BUTTONS` v `cogs/menza.py` a případně k ní přidej command.
 
 ## Testy
 

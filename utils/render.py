@@ -1,18 +1,26 @@
-"""Převod jídelníčků (lunch.models.Menu) na Discord embedy."""
+"""Převod jídelníčků (lunch.models.Menu) na Discord embedy.
+
+Každé jídlo je samostatný field embedu ("kartička"): v nadpisu emoji, štítek a cena,
+pod tím název. Inline fieldy Discord na desktopu skládá do mřížky po třech,
+na mobilu pod sebe.
+"""
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+import re
+from dataclasses import dataclass
 from datetime import date
 
 import discord
 
+from lunch import emoji
 from lunch.models import Dish, Menu
 
-# Discord limity: 10 embedů na zprávu, 6000 znaků dohromady, 4096 na description
+# Discord limity: 10 embedů na zprávu, 6000 znaků dohromady, 25 fieldů na embed
 MAX_EMBEDS = 10
+MAX_FIELDS = 25
 TOTAL_BUDGET = 5800
-DESC_LIMIT = 4096
+FIELD_VALUE_LIMIT = 1024
 
 WEEKDAYS = ["pondělí", "úterý", "středa", "čtvrtek", "pátek", "sobota", "neděle"]
 
@@ -21,66 +29,60 @@ def czech_date(d: date) -> str:
     return f"{WEEKDAYS[d.weekday()]} {d.day}. {d.month}."
 
 
-def dish_line(d: Dish) -> str:
-    label = f"`{d.label}` " if d.label else ""
-    price = f" — **{d.price}**" if d.price else ""
-    return f"{label}{d.name}{price}"
+@dataclass
+class Field:
+    name: str
+    value: str
+    inline: bool = True
+
+    def __len__(self) -> int:
+        return len(self.name) + len(self.value)
 
 
-def soup_line(d: Dish) -> str:
-    price = f" — {d.price}" if d.price else ""
-    return f"🥣 {d.name}{price}"
+def dish_field(d: Dish, inline: bool = True) -> Field:
+    head = " · ".join(p for p in (d.label, d.price) if p)
+    return Field(f"{emoji.for_dish(d)} {head}".strip(), d.name[:FIELD_VALUE_LIMIT], inline)
 
 
-def section(title: str | None, lines: Iterable[str]) -> list[str]:
-    lines = list(lines)
-    if not lines:
+def _soup_name(name: str) -> str:
+    """'Polévka rajčatová s těstovinou' -> 'Rajčatová s těstovinou' (nadpis už říká Polévka)."""
+    short = re.sub(r"^polévka\s+", "", name, flags=re.IGNORECASE)
+    return short[:1].upper() + short[1:] if short else name
+
+
+def soup_field(soups: list[Dish]) -> list[Field]:
+    if not soups:
         return []
-    return ([f"**{title}**"] if title else []) + lines
-
-
-def fit_lines(lines: list[str], limit: int) -> str:
-    """Poskládá řádky do limitu znaků; co se nevejde, nahradí poznámkou."""
-    out: list[str] = []
-    used = 0
-    for i, line in enumerate(lines):
-        rest = len(lines) - i
-        reserve = 40 if rest > 1 else 0  # místo na "…a další"
-        if used + len(line) + 1 + reserve > limit:
-            hidden = sum(1 for x in lines[i:] if not x.startswith("**"))
-            out.append(f"_…a dalších {hidden} položek – viz web_")
-            break
-        out.append(line)
-        used += len(line) + 1
-    return "\n".join(out)
-
-
-def menu_embed(menu: Menu, lines: list[str], limit: int, empty_text: str) -> discord.Embed:
-    place = menu.place
-    if menu.error:
-        description = f"⚠️ {menu.error}"
-    elif menu.note and not lines:
-        description = f"ℹ️ {menu.note}"
-    elif not lines:
-        description = f"_{empty_text}_"
-    else:
-        description = fit_lines(lines, limit)
-
-    embed = discord.Embed(
-        title=f"{place.emoji} {place.name}",
-        url=place.url,
-        description=description,
-        color=place.color,
-    )
-    if menu.hours:
-        embed.set_footer(text=f"Menu: {menu.hours}")
-    return embed
+    lines = [_soup_name(d.name) + (f" — {d.price}" if d.price else "") for d in soups]
+    title = "Polévka" if len(soups) == 1 else "Polévky"
+    return [Field(f"{emoji.SOUP} {title}", "\n".join(lines)[:FIELD_VALUE_LIMIT], inline=False)]
 
 
 def per_embed_limit(count: int) -> int:
     count = max(1, min(count, MAX_EMBEDS))
     # ~120 znaků rezerva na titulek a patičku každého embedu
-    return min(DESC_LIMIT, TOTAL_BUDGET // count - 120)
+    return TOTAL_BUDGET // count - 120
+
+
+def menu_embed(menu: Menu, fields: list[Field], limit: int, empty_text: str) -> discord.Embed:
+    place = menu.place
+    embed = discord.Embed(title=f"{place.emoji} {place.name}", url=place.url, color=place.color)
+    if menu.hours:
+        embed.set_footer(text=f"Menu: {menu.hours}")
+
+    if menu.error:
+        embed.description = f"⚠️ {menu.error}"
+    elif not fields:
+        embed.description = f"ℹ️ {menu.note}" if menu.note else f"_{empty_text}_"
+    else:
+        used = 0
+        for i, f in enumerate(fields):
+            if used + len(f) + 60 > limit or i >= MAX_FIELDS - 1:
+                embed.add_field(name="…", value=f"a dalších {len(fields) - i} – viz web", inline=False)
+                break
+            embed.add_field(name=f.name, value=f.value, inline=f.inline)
+            used += len(f)
+    return embed
 
 
 def finish(embeds: list[discord.Embed], footer: str, menus: list[Menu]) -> list[discord.Embed]:

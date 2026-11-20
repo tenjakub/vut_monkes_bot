@@ -13,8 +13,9 @@ from lunch.models import Menu
 from utils import render
 
 
-def restaurant_lines(menu: Menu) -> list[str]:
-    return [render.soup_line(d) for d in menu.soups] + [render.dish_line(d) for d in menu.mains]
+def restaurant_fields(menu: Menu) -> list[render.Field]:
+    # Názvy jídel v restauracích jsou dlouhé, takže tady jedno jídlo na řádek místo mřížky
+    return render.soup_field(menu.soups) + [render.dish_field(d, inline=False) for d in menu.mains]
 
 
 async def build_message(
@@ -22,7 +23,7 @@ async def build_message(
 ) -> tuple[str, list[discord.Embed], discord.ui.View]:
     menus = await service.restaurant_menus(bot.fetcher, force=force)
     limit = render.per_embed_limit(len(menus))
-    embeds = [render.menu_embed(m, restaurant_lines(m), limit, "Menu je prázdné.") for m in menus]
+    embeds = [render.menu_embed(m, restaurant_fields(m), limit, "Menu je prázdné.") for m in menus]
     embeds = render.finish(embeds, "menicka.cz + weby restaurací", menus)
     content = f"### 🍴 Polední menu restaurací – {render.czech_date(service.today())}"
     return content, embeds, build_view()
