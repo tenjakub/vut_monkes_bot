@@ -6,7 +6,7 @@ Tenhle soubor je pro AI, která na projektu pracuje. Lidský návod je v [README
 
 - **VUT Monkes bot** – Discord bot pro kamarádský server studentů VUT (FIT). Python 3.14, discord.py 2.x.
 - Commandy: `/ppv`, `/purkyne`, `/menzy` (menzy VUT), `/restaurace` (polední menu), `/mhd`, `/mhd-purkyne` (odjezdy MHD Brno),
-  `/letaky`, `/maso`, `/napoje` (letáky a slevy supermarketů), `/novinky` (changelog).
+  `/letaky`, `/maso`, `/napoje`, `/pivo` (letáky a slevy supermarketů), `/novinky` (changelog).
 - **Celý kód píše AI.** Majitel repa zadává požadavky, testuje na Discordu a rozhoduje. Kód nepíše, ale čte ho.
 - **Jazyk:** komunikace s uživatelem, texty v botovi, komentáře, docstringy i commit zprávy jsou **česky**.
   Identifikátory v kódu jsou anglicky.
@@ -112,7 +112,7 @@ Pravidla:
 
 ## Oprávnění a intenty – kontrola při každé změně
 
-Aktuální stav (ověřeno pro verzi s `/ppv`, `/purkyne`, `/menzy`, `/restaurace`, `/mhd`, `/mhd-purkyne`, `/letaky`, `/maso`, `/napoje`, `/novinky`):
+Aktuální stav (ověřeno pro verzi s `/ppv`, `/purkyne`, `/menzy`, `/restaurace`, `/mhd`, `/mhd-purkyne`, `/letaky`, `/maso`, `/napoje`, `/pivo`, `/novinky`):
 
 - **Intenty:** `discord.Intents.default()`, žádné privilegované (Message Content, Server Members, Presence vypnuté).
 - **Oprávnění bota:** View Channels, Send Messages, Embed Links → číselně `19456`.
@@ -168,7 +168,11 @@ Postup, když jsou nová oprávnění potřeba:
 - Nápoje (`DRINK_CATEGORIES`: energetické + limonády) jen bez cukru (`shops.service.sugar_free`). Kupi.cz varianty
   často neuvádí („různé druhy“), proto dvě úrovně: `SUGAR_FREE` = název/poznámka říká zero/bez cukru/max…,
   `MAYBE_SUGAR_FREE` = „různé/vybrané druhy“ značky ze seznamu `ZERO_BRANDS`. Ostatní (např. „regular“) se nezobrazují.
-- Výpisy akcí (`cogs/slevy.DEAL_VIEWS`) sdílí kód; nový výpis = `DealView` + kategorie v `shops/service.py`.
+- Pivo (`BEER_CATEGORIES`, `shops.service.beer_pack`): balení se pozná z balení akce (`Deal.amount`, např. „6x 0.5 l“)
+  a poznámky („plech“, „+3 Kč záloha na láhev“ = lahev, „záloha na láhve“ = multipack). Vyřazené: PET, objem > 1 l (sudy),
+  dárková balení (krýgl, sklenice, metr piv…) a cena nad 150 Kč/l. Řadí se podle slevy a pak ceny za litr (`Deal.unit_price`).
+- Výpisy akcí (`cogs/slevy.DEAL_VIEWS`) sdílí kód; nový výpis = `DealView` (kategorie Kupi, tlačítka filtru, funkce
+  `classify` akce → klíč filtru / None, `loader` v `Shops`) + kategorie v `shops/service.py`.
   Tlačítka mají stav v custom_id `slevy:<pohled>:<filtr>:<jen se slevou 0/1>:<slot>`, příznak 0/1 je volitelný
   kvůli tlačítkům ze starších zpráv.
 - Akce řetězců jsou většinou celostátní; letáky a otevírací doba jsou ze stránky konkrétní pobočky

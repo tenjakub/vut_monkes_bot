@@ -28,6 +28,7 @@ Výpis je v embedech a pod ním jsou tlačítka na přepínání.
 | `/mhd-purkyne` | Totéž u kolejí Purkyňova: Červinkova (tramvaje) a Skácelova (autobusy a trolejbusy zvlášť na východ a na západ) |
 | `/letaky` | Akční letáky a dnešní otevírací doba: Lidl (Palackého, Šumavská, Bayerova), BILLA Srbská, Albert Semilasso, Globus Ivanovice |
 | `/maso` | Slevy na maso v těch samých obchodech, seřazené podle slevy, s přepínačem vepřové / hovězí / drůbež a „jen se slevou“ |
+| `/pivo` | Pivo v akci: lahve, plechovky, basy a multipacky (s cenou za litr), bez PET lahví, sudů a dárkových balení |
 | `/napoje` | Energetické nápoje a limonády bez cukru v akci (✅ výslovně bez cukru, 🤷 různé druhy značky, která má i verzi bez cukru) |
 | `/novinky` | Co je nového v posledních verzích bota (z [CHANGELOG.md](CHANGELOG.md)), s listováním ke starším |
 
@@ -274,7 +275,7 @@ cogs/menza.py       # /ppv, /purkyne, /menzy + tlačítka
 cogs/restaurace.py  # /restaurace + tlačítko obnovit
 cogs/mhd.py         # /mhd, /mhd-purkyne + tlačítka
 cogs/novinky.py     # /novinky (changelog s listováním)
-cogs/slevy.py       # /letaky, /maso, /napoje
+cogs/slevy.py       # /letaky, /maso, /napoje, /pivo
 lunch/              # stahování a parsování (bez závislosti na Discordu)
   kam.py            #   menzy VUT – seznam menz a skupin (ppv, purkyne, vse)
   emoji.py          #   výběr emoji k jídlu podle klíčových slov

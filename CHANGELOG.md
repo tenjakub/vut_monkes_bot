@@ -11,6 +11,12 @@ Formát (bot ho čte, viz utils/changelog.py):
 Nejnovější verze je vždy nahoře.
 -->
 
+## 1.4 · 2026-11-20 · Pivo 🍺
+
+- 🍺 Nový command `/pivo` ukáže pivo v akci v Lidlu, BILLE Srbská, Albertu Semilasso a Globusu Ivanovice.
+- 🍾 🥫 📦 Tlačítky se dá vybrat jen lahve, plechovky, nebo basy a multipacky. U multipacků je cena za litr, ať se dá porovnat, co se vyplatí víc.
+- 🚫 PET lahve, sudy a dárková balení s krýglem se nezobrazují.
+
 ## 1.3 · 2026-11-20 · Nápoje bez cukru
 
 - 🥤 Nový command `/napoje` ukáže energetické nápoje a limonády bez cukru v akci ve stejných obchodech jako `/maso`. ✅ znamená výslovně bez cukru (Zero, bez cukru…), 🤷 akci na „různé druhy“ značky, která verzi bez cukru vyrábí.

@@ -70,6 +70,52 @@ def sugar_free(deal: kupi.Deal) -> str | None:
     return None
 
 
+# --- pivo -----------------------------------------------------------------------------------
+
+BEER_CATEGORIES: dict[str, tuple[str, str]] = {"pivo": ("🍺", "Pivo")}
+
+BEER_BOTTLE = "lahev"
+BEER_CAN = "plechovka"
+BEER_PACK = "multipack"
+BEER_PACKS: dict[str, tuple[str, str]] = {
+    BEER_BOTTLE: ("🍾", "Lahve"),
+    BEER_CAN: ("🥫", "Plechovky"),
+    BEER_PACK: ("📦", "Basy a multipacky"),
+}
+# PET lahve, sudy a dárková balení (s krýglem, sklenicí, "metr piv"…) nechceme
+_BEER_EXCLUDE_RE = re.compile(
+    r"\bpet\b|\bsud|soudek|darkov|krygl|sklenic|gobletk|dzban|\bsal[au]\b|\bmetr\b|adventni|ikonicke sklo|korbel"
+)
+_PACK_COUNT_RE = re.compile(r"(\d+)\s*x\s*(\d+(?:[.,]\d+)?)\s*l")
+_VOLUME_RE = re.compile(r"(\d+(?:[.,]\d+)?)\s*l\b")
+_UNIT_PRICE_RE = re.compile(r"([\d\s]+,\d+)\s*Kč\s*/\s*1\s*l")
+
+
+def beer_pack(deal: kupi.Deal) -> str | None:
+    """Typ balení piva (BEER_BOTTLE / BEER_CAN / BEER_PACK), nebo None pro PET, sudy a dárková balení."""
+    text = _simplify(f"{deal.product} {deal.note}")
+    if _BEER_EXCLUDE_RE.search(text):
+        return None
+    amount = deal.amount.lower()
+    pack = _PACK_COUNT_RE.search(amount)
+    volume = float((pack.group(2) if pack else (_VOLUME_RE.search(amount) or [None, "0"])[1]).replace(",", "."))
+    if volume > 1.0:  # 1,5 l a víc = PET nebo soudek
+        return None
+    per_liter = price_per_liter(deal)
+    if per_liter and per_liter > 150:  # sběratelské/dárkové lahve (1 l Pilsner za 229 Kč), ne akce na pivo
+        return None
+    if (pack and int(pack.group(1)) > 1) or "basa" in text or "prepravk" in text or "zaloha na lahve" in text:
+        return BEER_PACK
+    if "plech" in text:
+        return BEER_CAN
+    return BEER_BOTTLE
+
+
+def price_per_liter(deal: kupi.Deal) -> float | None:
+    m = _UNIT_PRICE_RE.search(deal.unit_price)
+    return float(m.group(1).replace(" ", "").replace(",", ".")) if m else None
+
+
 @dataclass(frozen=True)
 class Branch:
     label: str  # krátký popis pobočky do výpisu
@@ -167,6 +213,9 @@ class Shops:
     async def drink_deals(self, force: bool = False) -> DealsResult:
         return await self.deals(tuple(DRINK_CATEGORIES), force)
 
+    async def beer_deals(self, force: bool = False) -> DealsResult:
+        return await self.deals(tuple(BEER_CATEGORIES), force)
+
     async def store_pages(self, force: bool = False) -> dict[str, kupi.StorePage | None]:
         """Stránky poboček (letáky + otevírací doba). Klíč = Branch.kupi_path."""
         pages: dict[str, kupi.StorePage | None] = {}
@@ -187,4 +236,5 @@ class Shops:
         """Obnoví cache na pozadí (volá se pravidelně), aby commandy odpovídaly hned."""
         await self.meat_deals(force=True)
         await self.drink_deals(force=True)
+        await self.beer_deals(force=True)
         await self.store_pages(force=True)

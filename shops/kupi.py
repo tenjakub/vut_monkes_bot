@@ -32,7 +32,7 @@ _LD_DAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
 class Deal:
     id: str
     product: str
-    amount: str  # "1 kg", "100 g", "" když není
+    amount: str  # balení z akce ("1 kg", "6x 0.5 l"), jinak obecné z produktu, "" když není
     shop: str  # název obchodu tak, jak ho uvádí Kupi ("Lidl", "Albert supermarket", …)
     price: str  # "99,90 Kč"
     percent: int | None  # sleva v %, pokud ji Kupi uvádí
@@ -41,6 +41,7 @@ class Deal:
     category: str  # slug kategorie Kupi ("drubez", …)
     url: str  # detail produktu na Kupi.cz
     note: str = ""  # poznámka k akci ("různé druhy, plech", "regular", …)
+    unit_price: str = ""  # cena za jednotku ("31,97 Kč / 1 l"), pokud ji Kupi uvádí
 
     def is_current(self, today: date) -> bool:
         return (self.valid_from is None or self.valid_from <= today) and (
@@ -113,12 +114,14 @@ def parse_deals(html: str, category: str, today: date, page: int = 1) -> tuple[l
             if not shop or not price:
                 continue
             pct = _PERCENT_RE.search(_text(row.select_one(".discount_percentage")))
+            # balení konkrétní akce ("/ 6x 0.5 l") je přesnější než obecná gramáž produktu
+            row_amount = _text(row.select_one(".discount_amount")).lstrip("/ ").strip()
             valid_from, valid_to = parse_validity(_text(row.select_one(".discounts_validity")), today)
             deals.append(
                 Deal(
                     id=row.get("data-discount") or f"{name}|{shop}|{price}",
                     product=name,
-                    amount=amount,
+                    amount=row_amount or amount,
                     shop=shop,
                     price=price,
                     percent=int(pct.group(1)) if pct else None,
@@ -127,6 +130,7 @@ def parse_deals(html: str, category: str, today: date, page: int = 1) -> tuple[l
                     category=category,
                     url=url,
                     note=_text(row.select_one(".discount_note")),
+                    unit_price=_text(row.select_one(".price_per_unit")),
                 )
             )
     has_next = soup.select_one(f"a[href='/slevy/{category}?page={page + 1}']") is not None

@@ -146,3 +146,63 @@ def test_drinks_only_sugar_free_sure_first():
     text = embed.description
     assert text.index("✅ Bez cukru") < text.index("Coca Cola Zero") < text.index("🤷") < text.index("Red Bull")
     assert "Limonáda" not in text and "Energetický nápoj" not in text  # zkrácené názvy
+
+
+# --- pivo ---------------------------------------------------------------------------------------
+
+from shops.service import BEER_BOTTLE, BEER_CAN, BEER_PACK, beer_pack, price_per_liter  # noqa: E402
+
+
+def _beer(name, amount="0.5 l", note="", price="15,90 Kč", unit="31,80 Kč / 1 l", pct=None, shop="BILLA"):
+    return kupi.Deal(f"{name}{amount}{note}{price}", name, amount, shop, price, pct, None, date(2026, 11, 24),
+                     "pivo", kupi.BASE, note, unit)
+
+
+@pytest.mark.parametrize(
+    ("deal", "expected"),
+    [
+        (_beer("Pivo světlý ležák 12° Velkopopovický Kozel", note="+3 Kč záloha na láhev"), BEER_BOTTLE),
+        (_beer("Pivo světlý ležák 12° Staropramen", note="plech"), BEER_CAN),
+        (_beer("Pivo Originál 10° Gambrinus", "6x 0.5 l", "plech", "95,90 Kč", "31,97 Kč / 1 l"), BEER_PACK),
+        (_beer("Pivo Krušovice", "10x 0.5 l", "+30 Kč záloha na láhve", "127,90 Kč", "25,58 Kč / 1 l"), BEER_PACK),
+        (_beer("Pivo Litovel", "", "basa, 20 lahví"), BEER_PACK),
+        (_beer("Pivo světlý ležák Corona Extra", "0.33 l", "sklo"), BEER_BOTTLE),
+        (_beer("Pivo světlé Březňák", "2 l", "pet láhev"), None),  # PET
+        (_beer("Pivo Svijanský Máz", "5 l", "", "279,90 Kč", "55,98 Kč / 1 l"), None),  # soudek
+        (_beer("Pivo Pilsner Urquell - dárkové balení", "8x 0.5 l", "+ krýgl, +24 Kč záloha na láhve"), None),
+        (_beer("Pivo Pilsner Urquell", "6x 0.5 l", "metr piv, plech"), None),
+        (_beer("Pivo Retro láhev Pilsner Urquell", "1 l", "", "229,90 Kč", "229,90 Kč / 1 l"), None),  # sběratelská
+    ],
+)
+def test_beer_pack(deal, expected):
+    assert beer_pack(deal) == expected
+
+
+def test_price_per_liter():
+    assert price_per_liter(_beer("x", unit="1 031,97 Kč / 1 l")) == 1031.97
+    assert price_per_liter(_beer("x", unit="99,90 Kč / 1 kg")) is None
+
+
+def test_beer_view_lines_and_filters():
+    deals = [
+        _beer("Pivo světlý ležák 12° Staropramen", note="plech", pct=33),
+        _beer("Pivo Originál 10° Gambrinus", "6x 0.5 l", "plech", "95,90 Kč", "31,97 Kč / 1 l"),
+        _beer("Pivo světlé Braník", note="+3 Kč záloha na láhev", price="10,90 Kč", unit="21,80 Kč / 1 l"),
+        _beer("Pivo světlé Březňák", "2 l", "pet láhev"),
+    ]
+    billa = STORES["billa"]
+    assert len(slevy.store_deals(deals, billa, slevy.ALL, DAY, view=slevy.VIEW_BEER)) == 3
+    packs = slevy.store_deals(deals, billa, BEER_PACK, DAY, view=slevy.VIEW_BEER)
+    assert [d.product for d in packs] == ["Pivo Originál 10° Gambrinus"]
+    line = slevy._deal_line(packs[0], slevy.DEAL_VIEWS[slevy.VIEW_BEER], DAY)
+    assert line.startswith("📦 Originál 10° Gambrinus 6× 0,5 l — **95,90 Kč** (32 Kč/l)")
+    # bez slevy v % řadí podle ceny za litr (Braník 21,80 Kč/l před Gambrinusem 31,97 Kč/l)
+    no_pct = [d.product for d in slevy.store_deals(deals, billa, slevy.ALL, DAY, view=slevy.VIEW_BEER)[1:]]
+    assert no_pct == ["Pivo světlé Braník", "Pivo Originál 10° Gambrinus"]
+
+
+def test_parse_real_beer_page():
+    deals, has_next = kupi.parse_deals(read("kupi_pivo_1.html"), "pivo", DAY, page=1)
+    assert has_next
+    multipack = next(d for d in deals if d.amount.startswith("6x"))
+    assert multipack.unit_price.endswith("/ 1 l")

@@ -1,9 +1,10 @@
-"""/letaky, /maso a /napoje – akční letáky a vybrané slevy supermarketů, data z Kupi.cz."""
+"""/letaky, /maso, /napoje a /pivo – akční letáky a vybrané slevy supermarketů, data z Kupi.cz."""
 
 from __future__ import annotations
 
 import logging
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date, timedelta
 
@@ -15,12 +16,17 @@ from lunch import emoji
 from lunch.service import today
 from shops import kupi
 from shops.service import (
+    BEER_CATEGORIES,
+    BEER_PACK,
+    BEER_PACKS,
     DRINK_CATEGORIES,
     MEAT_CATEGORIES,
     STORES,
     SUGAR_FREE,
     Shops,
     Store,
+    beer_pack,
+    price_per_liter,
     sugar_free,
 )
 from utils import render
@@ -30,6 +36,7 @@ log = logging.getLogger(__name__)
 VIEW_LEAFLETS = "letaky"
 VIEW_MEAT = "maso"
 VIEW_DRINKS = "napoje"
+VIEW_BEER = "pivo"
 ALL = "vse"
 MAX_DEALS = 10  # akcí na obchod
 MAX_LEAFLETS = 5
@@ -38,15 +45,18 @@ SHORT_DAYS = ["po", "út", "st", "čt", "pá", "so", "ne"]
 
 @dataclass(frozen=True)
 class DealView:
-    """Výpis akcí z vybraných kategorií Kupi.cz (maso, nápoje)."""
+    """Výpis akcí z vybraných kategorií Kupi.cz (maso, nápoje, pivo)."""
 
     key: str
     title: str
     button: tuple[str, str]  # (emoji, popisek) tlačítka v horní řadě
-    categories: dict[str, tuple[str, str]]  # slug -> (emoji, popisek)
-    filters: tuple[str, ...]  # kategorie, které mají vlastní tlačítko filtru
+    categories: dict[str, tuple[str, str]]  # kategorie Kupi.cz, ze kterých se akce berou
+    filters: dict[str, tuple[str, str]]  # tlačítka filtru: klíč -> (emoji, popisek)
+    classify: Callable[[kupi.Deal], str | None]  # akce -> klíč filtru, None = nezobrazovat
+    loader: str  # metoda Shops, která akce stáhne
     empty: str
     link_category: str  # kategorie Kupi.cz pro odkaz "všechny akce řetězce"
+    note: str = ""  # vysvětlivka pod nadpisem zprávy
 
 
 DEAL_VIEWS: dict[str, DealView] = {
@@ -54,19 +64,35 @@ DEAL_VIEWS: dict[str, DealView] = {
     for v in [
         DealView(
             VIEW_MEAT, "🥩 Slevy na maso", ("🥩", "Maso"), MEAT_CATEGORIES,
-            ("veprove-maso", "hovezi-maso", "drubez"), "Teď tu žádné slevy na maso nejsou.", "maso-drubez-a-ryby",
+            {k: MEAT_CATEGORIES[k] for k in ("veprove-maso", "hovezi-maso", "drubez")},
+            lambda d: d.category, "meat_deals",
+            "Teď tu žádné slevy na maso nejsou.", "maso-drubez-a-ryby",
         ),
         DealView(
-            VIEW_DRINKS, "🥤 Nápoje bez cukru", ("🥤", "Nápoje"), DRINK_CATEGORIES,
-            tuple(DRINK_CATEGORIES), "Teď tu žádné nápoje bez cukru v akci nejsou.", "nealko-napoje",
+            VIEW_DRINKS, "🥤 Nápoje bez cukru", ("🥤", "Nápoje"), DRINK_CATEGORIES, DRINK_CATEGORIES,
+            lambda d: d.category if sugar_free(d) else None, "drink_deals",
+            "Teď tu žádné nápoje bez cukru v akci nejsou.", "nealko-napoje",
+            "✅ výslovně bez cukru · 🤷 akce na různé druhy značky, která má i verzi bez cukru",
+        ),
+        DealView(
+            VIEW_BEER, "🍺 Pivo v akci", ("🍺", "Pivo"), BEER_CATEGORIES, BEER_PACKS,
+            beer_pack, "beer_deals",
+            "Teď tu žádné pivo v akci není. 😢", "pivo",
+            "🍾 lahve · 🥫 plechovky · 📦 basy a multipacky (s cenou za litr) · bez PET lahví, sudů a dárkových balení",
         ),
     ]
 }
 VIEWS = (VIEW_LEAFLETS, *DEAL_VIEWS)
 # zpětná kompatibilita (testy, starší kód)
-MEAT_FILTERS = {ALL: ("🥩", "Všechno"), **{k: MEAT_CATEGORIES[k] for k in DEAL_VIEWS[VIEW_MEAT].filters}}
+MEAT_FILTERS = {ALL: ("🥩", "Všechno"), **DEAL_VIEWS[VIEW_MEAT].filters}
 
 _DRINK_PREFIX_RE = re.compile(r"^(energetický nápoj|limonád[ay])\s+", re.IGNORECASE)
+_BEER_PREFIX_RE = re.compile(r"^pivo\s+", re.IGNORECASE)
+
+
+def _pretty_amount(amount: str) -> str:
+    """'6x 0.5 l' -> '6× 0,5 l'"""
+    return re.sub(r"(\d)\.(\d)", r"\1,\2", re.sub(r"(\d)\s*x\s*", r"\1× ", amount))
 
 
 def _short_date(d: date) -> str:
@@ -147,20 +173,28 @@ def _leaflets_embed(store: Store, pages: dict[str, kupi.StorePage | None], day: 
 
 
 def _deal_line(d: kupi.Deal, view: DealView, day: date) -> str:
+    extra = ""
     if view.key == VIEW_DRINKS:
         icon = view.categories.get(d.category, ("🥤",))[0]
         name = _DRINK_PREFIX_RE.sub("", d.product) or d.product
-        name = name[:1].upper() + name[1:]
+    elif view.key == VIEW_BEER:
+        pack = beer_pack(d)
+        icon = BEER_PACKS.get(pack, ("🍺",))[0]
+        name = _BEER_PREFIX_RE.sub("", d.product) or d.product
+        per_liter = price_per_liter(d)
+        if pack == BEER_PACK and per_liter:
+            extra = f" ({per_liter:.0f} Kč/l)"
     else:
         icon = emoji.for_name(d.product)
         if icon == emoji.FALLBACK:
             icon = view.categories.get(d.category, ("🥩",))[0]
         name = d.product
+    name = name[:1].upper() + name[1:]
     name = name if len(name) <= 55 else name[:54] + "…"
-    amount = f" {d.amount}" if d.amount else ""
+    amount = f" {_pretty_amount(d.amount)}" if d.amount else ""
     pct = f" `−{d.percent} %`" if d.percent else ""
     when = _validity(d.valid_from, d.valid_to, day)
-    return f"{icon} {name}{amount} — **{d.price}**{pct}" + (f" · {when}" if when else "")
+    return f"{icon} {name}{amount} — **{d.price}**{extra}{pct}" + (f" · {when}" if when else "")
 
 
 def store_deals(
@@ -171,20 +205,25 @@ def store_deals(
     view: str = VIEW_MEAT,
     only_discount: bool = False,
 ) -> list[kupi.Deal]:
-    """Akce obchodu: (u nápojů nejdřív jistě bez cukru,) pak platné teď podle slevy, nakonec budoucí."""
-    mine = [
-        d
-        for d in deals
-        if d.shop in store.shop_labels
-        and (flt == ALL or d.category == flt)
-        and not (d.valid_to and d.valid_to < day)
-        and (not only_discount or d.percent)
-        and (view != VIEW_DRINKS or sugar_free(d))
-    ]
+    """Akce obchodu: (u nápojů nejdřív jistě bez cukru,) pak platné teď podle slevy a ceny za jednotku,
+    nakonec budoucí."""
+    classify = DEAL_VIEWS[view].classify
+    mine = []
+    for d in deals:
+        kind = classify(d)
+        if (
+            kind is not None
+            and d.shop in store.shop_labels
+            and (flt == ALL or kind == flt)
+            and not (d.valid_to and d.valid_to < day)
+            and (not only_discount or d.percent)
+        ):
+            mine.append(d)
 
     def key(d: kupi.Deal):
         sure = view != VIEW_DRINKS or sugar_free(d) == SUGAR_FREE
-        return (not sure, not d.is_current(day), -(d.percent or 0), d.product)
+        unit = price_per_liter(d) or 0.0
+        return (not sure, not d.is_current(day), -(d.percent or 0), unit, d.product)
 
     return sorted(mine, key=key)
 
@@ -192,7 +231,7 @@ def store_deals(
 def _deals_embed(
     store: Store, view: DealView, deals: list[kupi.Deal], flt: str, only_discount: bool, day: date, limit: int, error: bool
 ) -> discord.Embed:
-    icon, label = view.categories.get(flt, view.button)
+    icon, label = view.filters.get(flt, view.button)
     title = f"{icon} {store.name}" + ("" if flt == ALL else f" · {label}")
     embed = discord.Embed(
         title=title,
@@ -239,7 +278,7 @@ async def build_message(
     info = "Data z [Kupi.cz](https://www.kupi.cz)"
     if view in DEAL_VIEWS:
         dv = DEAL_VIEWS[view]
-        result = await (shops.meat_deals(force=force) if view == VIEW_MEAT else shops.drink_deals(force=force))
+        result = await getattr(shops, dv.loader)(force=force)
         limit = render.per_embed_limit(len(stores))
         embeds = [
             _deals_embed(s, dv, result.deals, flt, only_discount, day, limit, bool(result.errors)) for s in stores
@@ -247,8 +286,8 @@ async def build_message(
         title = dv.title + (" · jen se slevou" if only_discount else "")
         if result.fetched_at:
             info += f" · aktualizováno <t:{int(result.fetched_at)}:R>"
-        if view == VIEW_DRINKS:
-            info += "\n-# ✅ výslovně bez cukru · 🤷 akce na různé druhy značky, která má i verzi bez cukru"
+        if dv.note:
+            info += f"\n-# {dv.note}"
     else:
         pages = await shops.store_pages(force=force)
         embeds = [_leaflets_embed(s, pages, day) for s in stores]
@@ -280,7 +319,7 @@ class SlevyButton(
         return cls(match["view"], match["filter"], match["only"] == "1", match["slot"])
 
     async def callback(self, interaction: discord.Interaction) -> None:
-        valid_filters = {ALL, *(DEAL_VIEWS[self.view_name].categories if self.view_name in DEAL_VIEWS else ())}
+        valid_filters = {ALL, *(DEAL_VIEWS[self.view_name].filters if self.view_name in DEAL_VIEWS else ())}
         if self.view_name not in VIEWS or self.flt not in valid_filters:
             await interaction.response.send_message("Tohle tlačítko už je zastaralé.", ephemeral=True)
             return
@@ -298,7 +337,7 @@ def build_view(view: str, flt: str = ALL, only_discount: bool = False) -> discor
     def style(current: bool) -> discord.ButtonStyle:
         return discord.ButtonStyle.primary if current else discord.ButtonStyle.secondary
 
-    # 1. řada: letáky / maso / nápoje, obnovit, odkaz
+    # 1. řada: letáky / maso / nápoje / pivo, obnovit (max 5 tlačítek v řadě)
     current = view == VIEW_LEAFLETS
     ui.add_item(SlevyButton(VIEW_LEAFLETS, ALL, False, "g", label="Letáky", emoji="📰",
                             style=style(current), disabled=current, row=0))
@@ -308,19 +347,18 @@ def build_view(view: str, flt: str = ALL, only_discount: bool = False) -> discor
                                 style=style(current), disabled=current, row=0))
     ui.add_item(SlevyButton(view, flt, only_discount, "r", label="Obnovit", emoji="🔄",
                             style=discord.ButtonStyle.secondary, row=0))
-    ui.add_item(discord.ui.Button(label="Kupi.cz", url=kupi.BASE, row=0))
 
-    # 2. řada (jen u akcí): filtry kategorií a přepínač "jen se slevou"
+    # 2. řada: (u akcí) filtry a přepínač "jen se slevou", odkaz na Kupi.cz
     if view in DEAL_VIEWS:
         dv = DEAL_VIEWS[view]
-        for key in dv.filters:
-            icon, label = dv.categories[key]
+        for key, (icon, label) in dv.filters.items():
             current = key == flt
             ui.add_item(SlevyButton(view, key, only_discount, "f", label=label, emoji=icon,
                                     style=style(current), disabled=current, row=1))
         ui.add_item(SlevyButton(view, flt, not only_discount, "o", label="Jen se slevou", emoji="🏷️",
                                 style=discord.ButtonStyle.success if only_discount else discord.ButtonStyle.secondary,
                                 row=1))
+    ui.add_item(discord.ui.Button(label="Kupi.cz", url=kupi.BASE, row=1))
     return ui
 
 
@@ -357,6 +395,10 @@ class Slevy(commands.Cog):
     @app_commands.command(name="maso", description="🥩 Slevy na maso: Lidl, BILLA Srbská, Albert Semilasso, Globus Ivanovice")
     async def maso(self, interaction: discord.Interaction) -> None:
         await self._send(interaction, VIEW_MEAT)
+
+    @app_commands.command(name="pivo", description="🍺 Pivo v akci – lahve, plechovky, basy: Lidl, BILLA, Albert, Globus")
+    async def pivo(self, interaction: discord.Interaction) -> None:
+        await self._send(interaction, VIEW_BEER)
 
     @app_commands.command(name="napoje", description="🥤 Energetické nápoje a limonády bez cukru v akci (Lidl, BILLA, Albert, Globus)")
     async def napoje(self, interaction: discord.Interaction) -> None:
