@@ -73,6 +73,23 @@ def _rows(zf: zipfile.ZipFile, name: str) -> Iterator[dict[str, str]]:
         yield from csv.DictReader(io.TextIOWrapper(raw, encoding="utf-8-sig", newline=""))
 
 
+@dataclass(frozen=True)
+class Connection:
+    """Spoj z výchozí zastávky do cílové (např. z centra domů)."""
+
+    trip_id: str
+    departure: datetime
+    arrival: datetime
+    line: str
+    emoji: str
+    origin: str  # název výchozí zastávky
+    destination: str  # název cílové zastávky
+
+    @property
+    def night(self) -> bool:
+        return self.line.upper().startswith("N")
+
+
 @dataclass
 class Timetable:
     stop_names: dict[str, str]  # stop_id -> název (jen nástupiště, location_type 0)
@@ -85,8 +102,51 @@ class Timetable:
     trip_end: dict[str, tuple[str, int]]  # trip_id -> (poslední nástupiště, čas příjezdu)
     # nástupiště -> seřazený seznam (odjezd z první zastávky, trip_id) – pro hledání navazujících spojů
     trip_starts: dict[str, list[tuple[int, str]]]
+    # trip_id -> průjezdy sledovanými zastávkami: (pořadí, stop_id, příjezd, odjezd), včetně konečné
+    trip_visits: dict[str, list[tuple[int, str, int, int]]] = field(default_factory=dict)
     created: datetime = field(default_factory=lambda: datetime.now(TZ))
     _usual: dict[tuple[str, str], str] = field(default_factory=dict, repr=False)
+
+    def connections(
+        self, origin_ids: Iterable[str], dest_ids: Iterable[str], start: datetime, end: datetime
+    ) -> list[Connection]:
+        """Spoje, které z některé výchozí zastávky odjíždějí v [start, end] a pak projedou cílovou zastávkou.
+
+        Jeden spoj může projet víc výchozími zastávkami – vrací se pro každou zvlášť.
+        """
+        origins, dests = set(origin_ids), set(dest_ids)
+        out: list[Connection] = []
+        # včerejší spoje po půlnoci (časy 24:xx), dnešní, a když okno přes půlnoc, i zítřejší (0:xx)
+        for offset in range(-1, (end.date() - start.date()).days + 1):
+            day = start.date() + timedelta(days=offset)
+            active = self.active_services(day)
+            midnight = datetime.combine(day, datetime.min.time(), TZ)
+            lo, hi = (start - midnight).total_seconds(), (end - midnight).total_seconds()
+            for trip_id, visits in self.trip_visits.items():
+                trip = self.trips.get(trip_id)
+                if trip is None or trip.service_id not in active:
+                    continue
+                for i, (_, stop_id, _, dep) in enumerate(visits):
+                    if stop_id not in origins or not lo <= dep <= hi:
+                        continue
+                    dest = next((v for v in visits[i + 1 :] if v[1] in dests), None)
+                    if dest is None:
+                        continue
+                    route = self.routes[trip.route_id]
+                    out.append(
+                        Connection(
+                            trip_id=trip_id,
+                            departure=midnight + timedelta(seconds=dep),
+                            arrival=midnight + timedelta(seconds=dest[2]),
+                            line=route.line,
+                            emoji=route.emoji,
+                            origin=self.stop_names.get(stop_id, ""),
+                            destination=self.stop_names.get(dest[1], ""),
+                        )
+                    )
+        # stejná linka ze stejné zastávky ve stejnou minutu = jeden spoj (jízdní řád ho občas má dvakrát)
+        unique = {(c.departure, c.line, c.origin): c for c in out}
+        return sorted(unique.values(), key=lambda c: (c.departure, c.line))
 
     def stops_named(self, name: str) -> list[str]:
         return sorted(sid for sid, n in self.stop_names.items() if n == name)
@@ -208,7 +268,7 @@ def load(path: Path, stop_names: Iterable[str]) -> Timetable:
 
         first: dict[str, tuple[int, str, int]] = {}  # trip -> (seq, stop, departure)
         last: dict[str, tuple[int, str, int]] = {}  # trip -> (seq, stop, arrival)
-        at_targets: list[tuple[str, int, str, int]] = []  # (stop, seq, trip, departure)
+        at_targets: list[tuple[str, int, str, int, int]] = []  # (stop, seq, trip, departure, arrival)
         with zf.open("stop_times.txt") as raw:
             reader = csv.reader(io.TextIOWrapper(raw, encoding="utf-8-sig", newline=""))
             header = next(reader)
@@ -223,11 +283,14 @@ def load(path: Path, stop_names: Iterable[str]) -> Timetable:
                 if lst is None or seq > lst[0]:
                     last[trip_id] = (seq, stop_id, _secs(row[i_arr]))
                 if stop_id in targets:
-                    at_targets.append((stop_id, seq, trip_id, _secs(row[i_dep])))
+                    at_targets.append((stop_id, seq, trip_id, _secs(row[i_dep]), _secs(row[i_arr])))
 
     stop_index: dict[str, list[tuple[int, str]]] = defaultdict(list)
     relevant: set[str] = set()
-    for stop_id, seq, trip_id, dep in at_targets:
+    trip_visits: dict[str, list[tuple[int, str, int, int]]] = defaultdict(list)
+    for stop_id, seq, trip_id, dep, arr in at_targets:
+        if trip_id in trips:
+            trip_visits[trip_id].append((seq, stop_id, arr, dep))
         if trip_id in trips and seq != last[trip_id][0]:  # příjezd na konečnou není odjezd
             stop_index[stop_id].append((dep, trip_id))
             relevant.add(trip_id)
@@ -252,4 +315,5 @@ def load(path: Path, stop_names: Iterable[str]) -> Timetable:
         stop_index=dict(stop_index),
         trip_end=trip_end,
         trip_starts=dict(trip_starts),
+        trip_visits={t: sorted(v) for t, v in trip_visits.items() if len(v) > 1},  # 1 průjezd = nikam nevede
     )

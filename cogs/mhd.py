@@ -6,15 +6,25 @@ import logging
 import re
 from collections import Counter, defaultdict
 from collections.abc import Callable
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 
 from transit import alerts as alerts_mod
-from transit.gtfs import TZ, Departure, Timetable
-from transit.service import ALERTS_REFRESH_MINUTES, AREAS, BOARDS, GROUPS, Board, Transit, area_of
+from transit.gtfs import TZ, Connection, Departure, Timetable
+from transit.service import (
+    ALERTS_REFRESH_MINUTES,
+    AREAS,
+    BOARDS,
+    GROUPS,
+    HOME_ORIGINS,
+    HOMES,
+    Board,
+    Transit,
+    area_of,
+)
 from utils import render
 
 log = logging.getLogger(__name__)
@@ -194,6 +204,108 @@ async def build_message(
     return content, embeds, build_view(group)
 
 
+# --- /domu: spoje z centra ke kolejím -------------------------------------------------------------
+
+UPCOMING_WINDOW = timedelta(hours=2)
+MAX_UPCOMING = 6
+MAX_NIGHT = 6
+
+
+def _hm(d: datetime) -> str:
+    return f"{d.hour}:{d.minute:02d}"
+
+
+def _night_end(now: datetime) -> datetime:
+    """Konec "dnešní noci" = nejbližší 4:00 ráno (do té doby hledáme poslední a noční spoje)."""
+    four = now.replace(hour=4, minute=0, second=0, microsecond=0)
+    return four if now < four else four + timedelta(days=1)
+
+
+def home_trips(timetable: Timetable, home: str, now: datetime) -> list[Connection]:
+    """Spoje z centra domů do konce noci; když spoj projede víc výchozími zastávkami, bere se ta
+    první podle HOME_ORIGINS (Česká před Hlavním nádražím)."""
+    _, stops = HOMES[home]
+    origins = [sid for name in HOME_ORIGINS for sid in timetable.stops_named(name)]
+    dests = [sid for name in stops for sid in timetable.stops_named(name)]
+    preference = {name: i for i, name in enumerate(HOME_ORIGINS)}
+    best: dict[tuple[str, datetime], Connection] = {}
+    for c in timetable.connections(origins, dests, now, _night_end(now)):
+        key = (c.trip_id, c.arrival)
+        if key not in best or preference.get(c.origin, 99) < preference.get(best[key].origin, 99):
+            best[key] = c
+    return sorted(best.values(), key=lambda c: (c.departure, c.line))
+
+
+def _home_embed(home: str, trips: list[Connection], now: datetime) -> discord.Embed:
+    label, _ = HOMES[home]
+    embed = discord.Embed(title=f"🌙 Domů na {label}", url=f"{DEPARTURES_URL}#domu-{home}", color=0x5F3DC4)
+    lines = []
+    upcoming = [c for c in trips if c.departure <= now + UPCOMING_WINDOW][:MAX_UPCOMING]
+    if upcoming:
+        lines.append("**Nejbližší spoje**")
+        lines += [
+            f"**{_hm(c.departure)}** {c.origin} · {c.emoji} {c.line} → {c.destination} {_hm(c.arrival)}" for c in upcoming
+        ]
+    else:
+        lines.append("_V příštích dvou hodinách nic nejede._")
+    day = [c for c in trips if not c.night]
+    if day:
+        last = day[-1]
+        lines.append(
+            f"\n🌙 **Poslední denní spoj:** {_hm(last.departure)} {last.origin} · {last.emoji} {last.line} "
+            f"(doma {_hm(last.arrival)})"
+        )
+    elif any(c.night for c in trips):
+        lines.append("\n🌙 Denní spoje už dnes nejedou.")
+    # noční spoje po posledním denním; když denní už nejedou, jsou noční rovnou v "Nejbližších"
+    nights = [c for c in trips if c.night and day and c.departure > day[-1].departure][:MAX_NIGHT]
+    if nights:
+        if len({c.origin for c in nights}) == 1:  # všechny ze stejné zastávky -> stačí ji napsat jednou
+            items, where = [f"{_hm(c.departure)} {c.line}" for c in nights], f" (z: {nights[0].origin})"
+        else:
+            items, where = [f"{_hm(c.departure)} {c.line} {c.origin}" for c in nights], ""
+        lines.append("🦉 **Noční:** " + " · ".join(items) + where)
+    embed.description = "\n".join(lines)
+    return embed
+
+
+async def build_home_message(transit: Transit) -> tuple[str, list[discord.Embed], discord.ui.View]:
+    timetable = await transit.timetable()
+    now = datetime.now(TZ)
+    embeds = [_home_embed(key, home_trips(timetable, key, now), now) for key in HOMES]
+    origins = ", ".join(HOME_ORIGINS[:-1]) + " nebo " + HOME_ORIGINS[-1]
+    content = (
+        f"### 🌙 Domů z centra – {render.czech_date(now.date())}\n"
+        f"-# Z: {origins} · podle jízdního řádu (bez zpoždění) · stav k <t:{int(now.timestamp())}:t>"
+    )
+    return content, embeds, build_home_view()
+
+
+class DomuButton(discord.ui.DynamicItem[discord.ui.Button], template=r"domu:r"):
+    def __init__(self) -> None:
+        super().__init__(
+            discord.ui.Button(custom_id="domu:r", label="Obnovit", emoji="🔄", style=discord.ButtonStyle.secondary)
+        )
+
+    @classmethod
+    async def from_custom_id(
+        cls, interaction: discord.Interaction, item: discord.ui.Button, match: re.Match[str], /
+    ) -> DomuButton:
+        return cls()
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        await interaction.response.defer()
+        content, embeds, view = await build_home_message(_transit(interaction.client))
+        await interaction.edit_original_response(content=content, embeds=embeds, view=view)
+
+
+def build_home_view() -> discord.ui.View:
+    view = discord.ui.View(timeout=None)
+    view.add_item(DomuButton())
+    view.add_item(discord.ui.Button(label="IDS JMK", url=DEPARTURES_URL))
+    return view
+
+
 def _transit(client: discord.Client) -> Transit:
     cog = client.get_cog("Mhd")  # type: ignore[attr-defined]
     return cog.transit
@@ -255,7 +367,7 @@ class Mhd(commands.Cog):
         self.transit = Transit(bot.fetcher)
 
     async def cog_load(self) -> None:
-        self.bot.add_dynamic_items(MhdButton)
+        self.bot.add_dynamic_items(MhdButton, DomuButton)
         if getattr(self.bot, "background_refresh", True):
             self.refresh_timetable.start()
             self.refresh_alerts.start()
@@ -263,7 +375,7 @@ class Mhd(commands.Cog):
     async def cog_unload(self) -> None:
         self.refresh_timetable.cancel()
         self.refresh_alerts.cancel()
-        self.bot.remove_dynamic_items(MhdButton)
+        self.bot.remove_dynamic_items(MhdButton, DomuButton)
 
     @tasks.loop(minutes=ALERTS_REFRESH_MINUTES)
     async def refresh_alerts(self) -> None:
@@ -294,6 +406,12 @@ class Mhd(commands.Cog):
     )
     async def mhd(self, interaction: discord.Interaction, zastavka: str = "vse") -> None:
         await self._send(interaction, zastavka)
+
+    @app_commands.command(name="domu", description="🌙 Jak se dostat z centra na koleje – nejbližší, poslední denní a noční spoje")
+    async def domu(self, interaction: discord.Interaction) -> None:
+        await interaction.response.defer(thinking=True)
+        content, embeds, view = await build_home_message(self.transit)
+        await interaction.followup.send(content=content, embeds=embeds, view=view)
 
     @app_commands.command(name="mhd-purkyne", description="Odjezdy MHD u kolejí Purkyňova: Červinkova (tramvaje) a Skácelova (busy)")
     async def mhd_purkyne(self, interaction: discord.Interaction) -> None:

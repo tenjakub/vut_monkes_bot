@@ -13,6 +13,7 @@ Nejnovější verze je vždy nahoře.
 
 ## 1.7 · 2026-11-20 · Pro kolej
 
+- 🌙 Nový command `/domu` ukáže, jak se dostat z centra (Česká, Malinovského náměstí, Hlavní nádraží) na PPV a na Purkyňovy koleje: nejbližší spoje, poslední denní spoj a noční linky.
 - 🍽️ Nový command `/obed` založí hlasování „Kdo jde na oběd?“. Každý klikne, do které menzy nebo restaurace jde a v kolik (nebo „🚶 Jdu teď“), a ve zprávě je hned vidět, kdo jde kam.
 - 🎲 Nový command `/co-jist` náhodně vybere jídlo z dnešních menz a restaurací. Tlačítkem se dá losovat znovu nebo jen z menz, jen Economy či jen z restaurací.
 - 🏆 `/maso` a `/pivo` ukazují nahoře nejlevnější kus z každého druhu napříč obchody podle ceny za kilo nebo litr.

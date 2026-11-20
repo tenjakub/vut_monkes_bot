@@ -97,6 +97,14 @@ AREAS: dict[str, tuple[str, tuple[str, ...]]] = {
     "purkyne": ("Purkyně", ("cervinkova", "skacelova_vychod", "skacelova_zapad")),
 }
 
+# /domu: spoje z centra ke kolejím. Výchozí zastávky v pořadí, ve kterém se preferují, když jeden
+# spoj projede několika z nich (12 a N99 jedou Hlavní nádraží -> Česká -> …).
+HOME_ORIGINS: tuple[str, ...] = ("Česká", "Malinovského náměstí", "Hlavní nádraží")
+HOMES: dict[str, tuple[str, tuple[str, ...]]] = {
+    "ppv": ("PPV", ("Technologický park", "Kolejní")),
+    "purkyne": ("Purkyňovy koleje", ("Červinkova", "Skácelova")),
+}
+
 # skupiny pro command a tlačítka: celé oblasti i jednotlivé zastávky
 GROUPS: dict[str, tuple[str, ...]] = {
     **{k: boards for k, (_, boards) in AREAS.items()},
@@ -136,7 +144,8 @@ class Transit:
                     log.exception("Stažení GTFS selhalo, používám starší soubor")
             mtime = self.path.stat().st_mtime
             if self._timetable is None or self._loaded_mtime != mtime:
-                names = [b.name for b in BOARDS.values()]
+                names = {b.name for b in BOARDS.values()} | set(HOME_ORIGINS)
+                names |= {n for _, stops in HOMES.values() for n in stops}
                 started = time.monotonic()
                 self._timetable = await asyncio.to_thread(gtfs.load, self.path, names)
                 self._loaded_mtime = mtime

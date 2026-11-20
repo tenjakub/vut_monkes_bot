@@ -221,3 +221,37 @@ def test_usual_headsign_uses_whole_timetable(tt):
     k1 = tt.stops_named("Kolejní")[0]
     assert tt.usual_headsign(k1, "72") == "Technologický park"
     assert tt.usual_headsign(k1, "99") is None
+
+
+
+def test_connections_including_after_midnight(tt):
+    origins, dests = tt.stops_named("Kolejní"), tt.stops_named("Technologický park")
+    cons = tt.connections(origins, dests, at(2026, 11, 20, 10, 0), at(2026, 11, 20, 10, 30))
+    assert [(c.departure.strftime("%H:%M"), c.arrival.strftime("%H:%M"), c.destination) for c in cons] == [
+        ("10:03", "10:05", "Technologický park"),
+        ("10:13", "10:15", "Technologický park"),
+    ]
+    # spoj ze služby pátku s časem 24:10 = sobota 0:10
+    late = tt.connections(origins, dests, at(2026, 11, 20, 23, 50), at(2026, 11, 21, 4, 0))
+    assert [c.departure for c in late] == [at(2026, 11, 21, 0, 10)]
+    assert late[0].arrival == at(2026, 11, 21, 0, 12)
+
+
+def test_home_embed_sections():
+    from datetime import timedelta
+
+    now = at(2026, 11, 20, 22, 30)
+
+    def con(minutes, line):
+        dep = now + timedelta(minutes=minutes)
+        emoji = "🚌" if line.startswith("N") else "🚋"
+        return gtfs.Connection(f"t{minutes}", dep, dep + timedelta(minutes=15), line, emoji, "Česká", "Kolejní")
+
+    trips = [con(12, "12"), con(33, "N99"), con(63, "N99"), con(93, "N99")]
+    text = mhd._home_embed("ppv", trips, now).description
+    assert "**22:42** Česká · 🚋 12 → Kolejní 22:57" in text
+    assert "🌙 **Poslední denní spoj:** 22:42 Česká · 🚋 12 (doma 22:57)" in text
+    assert "🦉 **Noční:** 23:03 N99 · 23:33 N99 · 0:03 N99 (z: Česká)" in text
+    # po posledním denním spoji už jen noční – bez zdvojeného řádku 🦉
+    night_only = mhd._home_embed("ppv", trips[1:], now).description
+    assert "Denní spoje už dnes nejedou" in night_only and "🦉" not in night_only
