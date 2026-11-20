@@ -236,6 +236,11 @@ nám. se nejezdí) do `HOMES` (PPV, Purkyně), jen tramvaje (`HOME_ROUTE_TYPES`)
 Hledá se i přes půlnoc: služba včerejška (časy 24:xx), dnešní i zítřejší (0:xx), noc končí ve 4:00. Noční linky = `N…`.
 Výpis je jedna společná karta: `all_home_trips` sloučí stejný spoj ke všem kolejím (`HomeTrip.arrivals`), takže
 řádek je „odjezd · linka → Purkyně 22:53 · PPV 22:57“. Poslední denní spoj se hledá ke každým kolejím zvlášť.
+Časy jsou z hlavní výchozí zastávky (`HOME_ORIGINS[0]` = Česká). O kolik dřív jede linka z Hlavního nádraží, se napíše
+jednou nahoře (`origin_offsets` = nejčastější rozdíl z JŘ, u 12 je 6 min, u N99 3 min).
+
+**/co-jist** (`cogs/cojist.py`): ve výchozím stavu jen jídla do `MAX_PRICE` (150 Kč), jídlo bez ceny se nevyřazuje.
+Tlačítka `cojist:<rozsah>:<r|s|c>:<limit 0/1>`, příznak limitu je volitelný kvůli tlačítkům ze starších zpráv (= zapnuto).
 
 **/obed** (`cogs/obed.py`): stav hlasování (kdo, kam, v kolik) je **jen v embedu zprávy** – tlačítka ho přečtou
 (`read_state`), upraví a přepíšou. Žádná databáze, přežije restart. Názvy polí musí odpovídat `SPOTS`.
@@ -243,15 +248,16 @@ Výpis je jedna společná karta: `all_home_trips` sloučí stejný spoj ke vše
 Obecně: na weby chodíme s cache (`lunch/fetcher.py`) a slušným User-Agentem, žádné agresivní dotazování.
 
 **Obnova na pozadí (rychlost commandů):** každý cog má `tasks.loop`, který data pravidelně stáhne a naparsuje
-(menzy 10 min a restaurace 30 min jen v `LUNCH_HOURS`, výluky 5 min, Kupi.cz 60 min). Commandy tak jen čtou
-hotové výsledky (desítky ms). Pravidla:
+(menzy 10 min a restaurace 30 min, výluky 5 min, Kupi.cz 60 min). Commandy tak jen čtou hotové výsledky
+(desítky ms). Mimo `LUNCH_HOURS` se jídelníčky nestahují znovu: platí, co se dnes stáhlo, až do půlnoci
+(`service.effective_ttl`), smyčka jen dotáhne, co v cache chybí (po restartu, po půlnoci). Pravidla:
 - TTL cache musí být **delší** než interval obnovy, jinak by command stahoval sám.
 - Parsování větších HTML/zipů patří do `asyncio.to_thread`, jinak se zasekne celý bot.
 - Nová obnova na pozadí se spouští jen když `bot.background_refresh` (v testech `BACKGROUND_REFRESH=0`,
   aby testy nestahovaly z internetu).
 - Při chybě obnovy se nechávají předchozí data (lepší starší výpis než žádný).
 - Každá obnova na pozadí běží v `async with loading.track(self.bot, "<název>")` (`utils/loading.py`) a při startu
-  smyčky se registruje `loading.expect(...)`; když se zrovna nestahuje (mimo obědy), volá `loading.skip(...)`.
+  smyčky se registruje `loading.expect(...)`; když se zdroj schválně nestahuje, volá `loading.skip(...)`.
   Tracker loguje „✅ Načteno: … za X s“ (po startu vždy, pak jen pomalé obnovy), jednou souhrn „🚀 Všechna data po startu
   načtena“ a při načítání delším než 2 s přidá na konec statusu bota „⏳“ (`ObedBot.update_presence`).
 

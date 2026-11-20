@@ -85,13 +85,11 @@ class Restaurace(commands.Cog):
 
     @tasks.loop(minutes=service.RESTAURANT_REFRESH_MINUTES)
     async def prefetch(self) -> None:
-        """Přes den stahuje polední menu restaurací na pozadí, ať /restaurace odpovídá hned."""
-        if not service.is_lunch_time():
-            loading.skip(self.bot, "menu restaurací")
-            return
+        """Přes den stahuje polední menu restaurací na pozadí, ať /restaurace odpovídá hned.
+        Mimo obědy se jen dotáhne, co v cache z dneška chybí (třeba po restartu bota večer)."""
         try:
             async with loading.track(self.bot, "menu restaurací"):
-                await service.restaurant_menus(self.bot.fetcher, force=True)
+                await service.restaurant_menus(self.bot.fetcher, force=service.is_lunch_time())
         except Exception:
             log.exception("Obnova menu restaurací selhala")
 

@@ -11,6 +11,12 @@ Formát (bot ho čte, viz utils/changelog.py):
 Nejnovější verze je vždy nahoře.
 -->
 
+## 1.8 · 2026-11-20 · Oběd do 150 Kč 💸
+
+- 💸 `/co-jist` losuje jen jídla do 150 Kč. Tlačítkem **💸 Do 150 Kč** se limit vypne.
+- 🌙 `/domu` ukazuje časy ze zastávky Česká a jen jednou napíše, o kolik minut dřív jede linka z Hlavního nádraží (12 o 6 min, N99 o 3 min).
+- ⚡ `/co-jist`, menzy a restaurace odpovídají hned i večer. Dřív si v tu dobu jídelníčky stahovaly znovu.
+
 ## 1.7 · 2026-11-20 · Pro kolej
 
 - 🍽️ Nový command `/obed` založí hlasování „Kdo jde na oběd?“. Každý klikne, do které menzy nebo restaurace jde a v kolik (nebo „🚶 Jdu teď“), a ve zprávě je hned vidět, kdo jde kam. Hlasování jde svolat i tlačítkem **Svolat oběd** přímo pod menzami a restauracemi.

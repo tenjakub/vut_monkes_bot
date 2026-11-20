@@ -134,13 +134,11 @@ class Menza(commands.Cog):
 
     @tasks.loop(minutes=service.MENZA_REFRESH_MINUTES)
     async def prefetch(self) -> None:
-        """Přes den stahuje jídelníčky všech menz na pozadí, ať /ppv a spol. odpovídají hned."""
-        if not service.is_lunch_time():
-            loading.skip(self.bot, "jídelníčky menz")
-            return
+        """Přes den stahuje jídelníčky všech menz na pozadí, ať /ppv a spol. odpovídají hned.
+        Mimo obědy se jen dotáhne, co v cache z dneška chybí (třeba po restartu bota večer)."""
         try:
             async with loading.track(self.bot, "jídelníčky menz"):
-                await service.menza_menus(self.bot.fetcher, "vse", force=True)
+                await service.menza_menus(self.bot.fetcher, "vse", force=service.is_lunch_time())
         except Exception:
             log.exception("Obnova jídelníčků menz selhala")
 

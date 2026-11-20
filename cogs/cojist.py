@@ -24,6 +24,20 @@ SCOPES: dict[str, tuple[str, str]] = {
     "economy": ("💰", "Jen Economy"),
     "restaurace": ("🍴", "Restaurace"),
 }
+MAX_PRICE = 150  # Kč – tlačítko "Do 150 Kč", ve výchozím stavu zapnuté
+_PRICE_RE = re.compile(r"\d+(?:[.,]\d+)?")
+
+
+def price_value(price: str) -> float | None:
+    """'159 Kč' -> 159.0; bez čísla None."""
+    m = _PRICE_RE.search(price.replace("\u00a0", "").replace(" ", ""))
+    return float(m.group().replace(",", ".")) if m else None
+
+
+def affordable(dish: Dish, max_price: float = MAX_PRICE) -> bool:
+    """Jídlo bez uvedené ceny se nevyřazuje (nevíme, kolik stojí)."""
+    value = price_value(dish.price or "")
+    return value is None or value <= max_price
 
 
 @dataclass(frozen=True)
@@ -33,8 +47,9 @@ class Pick:
     menza: bool
 
 
-async def candidates(fetcher, scope: str) -> list[Pick]:
-    """Hlavní jídla (bez polévek) z dnešních výpisů; data jdou z cache obnovované na pozadí."""
+async def candidates(fetcher, scope: str, cheap: bool = False) -> list[Pick]:
+    """Hlavní jídla (bez polévek) z dnešních výpisů; data jdou z cache obnovované na pozadí.
+    cheap = jen do MAX_PRICE Kč."""
     picks: list[Pick] = []
     if scope in ("vse", "menzy", "economy"):
         for menu in await service.menza_menus(fetcher, "vse"):
@@ -44,6 +59,8 @@ async def candidates(fetcher, scope: str) -> list[Pick]:
     if scope in ("vse", "restaurace"):
         for menu in await service.restaurant_menus(fetcher):
             picks += [Pick(d, menu, False) for d in menu.mains]
+    if cheap:
+        picks = [p for p in picks if affordable(p.dish)]
     return picks
 
 
@@ -66,51 +83,67 @@ def pick_embed(pick: Pick) -> discord.Embed:
     return embed
 
 
-async def build_message(bot: commands.Bot, scope: str) -> tuple[str, list[discord.Embed], discord.ui.View]:
-    picks = await candidates(bot.fetcher, scope)
+async def build_message(
+    bot: commands.Bot, scope: str, cheap: bool = True
+) -> tuple[str, list[discord.Embed], discord.ui.View]:
+    picks = await candidates(bot.fetcher, scope, cheap)
     icon, label = SCOPES[scope]
     header = f"### 🎲 Co dneska jíst? – {render.czech_date(service.today())}"
+    limit = f" · 💸 do {MAX_PRICE} Kč" if cheap else ""
     if not picks:
-        content = f"{header}\n_Dnes tu ({label.lower()}) nic není. Asi se nevaří, nebo je zavřeno._ 😢"
-        return content, [], build_view(scope)
+        reason = f"nic do {MAX_PRICE} Kč" if cheap else "nic"
+        content = f"{header}\n_Dnes tu ({label.lower()}) {reason} není. Asi se nevaří, nebo je zavřeno._ 😢"
+        return content, [], build_view(scope, cheap)
     pick = random.choice(picks)
-    content = f"{header}\n-# Náhodně z {len(picks)} jídel · {icon} {label}"
-    return content, [pick_embed(pick)], build_view(scope)
+    dishes = "jídla" if len(picks) == 1 else "jídel"
+    content = f"{header}\n-# Náhodně z {len(picks)} {dishes} · {icon} {label}{limit}"
+    return content, [pick_embed(pick)], build_view(scope, cheap)
 
 
-class CojistButton(discord.ui.DynamicItem[discord.ui.Button], template=r"cojist:(?P<scope>[a-z]+):(?P<slot>[rs])"):
-    """slot: r = znovu losovat ve stejném rozsahu, s = přepnout rozsah (a losovat)"""
+class CojistButton(
+    discord.ui.DynamicItem[discord.ui.Button], template=r"cojist:(?P<scope>[a-z]+):(?P<slot>[rsc])(?::(?P<cheap>[01]))?"
+):
+    """slot: r = znovu losovat ve stejném rozsahu, s = přepnout rozsah (a losovat), c = zapnout/vypnout limit ceny.
+    cheap = 1/0 jen do MAX_PRICE Kč; starší tlačítka ho nemají -> zapnuto (výchozí stav)."""
 
-    def __init__(self, scope: str, slot: str, **button_kwargs) -> None:
-        super().__init__(discord.ui.Button(custom_id=f"cojist:{scope}:{slot}", **button_kwargs))
+    def __init__(self, scope: str, slot: str, cheap: bool = True, **button_kwargs) -> None:
+        super().__init__(discord.ui.Button(custom_id=f"cojist:{scope}:{slot}:{int(cheap)}", **button_kwargs))
         self.scope = scope
+        self.cheap = cheap
 
     @classmethod
     async def from_custom_id(
         cls, interaction: discord.Interaction, item: discord.ui.Button, match: re.Match[str], /
     ) -> CojistButton:
-        return cls(match["scope"], match["slot"])
+        return cls(match["scope"], match["slot"], match["cheap"] != "0")
 
     async def callback(self, interaction: discord.Interaction) -> None:
         if self.scope not in SCOPES:
             await interaction.response.send_message("Tohle tlačítko už je zastaralé.", ephemeral=True)
             return
         await interaction.response.defer()
-        content, embeds, view = await build_message(interaction.client, self.scope)
+        content, embeds, view = await build_message(interaction.client, self.scope, self.cheap)
         await interaction.edit_original_response(content=content, embeds=embeds, view=view)
 
 
-def build_view(scope: str) -> discord.ui.View:
+def build_view(scope: str, cheap: bool = True) -> discord.ui.View:
     view = discord.ui.View(timeout=None)
-    view.add_item(CojistButton(scope, "r", label="Znovu", emoji="🎲", style=discord.ButtonStyle.success, row=0))
+    view.add_item(CojistButton(scope, "r", cheap, label="Znovu", emoji="🎲", style=discord.ButtonStyle.success, row=0))
     for key, (icon, label) in SCOPES.items():
         current = key == scope
         view.add_item(
             CojistButton(
-                key, "s", label=label, emoji=icon, disabled=current,
+                key, "s", cheap, label=label, emoji=icon, disabled=current,
                 style=discord.ButtonStyle.primary if current else discord.ButtonStyle.secondary, row=0,
             )
         )
+    # přepínač: zelený = zapnuto, šedý = vypnuto (jako "Jen se slevou" u slev)
+    view.add_item(
+        CojistButton(
+            scope, "c", not cheap, label=f"Do {MAX_PRICE} Kč", emoji="💸", row=1,
+            style=discord.ButtonStyle.success if cheap else discord.ButtonStyle.secondary,
+        )
+    )
     return view
 
 

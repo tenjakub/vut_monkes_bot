@@ -243,33 +243,42 @@ def test_home_embed_one_card_for_all_dorms():
 
     now = at(2026, 11, 20, 22, 30)
 
-    def con(minutes, line, dest, ride=15):
-        dep = now + timedelta(minutes=minutes)
+    def con(minutes, line, dest, ride=15, origin="Česká", early=0):
+        """Spoj z České za `minutes`; early > 0 = stejná jízda o tolik minut dřív z Hlavního nádraží."""
+        dep = now + timedelta(minutes=minutes - early)
         emoji = "🚌" if line.startswith("N") else "🚋"
-        return gtfs.Connection(f"t{minutes}", dep, dep + timedelta(minutes=ride), line, emoji, "Česká", dest, 0)
+        return gtfs.Connection(f"t{minutes}", dep, dep + timedelta(minutes=ride + early), line, emoji, origin, dest, 0)
+
+    def both(minutes, line, dest, ride=15, early=6):
+        return [con(minutes, line, dest, ride), con(minutes, line, dest, ride, "Hlavní nádraží", early)]
 
     by_dorm = {
         # 12 jede kolem obou kolejí, poslední tramvaj na Purkyňovy jede dřív než na PPV
-        "Kolejní": [con(12, "12", "Kolejní"), con(25, "12", "Kolejní"), con(33, "N99", "Kolejní"),
-                    con(63, "N99", "Kolejní"), con(93, "N99", "Kolejní")],
-        "Skácelova": [con(12, "12", "Skácelova", 11)],
+        "Kolejní": [*both(12, "12", "Kolejní"), *both(25, "12", "Kolejní"), *both(33, "N99", "Kolejní", early=3),
+                    con(63, "N99", "Kolejní"), con(93, "N99", "Kolejní", origin="Hlavní nádraží")],
+        "Skácelova": both(12, "12", "Skácelova", 11),
     }
     fake = SimpleNamespace(
         stops_named=lambda name: [name],
         connections=lambda origins, dests, *a: [c for d in dests for c in by_dorm.get(d, [])],
     )
-    trips = mhd.all_home_trips(fake, now)
-    embed = mhd._home_embed(trips, now)
+    trips, offsets = mhd.all_home_trips(fake, now)
+    assert offsets == {"12": 6, "N99": 3}
+    embed = mhd._home_embed(trips, offsets, now)
     text = embed.description
     assert embed.title == "🌙 Domů na koleje"
-    assert "**22:42** Česká · 🚋 12 → Purkyně 22:53 · PPV 22:57" in text  # stejný spoj jen jednou
-    assert text.count("**22:42**") == 1
-    assert "🌙 **Poslední denní spoje:**\n22:42 Česká · 🚋 12 (Purkyně 22:53 · PPV 22:57)\n" \
-           "22:55 Česká · 🚋 12 (PPV 23:10)" in text
-    assert "🦉 **Noční:** 23:03 N99 · 23:33 N99 · 0:03 N99 (z: Česká)" in text
+    assert text.startswith(
+        "🚉 Časy jsou ze zastávky **Česká**. Ze zastávky Hlavní nádraží jede 🚋 12 o 6 min a 🚌 N99 o 3 min dřív."
+    )
+    assert "**22:42** · 🚋 12 → Purkyně 22:53 · PPV 22:57" in text  # stejný spoj jen jednou, jen z České
+    assert text.count("22:36") == 0 and text.count("**22:42**") == 1
+    assert "🌙 **Poslední denní spoje:**\n22:42 · 🚋 12 (Purkyně 22:53 · PPV 22:57)\n" \
+           "22:55 · 🚋 12 (PPV 23:10)" in text
+    assert "🦉 **Noční:** 23:03 N99 · 23:33 N99 · 0:03 N99 (Hlavní nádraží)" in text
     # po posledním denním spoji už jen noční – bez zdvojeného řádku 🦉
-    night_only = mhd._home_embed([t for t in trips if t.night], now).description
+    night_only = mhd._home_embed([t for t in trips if t.night], offsets, now).description
     assert "Denní spoje už dnes nejedou" in night_only and "🦉" not in night_only
+    assert "jede 🚌 N99 o 3 min dřív" in night_only  # rozdíl jen u linek, které ve výpisu jsou
 
 
 def test_home_trips_only_trams_and_n99():

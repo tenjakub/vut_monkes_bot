@@ -34,6 +34,16 @@ def today() -> date:
     return datetime.now(TZ).date()
 
 
+def effective_ttl(ttl: float, now: datetime | None = None) -> float:
+    """Mimo LUNCH_HOURS se jídelníčky nemění a obnova na pozadí neběží: co se dnes stáhlo, platí do půlnoci.
+    Večer tak commandy nestahují znovu všechny stránky (dřív to i /co-jist zdržovalo na několik sekund)."""
+    now = now or datetime.now(TZ)
+    if is_lunch_time(now):
+        return ttl
+    midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    return max(ttl, (now - midnight).total_seconds())
+
+
 @dataclass(frozen=True)
 class Restaurant:
     place: Place
@@ -77,7 +87,7 @@ _parsed: dict[str, tuple[float, date, Menu]] = {}
 
 async def _load(fetcher: Fetcher, place: Place, url: str, ttl: float, force: bool, parse) -> Menu:
     try:
-        html, fetched = await fetcher.get(url, ttl=ttl, force=force)
+        html, fetched = await fetcher.get(url, ttl=effective_ttl(ttl), force=force)
         day = today()
         cached = _parsed.get(url)
         if cached and cached[0] == fetched and cached[1] == day:
@@ -99,7 +109,7 @@ HOURS_TTL = 60 * 60
 async def _menza_hours(fetcher: Fetcher, force: bool) -> dict[int, str]:
     """Otevírací doby menz pro dnešek; když se nepovede, prostě se nezobrazí."""
     try:
-        html, _ = await fetcher.get(kam.OVERVIEW_URL, ttl=HOURS_TTL, force=force)
+        html, _ = await fetcher.get(kam.OVERVIEW_URL, ttl=effective_ttl(HOURS_TTL), force=force)
         return await asyncio.to_thread(kam.parse_hours, html, today())
     except Exception:
         log.exception("Načtení otevíracích dob menz selhalo")

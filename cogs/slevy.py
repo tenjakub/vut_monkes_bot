@@ -85,7 +85,7 @@ DEAL_VIEWS: dict[str, DealView] = {
             VIEW_BEER, "🍺 Pivo v akci", ("🍺", "Pivo"), BEER_CATEGORIES, BEER_PACKS,
             beer_pack, "beer_deals",
             "Teď tu žádné pivo v akci není. 😢", "pivo",
-            "🍾 lahve · 🥫 plechovky · 📦 multipacky (s cenou za 0,5 l)", cheapest=True,
+            "🍾 lahve · 🥫 plechovky · 📦 multipacky (s cenou za kus)", cheapest=True,
         ),
     ]
 }

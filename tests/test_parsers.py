@@ -151,3 +151,17 @@ def test_lastrada_pizza_rendered_separately():
     pizza = fields[-1]
     assert pizza.name.startswith("🍕 3 · 175 Kč · Pizza dle výběru")
     assert pizza.value.split("\n")[0] == "• **Fresca** – pomodoro, mozzarella, balkánský sýr, rukola"
+
+
+def test_menus_cached_until_midnight_outside_lunch_hours():
+    from datetime import datetime
+
+    from lunch import service
+
+    def at(h, m=0):
+        return datetime(2026, 11, 20, h, m, tzinfo=service.TZ)
+
+    assert service.effective_ttl(900, at(12)) == 900  # přes den běžné TTL, obnova běží na pozadí
+    assert service.effective_ttl(900, at(21, 30)) == 21.5 * 3600  # večer platí, co se dnes stáhlo
+    assert service.effective_ttl(900, at(0, 5)) == 900  # po půlnoci se stáhne jednou znovu
+    assert service.effective_ttl(900, at(3)) == 3 * 3600

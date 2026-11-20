@@ -19,6 +19,8 @@ def _fake(monkeypatch):
     ], hours="11:00–14:30")
     restaurant = Menu(RESTAURANT, [
         Dish("Pizza dle výběru", "175 Kč", label="3", options=[("Fresca", "pomodoro, rukola")]),
+        Dish("Smažák", "150 Kč"),
+        Dish("Polední speciál", ""),
     ])
 
     async def menza_menus(fetcher, group, force=False):
@@ -34,10 +36,33 @@ def _fake(monkeypatch):
 def test_candidates_by_scope(monkeypatch):
     _fake(monkeypatch)
     names = lambda scope: sorted(p.dish.name for p in asyncio.run(cojist.candidates(None, scope)))
-    assert names("vse") == ["Kuře s rýží", "Pizza dle výběru", "Svíčková"]  # bez polévek
+    assert names("vse") == ["Kuře s rýží", "Pizza dle výběru", "Polední speciál", "Smažák", "Svíčková"]  # bez polévek
     assert names("menzy") == ["Kuře s rýží", "Svíčková"]
     assert names("economy") == ["Kuře s rýží"]
-    assert names("restaurace") == ["Pizza dle výběru"]
+    assert names("restaurace") == ["Pizza dle výběru", "Polední speciál", "Smažák"]
+
+
+def test_price_limit(monkeypatch):
+    _fake(monkeypatch)
+    cheap = sorted(p.dish.name for p in asyncio.run(cojist.candidates(None, "restaurace", cheap=True)))
+    assert cheap == ["Polední speciál", "Smažák"]  # 150 Kč ještě ano, bez ceny se nevyřazuje
+    assert cojist.price_value("1 099,50 Kč") == 1099.5 and cojist.price_value("") is None
+
+
+def test_price_toggle_buttons(monkeypatch):
+    _fake(monkeypatch)
+    bot = SimpleNamespace(fetcher=None)
+    content, _, view = asyncio.run(cojist.build_message(bot, "restaurace"))  # výchozí = s limitem
+    assert "💸 do 150 Kč" in content and "Náhodně z 2 jídel" in content
+    ids = [i.item.custom_id for i in view.children]
+    assert "cojist:vse:s:1" in ids and "cojist:restaurace:c:0" in ids  # přepínač vede na "bez limitu"
+    content, _, view = asyncio.run(cojist.build_message(bot, "restaurace", cheap=False))
+    assert "💸" not in content and "Náhodně z 3 jídel" in content
+    assert "cojist:restaurace:c:1" in [i.item.custom_id for i in view.children]
+    # tlačítko ze starší zprávy (bez příznaku) = s limitem
+    match = cojist.CojistButton.__discord_ui_compiled_template__.fullmatch("cojist:menzy:r")
+    button = asyncio.run(cojist.CojistButton.from_custom_id(None, None, match))
+    assert button.scope == "menzy" and button.cheap
 
 
 def test_pick_embed(monkeypatch):
@@ -58,6 +83,6 @@ def test_nothing_today(monkeypatch):
         return []
     monkeypatch.setattr(service, "restaurant_menus", empty)
     content, embeds, view = asyncio.run(cojist.build_message(SimpleNamespace(fetcher=None), "restaurace"))
-    assert embeds == [] and "nic není" in content
+    assert embeds == [] and "nic do 150 Kč není" in content
     ids = [getattr(getattr(i, "item", i), "custom_id", None) for i in view.children]
     assert len(ids) == len(set(ids))
