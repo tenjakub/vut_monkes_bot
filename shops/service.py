@@ -89,7 +89,7 @@ _BEER_EXCLUDE_RE = re.compile(
 )
 _PACK_COUNT_RE = re.compile(r"(\d+)\s*x\s*(\d+(?:[.,]\d+)?)\s*l")
 _VOLUME_RE = re.compile(r"(\d+(?:[.,]\d+)?)\s*l\b")
-_UNIT_PRICE_RE = re.compile(r"([\d\s]+,\d+)\s*Kč\s*/\s*1\s*l")
+_UNIT_PRICE_RE = re.compile(r"([\d\s]+,\d+)\s*Kč\s*/\s*1\s*(kg|l)\b")
 
 
 def beer_pack(deal: kupi.Deal) -> str | None:
@@ -188,9 +188,15 @@ def beer_short_name(product: str) -> tuple[str | None, str]:
     return brand, rest
 
 
-def price_per_liter(deal: kupi.Deal) -> float | None:
+def unit_price(deal: kupi.Deal) -> tuple[float, str] | None:
+    """Cena za 1 kg nebo 1 l z Kupi.cz ("31,97 Kč / 1 l" -> (31.97, "l")), jinak None."""
     m = _UNIT_PRICE_RE.search(deal.unit_price)
-    return float(m.group(1).replace(" ", "").replace(",", ".")) if m else None
+    return (float(m.group(1).replace(" ", "").replace(",", ".")), m.group(2)) if m else None
+
+
+def price_per_liter(deal: kupi.Deal) -> float | None:
+    up = unit_price(deal)
+    return up[0] if up and up[1] == "l" else None
 
 
 @dataclass(frozen=True)

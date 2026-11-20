@@ -275,3 +275,21 @@ def test_empty_stores_hidden_and_listed_in_header(monkeypatch):
     content, embeds, _ = asyncio.run(slevy.build_message(FakeShops(), slevy.VIEW_MEAT, only_discount=True))
     assert [e.title for e in embeds] == ["🥩 BILLA"]
     assert "Bez slev v %: Lidl, Albert supermarket, Globus" in content
+
+
+def test_cheapest_per_kind_across_stores():
+    def meat(shop, name, cat, unit, valid_from=None):
+        return kupi.Deal(name + shop, name, "1 kg", shop, "99,90 Kč", 30, valid_from, date(2026, 11, 24), cat,
+                         kupi.BASE, "", unit)
+
+    deals = [
+        meat("BILLA", "Kuře Vocílka", "drubez", "49,90 Kč / 1 kg"),
+        meat("Lidl", "Kuřecí prsa", "drubez", "99,90 Kč / 1 kg"),
+        meat("Albert", "Krkovice", "veprove-maso", "149,90 Kč / 1 kg"),
+        meat("Globus", "Levnější, ale až od pondělí", "veprove-maso", "9,90 Kč / 1 kg", valid_from=date(2026, 11, 23)),
+    ]
+    lines = slevy.cheapest_lines(slevy.DEAL_VIEWS["maso"], list(STORES.values()), deals, slevy.ALL, False, DAY)
+    assert lines == [
+        "🐖 Vepřové: **Krkovice** — **149,90 Kč/kg** · Albert supermarket",
+        "🍗 Drůbež: **Kuře Vocílka** — **49,90 Kč/kg** · BILLA",
+    ]

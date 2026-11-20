@@ -11,6 +11,10 @@ Formát (bot ho čte, viz utils/changelog.py):
 Nejnovější verze je vždy nahoře.
 -->
 
+## 1.7 · 2026-11-20 · Pro kolej
+
+- 🏆 `/maso` a `/pivo` ukazují nahoře nejlevnější kus z každého druhu napříč obchody podle ceny za kilo nebo litr.
+
 ## 1.6 · 2026-11-20 · Pizza dne v La Stradě 🍕
 
 - 🍕 V `/restaurace` je pizza dne La Strady zvlášť pod ostatními jídly a u každé ze 4 pizz jsou ingredience.

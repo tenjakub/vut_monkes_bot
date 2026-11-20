@@ -29,6 +29,7 @@ from shops.service import (
     beer_pack,
     beer_short_name,
     price_per_liter,
+    unit_price,
     sugar_free,
 )
 from utils import render
@@ -60,6 +61,7 @@ class DealView:
     empty: str
     link_category: str  # kategorie Kupi.cz pro odkaz "všechny akce řetězce"
     note: str = ""  # vysvětlivka pod nadpisem zprávy
+    cheapest: bool = False  # ukázat nahoře nejlevnější kus podle ceny za kg/l
 
 
 DEAL_VIEWS: dict[str, DealView] = {
@@ -69,7 +71,7 @@ DEAL_VIEWS: dict[str, DealView] = {
             VIEW_MEAT, "🥩 Slevy na maso", ("🥩", "Maso"), MEAT_CATEGORIES,
             {k: MEAT_CATEGORIES[k] for k in ("veprove-maso", "hovezi-maso", "drubez")},
             lambda d: d.category, "meat_deals",
-            "Teď tu žádné slevy na maso nejsou.", "maso-drubez-a-ryby",
+            "Teď tu žádné slevy na maso nejsou.", "maso-drubez-a-ryby", cheapest=True,
         ),
         DealView(
             VIEW_DRINKS, "🥤 Nápoje bez cukru", ("🥤", "Nápoje"), DRINK_CATEGORIES, DRINK_CATEGORIES,
@@ -81,7 +83,7 @@ DEAL_VIEWS: dict[str, DealView] = {
             VIEW_BEER, "🍺 Pivo v akci", ("🍺", "Pivo"), BEER_CATEGORIES, BEER_PACKS,
             beer_pack, "beer_deals",
             "Teď tu žádné pivo v akci není. 😢", "pivo",
-            "🍾 lahve · 🥫 plechovky · 📦 multipacky (Kč/l)",
+            "🍾 lahve · 🥫 plechovky · 📦 multipacky (Kč/l)", cheapest=True,
         ),
     ]
 }
@@ -285,6 +287,37 @@ def _deals_embed(
     return embed
 
 
+def _short_name(d: kupi.Deal, view: DealView) -> str:
+    if view.key == VIEW_BEER:
+        brand, rest = beer_short_name(d.product)
+        return f"{brand} {rest}".strip() if brand else rest
+    return d.product
+
+
+def cheapest_lines(
+    view: DealView, stores: list[Store], deals: list[kupi.Deal], flt: str, only_discount: bool, day: date
+) -> list[str]:
+    """🏆 Nejlevnější kus podle ceny za kg/l napříč obchody – pro každý druh (vepřové, drůbež / lahve, …),
+    nebo jen pro vybraný filtr. Bere jen akce platné dnes a jen ty, které výpis ukazuje."""
+    best: dict[str, tuple[float, str, kupi.Deal, Store]] = {}
+    for store in stores:
+        for d in store_deals(deals, store, flt, day, view.key, only_discount):
+            up = unit_price(d)
+            kind = view.classify(d)
+            if up is None or kind not in view.filters or not d.is_current(day):
+                continue
+            if kind not in best or up[0] < best[kind][0]:
+                best[kind] = (up[0], up[1], d, store)
+    lines = []
+    for kind, (icon, label) in view.filters.items():
+        if kind not in best:
+            continue
+        value, unit, d, store = best[kind]
+        price = f"{value:.0f}" if unit == "l" else f"{value:.2f}".replace(".", ",")
+        lines.append(f"{icon} {label}: **{_short_name(d, view)}** — **{price} Kč/{unit}** · {store.name}")
+    return lines
+
+
 # --- zpráva a tlačítka ------------------------------------------------------------------------
 
 
@@ -308,6 +341,10 @@ async def build_message(
             info += f" · aktualizováno <t:{int(result.fetched_at)}:R>"
         if dv.note:
             info += f"\n-# {dv.note}"
+        if dv.cheapest:
+            top = cheapest_lines(dv, stores, result.deals, flt, only_discount, day)
+            if top:
+                info += "\n**🏆 Nejlevnější**\n" + "\n".join(top)
         empty = [s.name for s in stores if s not in with_deals]
         if result.errors:
             info += "\n⚠️ Část slev se nepodařilo načíst, zkus Obnovit."
