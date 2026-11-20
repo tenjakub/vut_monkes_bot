@@ -6,6 +6,7 @@ import logging
 import re
 from collections import Counter, defaultdict
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 import discord
@@ -240,29 +241,62 @@ def home_trips(timetable: Timetable, home: str, now: datetime) -> list[Connectio
     return sorted(best.values(), key=lambda c: (c.departure, c.line))
 
 
-def _home_embed(home: str, trips: list[Connection], now: datetime) -> discord.Embed:
-    label, _ = HOMES[home]
-    embed = discord.Embed(title=f"🌙 Domů na {label}", url=f"{DEPARTURES_URL}#domu-{home}", color=0x5F3DC4)
+@dataclass(frozen=True)
+class HomeTrip:
+    """Jeden spoj z centra a kdy dorazí ke kterým kolejím (jedna linka může jet k oběma)."""
+
+    trip: Connection  # výchozí zastávka, odjezd, linka
+    arrivals: tuple[tuple[str, datetime], ...]  # (koleje, příjezd), seřazeno podle příjezdu
+
+    @property
+    def night(self) -> bool:
+        return self.trip.night
+
+
+def all_home_trips(timetable: Timetable, now: datetime) -> list[HomeTrip]:
+    """Spoje domů ke všem kolejím dohromady: stejný spoj se ukáže jednou, s příjezdy ke všem kolejím."""
+    merged: dict[tuple[str, datetime], tuple[Connection, list[tuple[str, datetime]]]] = {}
+    for key, (label, _) in HOMES.items():
+        for c in home_trips(timetable, key, now):
+            merged.setdefault((c.trip_id, c.departure), (c, []))[1].append((label, c.arrival))
+    trips = [HomeTrip(c, tuple(sorted(a, key=lambda x: x[1]))) for c, a in merged.values()]
+    return sorted(trips, key=lambda t: (t.trip.departure, t.trip.line))
+
+
+def _arrivals(t: HomeTrip) -> str:
+    return " · ".join(f"{label} {_hm(when)}" for label, when in t.arrivals)
+
+
+def _home_embed(trips: list[HomeTrip], now: datetime) -> discord.Embed:
+    embed = discord.Embed(title="🌙 Domů na koleje", url=f"{DEPARTURES_URL}#domu", color=0x5F3DC4)
     lines = []
-    upcoming = [c for c in trips if c.departure <= now + UPCOMING_WINDOW][:MAX_UPCOMING]
+    upcoming = [t for t in trips if t.trip.departure <= now + UPCOMING_WINDOW][:MAX_UPCOMING]
     if upcoming:
         lines.append("**Nejbližší spoje**")
         lines += [
-            f"**{_hm(c.departure)}** {c.origin} · {c.emoji} {c.line} → {c.destination} {_hm(c.arrival)}" for c in upcoming
+            f"**{_hm(t.trip.departure)}** {t.trip.origin} · {t.trip.emoji} {t.trip.line} → {_arrivals(t)}"
+            for t in upcoming
         ]
     else:
         lines.append("_V příštích dvou hodinách nic nejede._")
-    day = [c for c in trips if not c.night]
-    if day:
-        last = day[-1]
-        lines.append(
-            f"\n🌙 **Poslední denní spoj:** {_hm(last.departure)} {last.origin} · {last.emoji} {last.line} "
-            f"(doma {_hm(last.arrival)})"
-        )
-    elif any(c.night for c in trips):
+    # poslední denní spoj ke každým kolejím (k jedněm může jet poslední tramvaj dřív než k druhým)
+    day = [t for t in trips if not t.night]
+    lasts: list[HomeTrip] = []
+    for label, _ in HOMES.values():
+        last = next((t for t in reversed(day) if any(lb == label for lb, _ in t.arrivals)), None)
+        if last is not None and last not in lasts:
+            lasts.append(last)
+    lasts.sort(key=lambda t: t.trip.departure)
+    if lasts:
+        items = [f"{_hm(t.trip.departure)} {t.trip.origin} · {t.trip.emoji} {t.trip.line} ({_arrivals(t)})" for t in lasts]
+        if len(items) == 1:
+            lines.append(f"\n🌙 **Poslední denní spoj:** {items[0]}")
+        else:
+            lines.append("\n🌙 **Poslední denní spoje:**\n" + "\n".join(items))
+    elif any(t.night for t in trips):
         lines.append("\n🌙 Denní spoje už dnes nejedou.")
     # noční spoje po posledním denním; když denní už nejedou, jsou noční rovnou v "Nejbližších"
-    nights = [c for c in trips if c.night and day and c.departure > day[-1].departure][:MAX_NIGHT]
+    nights = [t.trip for t in trips if t.night and day and t.trip.departure > day[-1].trip.departure][:MAX_NIGHT]
     if nights:
         if len({c.origin for c in nights}) == 1:  # všechny ze stejné zastávky -> stačí ji napsat jednou
             items, where = [f"{_hm(c.departure)} {c.line}" for c in nights], f" (z: {nights[0].origin})"
@@ -276,7 +310,7 @@ def _home_embed(home: str, trips: list[Connection], now: datetime) -> discord.Em
 async def build_home_message(transit: Transit) -> tuple[str, list[discord.Embed], discord.ui.View]:
     timetable = await transit.timetable()
     now = datetime.now(TZ)
-    embeds = [_home_embed(key, home_trips(timetable, key, now), now) for key in HOMES]
+    embeds = [_home_embed(all_home_trips(timetable, now), now)]
     origins = ", ".join(HOME_ORIGINS[:-1]) + " nebo " + HOME_ORIGINS[-1]
     content = (
         f"### 🌙 Domů z centra – {render.czech_date(now.date())}\n"

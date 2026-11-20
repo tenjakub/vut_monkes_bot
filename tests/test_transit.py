@@ -237,23 +237,38 @@ def test_connections_including_after_midnight(tt):
     assert late[0].arrival == at(2026, 11, 21, 0, 12)
 
 
-def test_home_embed_sections():
+def test_home_embed_one_card_for_all_dorms():
     from datetime import timedelta
+    from types import SimpleNamespace
 
     now = at(2026, 11, 20, 22, 30)
 
-    def con(minutes, line):
+    def con(minutes, line, dest, ride=15):
         dep = now + timedelta(minutes=minutes)
         emoji = "🚌" if line.startswith("N") else "🚋"
-        return gtfs.Connection(f"t{minutes}", dep, dep + timedelta(minutes=15), line, emoji, "Česká", "Kolejní")
+        return gtfs.Connection(f"t{minutes}", dep, dep + timedelta(minutes=ride), line, emoji, "Česká", dest, 0)
 
-    trips = [con(12, "12"), con(33, "N99"), con(63, "N99"), con(93, "N99")]
-    text = mhd._home_embed("ppv", trips, now).description
-    assert "**22:42** Česká · 🚋 12 → Kolejní 22:57" in text
-    assert "🌙 **Poslední denní spoj:** 22:42 Česká · 🚋 12 (doma 22:57)" in text
+    by_dorm = {
+        # 12 jede kolem obou kolejí, poslední tramvaj na Purkyňovy jede dřív než na PPV
+        "Kolejní": [con(12, "12", "Kolejní"), con(25, "12", "Kolejní"), con(33, "N99", "Kolejní"),
+                    con(63, "N99", "Kolejní"), con(93, "N99", "Kolejní")],
+        "Skácelova": [con(12, "12", "Skácelova", 11)],
+    }
+    fake = SimpleNamespace(
+        stops_named=lambda name: [name],
+        connections=lambda origins, dests, *a: [c for d in dests for c in by_dorm.get(d, [])],
+    )
+    trips = mhd.all_home_trips(fake, now)
+    embed = mhd._home_embed(trips, now)
+    text = embed.description
+    assert embed.title == "🌙 Domů na koleje"
+    assert "**22:42** Česká · 🚋 12 → Purkyně 22:53 · PPV 22:57" in text  # stejný spoj jen jednou
+    assert text.count("**22:42**") == 1
+    assert "🌙 **Poslední denní spoje:**\n22:42 Česká · 🚋 12 (Purkyně 22:53 · PPV 22:57)\n" \
+           "22:55 Česká · 🚋 12 (PPV 23:10)" in text
     assert "🦉 **Noční:** 23:03 N99 · 23:33 N99 · 0:03 N99 (z: Česká)" in text
     # po posledním denním spoji už jen noční – bez zdvojeného řádku 🦉
-    night_only = mhd._home_embed("ppv", trips[1:], now).description
+    night_only = mhd._home_embed([t for t in trips if t.night], now).description
     assert "Denní spoje už dnes nejedou" in night_only and "🦉" not in night_only
 
 

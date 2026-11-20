@@ -189,6 +189,8 @@ Postup, když jsou nová oprávnění potřeba:
   (`beer_short_name`, slovník `BEER_BRANDS` – Velkopopovický Kozel → Kozel, Pilsner Urquell → Plzeň) + styl na konec. Vyřazené: PET, objem > 1 l (sudy),
   dárková balení (krýgl, sklenice, metr piv…) a cena nad 150 Kč/l. Řadí se podle slevy a pak ceny za litr (`Deal.unit_price`).
   **Uživatelům se ceny piva ukazují za 0,5 l** (`price_per_half_liter`), ne za litr – na půllitry jsou zvyklí.
+  Multipack (`BEER_PACK`) má hlavní cenu za kus a celkovou v závorce. V 🏆 nejlevnějších se u lahve/plechovky 0,5 l
+  „/0,5 l“ nepíše (je to jasné).
 - Řádek akce: sleva vlevo ve stejně širokém `kódu` (doplněno mezerou U+2007, Discord ji neořízne), datum bez dne
   v týdnu, „📅 od …“ místo 🔜 (Discord ho kreslí jako nečitelnou šipku). Stejná akce (produkt, balení, cena) se
   slučuje. Obchody bez akcí se nevykreslují jako karta, jen se vyjmenují v hlavičce.
@@ -230,8 +232,10 @@ uvedený zdroj („Data: Open-Meteo.com“). Souřadnice FITu, obnova na pozadí
 `window_advice` radí s otevřeným oknem podle předpovědi do 7:00 (mráz, déšť, chladno, vítr).
 
 **/domu** (`cogs/mhd.py`, `Timetable.connections`): spoje z `HOME_ORIGINS` (Česká, Hlavní nádraží – z Malinovského
-nám. se nejezdí) do `HOMES` (PPV, Purkyňovy koleje), jen tramvaje (`HOME_ROUTE_TYPES`) a noční `HOME_NIGHT_LINES` (N99). Loader drží `trip_visits` = průjezdy sledovanými zastávkami včetně konečné.
+nám. se nejezdí) do `HOMES` (PPV, Purkyně), jen tramvaje (`HOME_ROUTE_TYPES`) a noční `HOME_NIGHT_LINES` (N99). Loader drží `trip_visits` = průjezdy sledovanými zastávkami včetně konečné.
 Hledá se i přes půlnoc: služba včerejška (časy 24:xx), dnešní i zítřejší (0:xx), noc končí ve 4:00. Noční linky = `N…`.
+Výpis je jedna společná karta: `all_home_trips` sloučí stejný spoj ke všem kolejím (`HomeTrip.arrivals`), takže
+řádek je „odjezd · linka → Purkyně 22:53 · PPV 22:57“. Poslední denní spoj se hledá ke každým kolejím zvlášť.
 
 **/obed** (`cogs/obed.py`): stav hlasování (kdo, kam, v kolik) je **jen v embedu zprávy** – tlačítka ho přečtou
 (`read_state`), upraví a přepíšou. Žádná databáze, přežije restart. Názvy polí musí odpovídat `SPOTS`.

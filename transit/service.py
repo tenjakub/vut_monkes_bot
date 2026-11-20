@@ -105,7 +105,7 @@ HOME_ROUTE_TYPES: tuple[int, ...] = (0,)
 HOME_NIGHT_LINES: tuple[str, ...] = ("N99",)
 HOMES: dict[str, tuple[str, tuple[str, ...]]] = {
     "ppv": ("PPV", ("Technologický park", "Kolejní")),
-    "purkyne": ("Purkyňovy koleje", ("Červinkova", "Skácelova")),
+    "purkyne": ("Purkyně", ("Červinkova", "Skácelova")),
 }
 
 # skupiny pro command a tlačítka: celé oblasti i jednotlivé zastávky

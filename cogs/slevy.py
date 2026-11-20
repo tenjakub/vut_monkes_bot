@@ -190,6 +190,7 @@ def _leaflets_embed(store: Store, pages: dict[str, kupi.StorePage | None], day: 
 def _deal_line(d: kupi.Deal, view: DealView, day: date) -> str:
     """`−39 %` 🥫 **Kozel** 12° ležák 0,5 l — **16,90 Kč** · do 22. 11.  (sleva vlevo = zarovnaný sloupec)"""
     extra = ""
+    price = f"**{d.price}**"
     if view.key == VIEW_DRINKS:
         icon = view.categories.get(d.category, ("🥤",))[0]
         name = _DRINK_PREFIX_RE.sub("", d.product) or d.product
@@ -198,10 +199,14 @@ def _deal_line(d: kupi.Deal, view: DealView, day: date) -> str:
         icon = BEER_PACKS.get(pack, ("🍺",))[0]
         brand, rest = beer_short_name(d.product)
         name = f"**{brand}** {rest}".strip() if brand else rest
-        # u multipacků a jiných velikostí než 0,5 l přepočet na půllitr (u 0,5 l je to rovnou cena)
-        half = price_per_half_liter(d)
-        if half and (pack == BEER_PACK or beer_size(d) not in (None, (1, 0.5))):
-            extra = f" ({_czk(half)}/0,5 l)"
+        size = beer_size(d)
+        total = _price_value(d.price)
+        if pack == BEER_PACK and size and size[0] > 1 and total:
+            # multipack: hlavní je cena za kus, celková až v závorce
+            price, extra = f"**{_czk(total / size[0])}/ks**", f" (celkem {d.price})"
+        elif size not in (None, (1, 0.5)) and price_per_half_liter(d):
+            # jiná velikost než 0,5 l: přepočet na půllitr
+            extra = f" ({_czk(price_per_half_liter(d))}/0,5 l)"
     else:
         icon = emoji.for_name(d.product)
         if icon == emoji.FALLBACK:
@@ -212,7 +217,7 @@ def _deal_line(d: kupi.Deal, view: DealView, day: date) -> str:
         name = name if len(name) <= 50 else name[:49] + "…"
     amount = f" {_pretty_amount(d.amount)}" if d.amount else ""
     when = _validity(d.valid_from, d.valid_to, day, weekday=False)
-    return f"{_discount_badge(d.percent)} {icon} {name}{amount} — **{d.price}**{extra}" + (f" · {when}" if when else "")
+    return f"{_discount_badge(d.percent)} {icon} {name}{amount} — {price}{extra}" + (f" · {when}" if when else "")
 
 
 def store_deals(
@@ -290,6 +295,12 @@ def _deals_embed(
     return embed
 
 
+def _price_value(price: str) -> float | None:
+    """'1 099,90 Kč' -> 1099.9"""
+    m = re.search(r"(\d[\d\s]*),(\d+)", price)
+    return float(m.group(1).replace(" ", "").replace("\u00a0", "") + "." + m.group(2)) if m else None
+
+
 def _czk(value: float) -> str:
     return f"{value:.2f}".replace(".", ",") + " Kč"
 
@@ -320,8 +331,13 @@ def cheapest_lines(
         if kind not in best:
             continue
         value, unit, d, store = best[kind]
-        # pivo za půllitr (u 0,5 l lahve/plechovky je to přímo cena za kus), maso za kilo
-        price = f"{_czk(value / 2)}/0,5 l" if unit == "l" else f"{_czk(value)}/{unit}"
+        # maso za kilo; pivo za půllitr – u jedné 0,5 l lahve/plechovky jen cena (že je to půllitr, je jasné)
+        if unit != "l":
+            price = f"{_czk(value)}/{unit}"
+        elif beer_size(d) == (1, 0.5):
+            price = _czk(value / 2)
+        else:
+            price = f"{_czk(value / 2)}/0,5 l"
         lines.append(f"{icon} {label}: **{_short_name(d, view)}** — **{price}** · {store.name}")
     return lines
 
