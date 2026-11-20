@@ -12,6 +12,9 @@ Výpis je v embedech a pod ním jsou tlačítka na přepínání.
 > `Co-Authored-By: Claude`.
 >
 > Pokud tu najdeš chybu nebo podivné řešení, je to nejspíš chyba AI, ne člověka. 🙂
+>
+> Pokyny a kontext pro AI agenty (architektura, záludnosti zdrojů dat, oprávnění bota) jsou
+> v [AGENTS.md](AGENTS.md). [CLAUDE.md](CLAUDE.md) na něj jen odkazuje.
 
 ## Commandy
 
@@ -240,6 +243,7 @@ transit/            # MHD (bez závislosti na Discordu)
   service.py        #   zastávky (BOARDS), stahování a obnova dat
 utils/render.py     # převod na Discord embedy (limity délky apod.)
 tests/              # testy parserů, emoji, vykreslování a MHD
+AGENTS.md           # kontext a pravidla pro AI agenty (CLAUDE.md na něj odkazuje)
 ```
 
 **Přidání restaurace z menicka.cz:** najdi její ID v URL (`menicka.cz/1234-nazev.html`)
