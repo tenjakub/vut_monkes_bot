@@ -137,3 +137,32 @@ def test_alert_parsing():
     assert parsed[0].text == "Zastávka přesunuta. Jede odklonem."
     assert alerts.for_lines(parsed, {"12"}) == []
     assert alerts.for_lines(parsed, {"12", "72"}) == parsed
+
+
+def _dep(line, minute, headsign, emoji="🚋", continues_to=None):
+    return gtfs.Departure(
+        when=at(2026, 11, 23, 13, minute), line=line, emoji=emoji, headsign=headsign,
+        stop_id="T2", last_stop=headsign, continues_to=continues_to,
+    )
+
+
+def test_merged_lines_one_card_with_line_tags():
+    deps = [
+        _dep("12", 1, "Komárov"),
+        _dep("10", 4, "Stránská skála - smyčka"),
+        _dep("12", 8, "Vozovna Pisárky"),
+        _dep("4", 9, "Babická"),
+    ]
+    cards = mhd._cards(deps, merged=(("12", "10"),))
+    assert [c.name for c in cards] == ["🚋 12 / 10", "🚋 4 → Babická"]
+    rows = cards[0].value.split("\n")
+    assert len(rows) == 3
+    assert rows[0].startswith("**13:01**") and "`" not in rows[0]  # výchozí linka bez označení
+    assert rows[1].startswith("**13:04**") and rows[1].endswith("· `10`")
+
+
+def test_merged_line_ignores_destination():
+    deps = [_dep("65", 1, "Řečkovice, hřbitov", "🚌"), _dep("65", 11, "Řečkovice, nádraží", "🚌")]
+    cards = mhd._cards(deps, merged=(("65",),))
+    assert [c.name for c in cards] == ["🚌 65"]
+    assert cards[0].value.count("**") == 4  # dva časy, oba tučně

@@ -45,7 +45,9 @@ Odjezdy na hodinu dopředu, seskupené do kartiček podle linky a cíle. Časy j
 timestampy („in 5 minutes“ se samo odpočítává). U spojů, které končí na konečné, ale vůz
 z ní hned pokračuje dál (typicky 72 z Kolejní přes Technologický park), ukazuje kartička
 skutečný cíl („72 → Královo Pole, nádraží ↪ přes Technologický park“), u končících „🛑 dál nejede“.
-Zastávky a filtr typu vozidel se nastavují v `BOARDS` v `transit/service.py`.
+Některé linky jsou sloučené do jedné kartičky bez ohledu na cíl: tramvaje **12 / 10** z Technologického
+parku (u desítky je za časem `10`, bez označení je to dvanáctka) a autobus **65** z Kolejní.
+Zastávky, filtr typu vozidel a sloučené linky (`MERGED_LINES`) se nastavují v `transit/service.py`.
 
 Odjezdy jsou **podle jízdního řádu, bez zpoždění**. Realtime feed KORDIS sice obsahuje polohy
 vozidel, ale nemá zpoždění a jeho ID spojů zatím nesedí na jízdní řád. Výluky z něj ale bot bere.

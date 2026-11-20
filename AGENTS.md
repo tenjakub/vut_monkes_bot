@@ -109,6 +109,9 @@ Postup, když jsou nová oprávnění potřeba:
 **MHD – KORDIS JMK** (`transit/`), otevřená data CC BY:
 - Statické GTFS `https://kordis-jmk.cz/gtfs/gtfs.zip` (~6 MB, `stop_times` ~28 MB). Načítá se jen to, co je
   potřeba pro zastávky z `BOARDS`, mimo event loop (`asyncio.to_thread`), uloží se do `data/` (volume v Dockeru).
+- Kartičky na tabuli (`cogs/mhd._cards`): sloučené linky z `MERGED_LINES` (12 + 10, 65) mají jednu kartičku
+  bez cíle, výchozí linka (první ve skupině) bez označení, ostatní s `` `číslo` `` za časem. Linky, kde část spojů
+  pokračuje dál (72), se dělí na „jede dál“ a nevýraznou „končí“. Ostatní podle linky a cíle.
 - GTFS nemá `block_id`. Navazující spoj se odvozuje: příjezd na nástupiště P v čase A → spoj stejné linky
   z P v okně A…A+5 min. Na lince 72 (Technologický park: Z4 = jede dál, Z3 = končí) to sedí.
 - GTFS Realtime `https://kordis-jmk.cz/gtfs/gtfsReal.dat`: **jen VehiclePositions + Alerts, žádné TripUpdates**

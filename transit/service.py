@@ -40,6 +40,13 @@ BOARDS: dict[str, Board] = {
     ]
 }
 
+# Linky, které se na tabulích slučují do jedné kartičky bez ohledu na cíl (stačí, kdy jedou).
+# První linka ve skupině je výchozí; u ostatních se za časem ukáže číslo linky.
+MERGED_LINES: tuple[tuple[str, ...], ...] = (
+    ("12", "10"),  # Technologický park: hlavně 12, v pracovní dny ráno a odpoledne i 10
+    ("65",),  # Kolejní: Řečkovice, hřbitov / Řečkovice, nádraží – je to jedno
+)
+
 # skupiny pro command a tlačítka
 GROUPS: dict[str, tuple[str, ...]] = {
     "vse": tuple(BOARDS),

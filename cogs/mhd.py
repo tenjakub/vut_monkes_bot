@@ -13,7 +13,7 @@ from discord.ext import commands, tasks
 
 from transit import alerts as alerts_mod
 from transit.gtfs import TZ, Departure, Timetable
-from transit.service import BOARDS, GROUPS, Board, Transit
+from transit.service import BOARDS, GROUPS, MERGED_LINES, Board, Transit
 from utils import render
 
 log = logging.getLogger(__name__)
@@ -26,35 +26,48 @@ MAX_ALERTS = 3
 GROUP_LABELS = {"vse": "Obě zastávky", **{k: b.name for k, b in BOARDS.items()}}
 
 
-def _cards(departures: list[Departure]) -> list[render.Field]:
+def _time_row(d: Departure, bold: bool = True, tag: str | None = None) -> str:
+    time = f"**{d.when:%H:%M}**" if bold else f"{d.when:%H:%M}"
+    row = f"{time} · <t:{int(d.when.timestamp())}:R>"
+    return f"{row} · `{tag}`" if tag else row
+
+
+def _cards(departures: list[Departure], merged: tuple[tuple[str, ...], ...] = MERGED_LINES) -> list[render.Field]:
     """Kartičky s nejbližšími odjezdy.
 
-    U linek, kde část spojů na konečné pokračuje dál (72 z Kolejní přes Technologický park),
-    je jedno, kam přesně pak vůz jede – rozlišujeme jen "jede dál" a "končí". Končící spoje
-    jsou až na konci a nevýrazně (jen ať je vidět, že existují).
+    - Sloučené linky (MERGED_LINES, např. 12 + 10, 65) mají jednu kartičku bez ohledu na cíl.
+      Výchozí linka skupiny se u času neoznačuje, ostatní mají za časem své číslo.
+    - U linek, kde část spojů na konečné pokračuje dál (72 z Kolejní přes Technologický park),
+      je jedno, kam přesně pak vůz jede – rozlišujeme jen "jede dál" a "končí". Končící spoje
+      jsou až na konci a nevýrazně (jen ať je vidět, že existují).
     """
-    continuing_lines = {d.line for d in departures if d.continues_to}
-    groups: dict[tuple[str, str, bool], list[Departure]] = defaultdict(list)
+    merged_of = {line: group for group in merged for line in group}
+    continuing_lines = {d.line for d in departures if d.continues_to and d.line not in merged_of}
+    # klíč: (nadpis kartičky, končící?) ; nadpis bez emoji, to se doplní z prvního odjezdu
+    groups: dict[tuple[str, bool], list[Departure]] = defaultdict(list)
     for d in departures:
-        if d.line in continuing_lines:
-            if d.continues_to:
-                groups[(d.line, "↪ jede dál", False)].append(d)
-            else:
-                groups[(d.line, f"→ {d.headsign}", True)].append(d)
+        group = merged_of.get(d.line)
+        if group:
+            groups[(" / ".join(group), False)].append(d)
+        elif d.line in continuing_lines and d.continues_to:
+            groups[(f"{d.line} ↪ jede dál", False)].append(d)
+        elif d.line in continuing_lines:
+            groups[(f"{d.line} → {d.headsign}", True)].append(d)
         else:
-            groups[(d.line, f"→ {d.headsign}", False)].append(d)
+            groups[(f"{d.line} → {d.headsign}", False)].append(d)
 
     fields = []
     # nejdřív normální kartičky podle nejbližšího odjezdu, končící spoje až na konec
-    for (line, label, ends), deps in sorted(groups.items(), key=lambda kv: (kv[0][2], kv[1][0].when)):
+    for (title, ends), deps in sorted(groups.items(), key=lambda kv: (kv[0][1], kv[1][0].when)):
+        group = merged_of.get(deps[0].line)
         if ends:
-            lines = ["🛑 _končí, dál nejede_"]
-            lines += [f"{d.when:%H:%M} · <t:{int(d.when.timestamp())}:R>" for d in deps[:2]]
+            rows = ["🛑 _končí, dál nejede_"] + [_time_row(d, bold=False) for d in deps[:2]]
+        elif group:
+            rows = [_time_row(d, tag=d.line if d.line != group[0] else None) for d in deps[:PER_CARD]]
         else:
             via = deps[0].last_stop if deps[0].continues_to else None
-            lines = [f"_přes {via}_"] if via else []
-            lines += [f"**{d.when:%H:%M}** · <t:{int(d.when.timestamp())}:R>" for d in deps[:PER_CARD]]
-        fields.append(render.Field(f"{deps[0].emoji} {line} {label}", "\n".join(lines)))
+            rows = ([f"_přes {via}_"] if via else []) + [_time_row(d) for d in deps[:PER_CARD]]
+        fields.append(render.Field(f"{deps[0].emoji} {title}", "\n".join(rows)))
     return fields[:MAX_CARDS]
 
 
