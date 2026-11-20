@@ -58,6 +58,18 @@ Tenhle soubor je pro AI, která na projektu pracuje. Lidský návod je v [README
   Velké předělávky → `2.0` (jen po domluvě).
 - Změna viditelná pro uživatele = v její branchi přidej (nebo rozšiř) záznam nahoře v CHANGELOG.md.
   Datum je den vydání. Když se branch začleňuje později, datum při rebase před začleněním aktualizuj.
+- **Záznam popisuje jen rozdíl proti předchozí vydané verzi**, ne průběh vývoje. Uživatel zná jen to, co
+  bylo na produkci; vývojové mezikroky nikdy neviděl.
+  - Vydaná verze = nejvyšší verze v CHANGELOG.md na `origin/main`. Všechno nad ní je ještě nevydané.
+  - Úpravy funkce, která ještě nebyla vydaná (ladění vzhledu, přejmenování, přidané filtry, opravy chyb
+    vzniklých během vývoje…), se nepíšou jako další odrážky. Nevydaný záznam se místo toho **přepíše**,
+    aby popisoval výslednou podobu funkce.
+  - Špatně: „/pivo ukazuje pivo v akci“ + „piva se teď jmenují zkráceně“ + „opravena duplicita“
+    (vše ve stejné nevydané verzi). Správně: jedna odrážka, jak `/pivo` vypadá při vydání.
+  - Změna už vydané funkce (např. přejmenování commandu, který je na produkci) do záznamu patří.
+  - Když se najednou vydává víc nevydaných verzí, každá popisuje jen svoje novinky proti verzi pod ní
+    a nic z ní nesmí popisovat mezistav, který nikdo neviděl.
+  - Před vydáním projdi všechny nevydané záznamy očima uživatele, který zná jen poslední vydanou verzi.
 - Commit hash (`BOT_VERSION`) dál slouží k přesné identifikaci buildu a sedí s tagem image `sha-<hash>`.
 
 ## Vývoj a testy
