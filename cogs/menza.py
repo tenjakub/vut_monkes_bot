@@ -1,4 +1,4 @@
-"""/menza – Economy (případně všechna) jídla z menz VUT."""
+"""/ppv, /purkyne, /menzy – Economy (případně všechna) jídla z menz VUT."""
 
 from __future__ import annotations
 
@@ -42,10 +42,8 @@ async def build_message(
     limit = render.per_embed_limit(len(menus))
     empty = "Dnes tu není žádné Economy jídlo." if mode == MODE_ECO else "Dnes tu nejsou žádná hlavní jídla."
     embeds = [render.menu_embed(m, menza_fields(m, mode), limit, empty) for m in menus]
-    embeds = render.finish(embeds, f"Ceny: {kam.PRICE_LABEL} · kam.vut.cz", menus)
-
     title = "Economy menu" if mode == MODE_ECO else "Jídla v menzách"
-    content = f"### 🍽️ {title} – {render.czech_date(service.today())}"
+    content = render.header(f"🍽️ {title}", menus, f"💰 ceny: {kam.PRICE_LABEL}")
     return content, embeds, build_view(group, mode)
 
 
@@ -130,12 +128,12 @@ class Menza(commands.Cog):
         content, embeds, view = await build_message(self.bot, group, MODE_ALL if vse else MODE_ECO)
         await interaction.followup.send(content=content, embeds=embeds, view=view)
 
-    # Každá skupina menz má vlastní command, takže stačí napsat /menza + Enter.
+    # Každá skupina menz má vlastní command, takže stačí napsat /ppv + Enter.
     # Mezi skupinami se pak dá přepínat i tlačítky pod zprávou.
 
-    @app_commands.command(name="menza", description="Economy: Kolejní, Mozzarella, Starý pivovar")
+    @app_commands.command(name="ppv", description="Economy: Kolejní, Mozzarella, Starý pivovar")
     @app_commands.describe(vse=VSE_DESCRIPTION)
-    async def menza(self, interaction: discord.Interaction, vse: bool = False) -> None:
+    async def ppv(self, interaction: discord.Interaction, vse: bool = False) -> None:
         await self._send(interaction, "ppv", vse)
 
     @app_commands.command(name="purkyne", description="Economy: Purkyňova, Starý pivovar")

@@ -15,10 +15,13 @@ import discord
 
 from lunch import emoji
 from lunch.models import Dish, Menu
+from lunch.service import today
 
 # Discord limity: 10 embedů na zprávu, 6000 znaků dohromady, 25 fieldů na embed
 MAX_EMBEDS = 10
 MAX_FIELDS = 25
+GRID_COLUMNS = 3
+BLANK = "\u200b"  # zero-width space – prázdný field
 TOTAL_BUDGET = 5800
 FIELD_VALUE_LIMIT = 1024
 
@@ -64,6 +67,37 @@ def per_embed_limit(count: int) -> int:
     return TOTAL_BUDGET // count - 120
 
 
+def _add_fields(embed: discord.Embed, fields: list[Field], limit: int) -> None:
+    """Přidá fieldy a každou řadu inline kartiček doplní prázdnými do násobku GRID_COLUMNS.
+
+    Bez toho Discord roztáhne osamocenou kartičku v poslední řadě přes celou šířku
+    a vypadá pak jako další nadpis.
+    """
+    run = 0  # počet inline fieldů v aktuální řadě
+
+    def close_row() -> None:
+        nonlocal run
+        while run % GRID_COLUMNS:
+            embed.add_field(name=BLANK, value=BLANK, inline=True)
+            run += 1
+        run = 0
+
+    used = 0
+    for i, f in enumerate(fields):
+        # rezerva na doplnění řady (2) + poznámku o zbytku (1)
+        if used + len(f) + 60 > limit or len(embed.fields) + 1 + GRID_COLUMNS > MAX_FIELDS:
+            close_row()
+            embed.add_field(name="…", value=f"a dalších {len(fields) - i} – viz web", inline=False)
+            return
+        if not f.inline:
+            close_row()
+        embed.add_field(name=f.name, value=f.value, inline=f.inline)
+        used += len(f)
+        if f.inline:
+            run += 1
+    close_row()
+
+
 def menu_embed(menu: Menu, fields: list[Field], limit: int, empty_text: str) -> discord.Embed:
     place = menu.place
     embed = discord.Embed(title=f"{place.emoji} {place.name}", url=place.url, color=place.color)
@@ -75,26 +109,24 @@ def menu_embed(menu: Menu, fields: list[Field], limit: int, empty_text: str) -> 
     elif not fields:
         embed.description = f"ℹ️ {menu.note}" if menu.note else f"_{empty_text}_"
     else:
-        used = 0
-        for i, f in enumerate(fields):
-            if used + len(f) + 60 > limit or i >= MAX_FIELDS - 1:
-                embed.add_field(name="…", value=f"a dalších {len(fields) - i} – viz web", inline=False)
-                break
-            embed.add_field(name=f.name, value=f.value, inline=f.inline)
-            used += len(f)
+        _add_fields(embed, fields, limit)
     return embed
 
 
-def finish(embeds: list[discord.Embed], footer: str, menus: list[Menu]) -> list[discord.Embed]:
-    """Na poslední embed dá společnou patičku a čas stažení dat."""
-    if not embeds:
-        return embeds
-    last = embeds[-1]
-    text = footer
-    if last.footer and last.footer.text:
-        text = f"{last.footer.text} · {footer}"
-    last.set_footer(text=text)
+def header(title: str, menus: list[Menu], extra: str | None = None) -> str:
+    """Hlavička zprávy: nadpis s datem a pod ním, kdy byla data stažena.
+
+    <t:…:t> a <t:…:R> jsou Discord timestampy – každý je vidí ve svém čase
+    a relativní "před 5 minutami" se v klientu samo průběžně aktualizuje.
+    """
+    lines = [f"### {title} – {czech_date(today())}"]
+    info = []
     times = [m.fetched_at for m in menus if m.fetched_at]
     if times:
-        last.timestamp = min(times)
-    return embeds
+        ts = int(min(times).timestamp())
+        info.append(f"🕒 Aktualizováno <t:{ts}:t> (<t:{ts}:R>)")
+    if extra:
+        info.append(extra)
+    if info:
+        lines.append(" · ".join(info))
+    return "\n".join(lines)

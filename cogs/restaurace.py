@@ -24,8 +24,7 @@ async def build_message(
     menus = await service.restaurant_menus(bot.fetcher, force=force)
     limit = render.per_embed_limit(len(menus))
     embeds = [render.menu_embed(m, restaurant_fields(m), limit, "Menu je prázdné.") for m in menus]
-    embeds = render.finish(embeds, "menicka.cz + weby restaurací", menus)
-    content = f"### 🍴 Polední menu restaurací – {render.czech_date(service.today())}"
+    content = render.header("🍴 Polední menu restaurací", menus)
     return content, embeds, build_view()
 
 

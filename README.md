@@ -8,7 +8,7 @@ a pod ním jsou tlačítka na přepínání.
 
 | Command | Co dělá |
 |---|---|
-| `/menza` | Economy: Menza Kolejní, Pizzerie Mozzarella, Menza Starý pivovar |
+| `/ppv` | Economy: Menza Kolejní, Pizzerie Mozzarella, Menza Starý pivovar |
 | `/purkyne` | Economy: Menza Purkyňova + Starý pivovar |
 | `/menzy` | Economy ze všech menz, kde ho vaří (Kolejní, Mozzarella, SP, Purkyňova, Q Technická, FCH, Rybkova) |
 | `/restaurace` | Polední menu: U 3 opic, Padagali, La Strada |
@@ -21,6 +21,8 @@ přímo v ID tlačítka, takže tlačítka fungují i po restartu bota.
 
 Každé jídlo je ve výpisu jako kartička: emoji, štítek (`E1`…), cena a název. U menz se kartičky
 na desktopu skládají do mřížky po třech, u restaurací (dlouhé názvy) je jedno jídlo na řádek.
+Čas stažení dat je v hlavičce zprávy jako Discord timestamp (každý ho vidí ve svém čase
+a relativní „před X minutami“ se průběžně aktualizuje).
 Emoji se vybírá podle klíčových slov v názvu jídla, pravidla jsou v `lunch/emoji.py`
 (stačí připsat řádek s emoji a regexem).
 
@@ -69,7 +71,7 @@ pak se commandy objeví hned. Bez něj se registrují globálně, což může tr
 ```
 bot.py              # vstupní bod, načte cogy, synchronizuje slash commandy
 config.py           # načtení .env
-cogs/menza.py       # /menza, /purkyne, /menzy + tlačítka
+cogs/menza.py       # /ppv, /purkyne, /menzy + tlačítka
 cogs/restaurace.py  # /restaurace + tlačítko obnovit
 lunch/              # stahování a parsování (bez závislosti na Discordu)
   kam.py            #   menzy VUT – seznam menz a skupin (ppv, purkyne, vse)
