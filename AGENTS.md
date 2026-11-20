@@ -169,8 +169,12 @@ Postup, když jsou nová oprávnění potřeba:
   často neuvádí („různé druhy“), proto dvě úrovně: `SUGAR_FREE` = název/poznámka říká zero/bez cukru/max…,
   `MAYBE_SUGAR_FREE` = „různé/vybrané druhy“ značky ze seznamu `ZERO_BRANDS`. Ostatní (např. „regular“) se nezobrazují.
 - Pivo (`BEER_CATEGORIES`, `shops.service.beer_pack`): balení se pozná z balení akce (`Deal.amount`, např. „6x 0.5 l“)
-  a poznámky („plech“, „+3 Kč záloha na láhev“ = lahev, „záloha na láhve“ = multipack). Vyřazené: PET, objem > 1 l (sudy),
+  a poznámky („plech“, „+3 Kč záloha na láhev“ = lahev, „záloha na láhve“ = multipack). Název se zkracuje na značku
+  (`beer_short_name`, slovník `BEER_BRANDS` – Velkopopovický Kozel → Kozel, Pilsner Urquell → Plzeň) + styl na konec. Vyřazené: PET, objem > 1 l (sudy),
   dárková balení (krýgl, sklenice, metr piv…) a cena nad 150 Kč/l. Řadí se podle slevy a pak ceny za litr (`Deal.unit_price`).
+- Řádek akce: sleva vlevo ve stejně širokém `kódu` (doplněno mezerou U+2007, Discord ji neořízne), datum bez dne
+  v týdnu, „📅 od …“ místo 🔜 (Discord ho kreslí jako nečitelnou šipku). Stejná akce (produkt, balení, cena) se
+  slučuje. Obchody bez akcí se nevykreslují jako karta, jen se vyjmenují v hlavičce.
 - Výpisy akcí se otevírají s „jen se slevou“ (`DEFAULT_ONLY_DISCOUNT`). Pozor: BILLA a Globus u piva slevu v % neuvádějí,
   takže tam pak bývá prázdno – je to záměr uživatele.
 - Obchody se v akcích jmenují obecně („BILLA“, „Albert supermarket“, „Globus“), protože akce na Kupi.cz jsou za celý řetězec;

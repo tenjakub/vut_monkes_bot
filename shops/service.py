@@ -111,6 +111,82 @@ def beer_pack(deal: kupi.Deal) -> str | None:
     return BEER_BOTTLE
 
 
+# Značky piv: jak je píše Kupi.cz (bez diakritiky, malými) -> jak se jim říká. Delší varianty první.
+BEER_BRANDS: dict[str, str] = {
+    "velkopopovicky kozel": "Kozel",
+    "original budweiser budvar": "Budvar",
+    "budweiser budvar": "Budvar",
+    "pilsner urquell": "Plzeň",
+    "svijansky maz svijany": "Svijany Máz",
+    "svijany": "Svijany",
+    "zlaty bazant": "Bažant",
+    "corona extra": "Corona",
+    "stella artois": "Stella",
+    "grand pivovar zubr": "Zubr",
+    "pivovar hubertus": "Hubertus",
+    "novopacka liska": "Novopacké",
+}
+_SINGLE_WORD_BRANDS = (
+    "radegast", "krusovice", "staropramen", "gambrinus", "branik", "bernard", "lobkowicz", "argus", "heineken",
+    "guinness", "litovel", "excelent", "holba", "rychtar", "trumf", "klaster", "breznak", "zlatopramen", "proud",
+    "starobrno", "ostravar", "zubr", "hubertus", "svijany", "rebel", "primator", "chotebor", "lev", "kelt",
+    "kozel", "budvar", "pilsner", "birell", "tuborg", "carlsberg", "kvasnicak",
+)
+# Styl piva na začátku názvu -> krátce na konec
+BEER_STYLES: dict[str, str] = {
+    "svetly lezak": "ležák",
+    "svetle vycepni": "výčepní",
+    "svetle": "světlé",
+    "cerny lezak": "černý ležák",
+    "cerne vycepni": "černé výčepní",
+    "polotmavy lezak": "polotmavý",
+    "polotmave": "polotmavé",
+    "silne tmave": "tmavé",
+    "nefiltrovany svetly lezak": "nefiltrovaný ležák",
+    "nefiltrovane svetle": "nefiltrované",
+    "extra horky svetly lezak": "extra hořký ležák",
+    "svatecni lezak": "sváteční ležák",
+    "lezak": "ležák",
+}
+
+
+def beer_short_name(product: str) -> tuple[str | None, str]:
+    """'Pivo světlý ležák 12° Velkopopovický Kozel' -> ('Kozel', '12° ležák').
+
+    Vrací (značka, zbytek). Když značku nepozná, vrátí (None, název bez "Pivo").
+    """
+    words = re.sub(r"^pivo\s+", "", product.strip(), flags=re.IGNORECASE).split()
+    simple = [_simplify(w) for w in words]
+
+    def find(phrase: str) -> int | None:
+        n = len(phrase.split())
+        for i in range(len(simple) - n + 1):
+            if " ".join(simple[i : i + n]) == phrase:
+                return i
+        return None
+
+    brand = None
+    for phrase, short in [*BEER_BRANDS.items(), *((b, None) for b in _SINGLE_WORD_BRANDS)]:
+        i = find(phrase)
+        if i is not None:
+            n = len(phrase.split())
+            brand = short or words[i]
+            del words[i : i + n], simple[i : i + n]
+            break
+    style = ""
+    for phrase, short in sorted(BEER_STYLES.items(), key=lambda kv: -len(kv[0])):
+        if " ".join(simple[: len(phrase.split())]) == phrase:
+            n = len(phrase.split())
+            style = short
+            del words[:n], simple[:n]
+            break
+    rest = " ".join(w for w in [" ".join(words), style] if w)
+    if brand is None:
+        name = " ".join(words) if not style else f"{style} {' '.join(words)}".strip()
+        return None, (name[:1].upper() + name[1:]) if name else product
+    return brand, rest
+
+
 def price_per_liter(deal: kupi.Deal) -> float | None:
     m = _UNIT_PRICE_RE.search(deal.unit_price)
     return float(m.group(1).replace(" ", "").replace(",", ".")) if m else None

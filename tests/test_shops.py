@@ -83,7 +83,8 @@ def test_store_deals_filter_and_order():
 
 def test_validity_labels():
     assert slevy._validity(None, date(2026, 11, 22), DAY) == "do ne 22. 11."
-    assert slevy._validity(date(2026, 11, 26), date(2026, 11, 29), DAY) == "🔜 od čt 26. 11."
+    assert slevy._validity(date(2026, 11, 26), date(2026, 11, 29), DAY) == "📅 od čt 26. 11."
+    assert slevy._validity(None, date(2026, 11, 22), DAY, weekday=False) == "do 22. 11."
     assert slevy._validity(None, DAY, DAY) == "⏳ končí dnes"
     assert slevy._validity(None, date(2026, 11, 21), DAY) == "⏳ končí zítra"
 
@@ -195,7 +196,7 @@ def test_beer_view_lines_and_filters():
     packs = slevy.store_deals(deals, billa, BEER_PACK, DAY, view=slevy.VIEW_BEER)
     assert [d.product for d in packs] == ["Pivo Originál 10° Gambrinus"]
     line = slevy._deal_line(packs[0], slevy.DEAL_VIEWS[slevy.VIEW_BEER], DAY)
-    assert line.startswith("📦 Originál 10° Gambrinus 6× 0,5 l — **95,90 Kč** (32 Kč/l)")
+    assert line == "`\u2007\u2007\u2007\u2007–` 📦 **Gambrinus** Originál 10° 6× 0,5 l — **95,90 Kč** (32 Kč/l) · do 24. 11."
     # bez slevy v % řadí podle ceny za litr (Braník 21,80 Kč/l před Gambrinusem 31,97 Kč/l)
     no_pct = [d.product for d in slevy.store_deals(deals, billa, slevy.ALL, DAY, view=slevy.VIEW_BEER)[1:]]
     assert no_pct == ["Pivo světlé Braník", "Pivo Originál 10° Gambrinus"]
@@ -228,3 +229,49 @@ def test_generic_store_names_branch_in_leaflets():
     embed = slevy._leaflets_embed(STORES["billa"], {STORES["billa"].branches[0].kupi_path: page}, DAY)
     assert embed.title == "🛒 BILLA"
     assert embed.description.startswith("📍 Srbská\n🕐 Dnes 7:00–22:00")
+
+
+def test_discount_badge_same_width():
+    assert slevy._discount_badge(64) == "`−64 %`"
+    assert slevy._discount_badge(5) == "`\u2007−5 %`"
+    assert len(slevy._discount_badge(None)) == len(slevy._discount_badge(64))
+
+
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [
+        ("Pivo světlý ležák 12° Velkopopovický Kozel", ("Kozel", "12° ležák")),
+        ("Pivo světlé výčepní Rázná 10° Radegast", ("Radegast", "Rázná 10° výčepní")),
+        ("Pivo světlý ležák Original Budweiser Budvar", ("Budvar", "ležák")),
+        ("Pivo Pilsner Urquell", ("Plzeň", "")),
+        ("Pivo světlý ležák 11° Svijanský Máz Svijany", ("Svijany Máz", "11° ležák")),
+        ("Pivo nějaké neznámé 11°", (None, "Nějaké neznámé 11°")),
+    ],
+)
+def test_beer_short_name(name, expected):
+    from shops.service import beer_short_name
+
+    assert beer_short_name(name) == expected
+
+
+def test_duplicates_merged_keep_longest_validity():
+    a = _deal("Albert", 32, name="Cola Royal Crown", valid_to=date(2026, 11, 24))
+    b = _deal("Albert supermarket", 32, name="Cola Royal Crown", valid_to=date(2027, 1, 3))
+    got = slevy.store_deals([a, b], STORES["albert"], slevy.ALL, DAY)
+    assert got == [b]
+
+
+def test_empty_stores_hidden_and_listed_in_header(monkeypatch):
+    monkeypatch.setattr(slevy, "today", lambda: DAY)
+
+    class FakeShops:
+        async def meat_deals(self, force=False):
+            from shops.service import DealsResult
+
+            return DealsResult(deals=[_deal("BILLA", 30, name="Kuře")], fetched_at=0.0)
+
+    import asyncio
+
+    content, embeds, _ = asyncio.run(slevy.build_message(FakeShops(), slevy.VIEW_MEAT, only_discount=True))
+    assert [e.title for e in embeds] == ["🥩 BILLA"]
+    assert "Bez slev v %: Lidl, Albert supermarket, Globus" in content

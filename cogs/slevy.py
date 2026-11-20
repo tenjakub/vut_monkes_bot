@@ -26,6 +26,7 @@ from shops.service import (
     Shops,
     Store,
     beer_pack,
+    beer_short_name,
     price_per_liter,
     sugar_free,
 )
@@ -79,7 +80,7 @@ DEAL_VIEWS: dict[str, DealView] = {
             VIEW_BEER, "🍺 Pivo v akci", ("🍺", "Pivo"), BEER_CATEGORIES, BEER_PACKS,
             beer_pack, "beer_deals",
             "Teď tu žádné pivo v akci není. 😢", "pivo",
-            "🍾 lahve · 🥫 plechovky · 📦 basy a multipacky (s cenou za litr) · bez PET lahví, sudů a dárkových balení",
+            "🍾 lahve · 🥫 plechovky · 📦 multipacky (Kč/l)",
         ),
     ]
 }
@@ -88,7 +89,6 @@ VIEWS = (VIEW_LEAFLETS, *DEAL_VIEWS)
 MEAT_FILTERS = {ALL: ("🥩", "Všechno"), **DEAL_VIEWS[VIEW_MEAT].filters}
 
 _DRINK_PREFIX_RE = re.compile(r"^(energetický nápoj|limonád[ay])\s+", re.IGNORECASE)
-_BEER_PREFIX_RE = re.compile(r"^pivo\s+", re.IGNORECASE)
 
 
 def _pretty_amount(amount: str) -> str:
@@ -96,18 +96,28 @@ def _pretty_amount(amount: str) -> str:
     return re.sub(r"(\d)\.(\d)", r"\1,\2", re.sub(r"(\d)\s*x\s*", r"\1× ", amount))
 
 
-def _short_date(d: date) -> str:
-    return f"{SHORT_DAYS[d.weekday()]} {d.day}. {d.month}."
+def _short_date(d: date, weekday: bool = True) -> str:
+    return f"{SHORT_DAYS[d.weekday()]} {d.day}. {d.month}." if weekday else f"{d.day}. {d.month}."
 
 
-def _validity(valid_from: date | None, valid_to: date | None, day: date) -> str:
+def _validity(valid_from: date | None, valid_to: date | None, day: date, weekday: bool = True) -> str:
+    """Platnost akce/letáku. (Emoji 🔜 Discord kreslí jako nečitelnou šipku "SOON", proto 📅.)"""
     if valid_from and valid_from > day:
-        return f"🔜 od {_short_date(valid_from)}"
+        return f"📅 od {_short_date(valid_from, weekday)}"
     if valid_to == day:
         return "⏳ končí dnes"
     if valid_to and valid_to == day + timedelta(days=1):
         return "⏳ končí zítra"
-    return f"do {_short_date(valid_to)}" if valid_to else ""
+    return f"do {_short_date(valid_to, weekday)}" if valid_to else ""
+
+
+_FIGURE_SPACE = "\u2007"  # mezera šířky číslice – Discord ji v `kódu` neořízne, takže sloupec drží šířku
+
+
+def _discount_badge(percent: int | None) -> str:
+    """Sleva na začátku řádku se stejnou šířkou: `−64 %`, `−5 %` doplněné mezerou, bez slevy prázdné místo."""
+    text = f"−{percent} %" if percent else "–"
+    return f"`{text.rjust(5, _FIGURE_SPACE)}`"
 
 
 def _fit(lines: list[str], limit: int, more_text: str) -> str:
@@ -173,6 +183,7 @@ def _leaflets_embed(store: Store, pages: dict[str, kupi.StorePage | None], day: 
 
 
 def _deal_line(d: kupi.Deal, view: DealView, day: date) -> str:
+    """`−39 %` 🥫 **Kozel** 12° ležák 0,5 l — **16,90 Kč** · do 22. 11.  (sleva vlevo = zarovnaný sloupec)"""
     extra = ""
     if view.key == VIEW_DRINKS:
         icon = view.categories.get(d.category, ("🥤",))[0]
@@ -180,7 +191,8 @@ def _deal_line(d: kupi.Deal, view: DealView, day: date) -> str:
     elif view.key == VIEW_BEER:
         pack = beer_pack(d)
         icon = BEER_PACKS.get(pack, ("🍺",))[0]
-        name = _BEER_PREFIX_RE.sub("", d.product) or d.product
+        brand, rest = beer_short_name(d.product)
+        name = f"**{brand}** {rest}".strip() if brand else rest
         per_liter = price_per_liter(d)
         if pack == BEER_PACK and per_liter:
             extra = f" ({per_liter:.0f} Kč/l)"
@@ -189,12 +201,12 @@ def _deal_line(d: kupi.Deal, view: DealView, day: date) -> str:
         if icon == emoji.FALLBACK:
             icon = view.categories.get(d.category, ("🥩",))[0]
         name = d.product
-    name = name[:1].upper() + name[1:]
-    name = name if len(name) <= 55 else name[:54] + "…"
+    if not name.startswith("**"):
+        name = name[:1].upper() + name[1:]
+        name = name if len(name) <= 50 else name[:49] + "…"
     amount = f" {_pretty_amount(d.amount)}" if d.amount else ""
-    pct = f" `−{d.percent} %`" if d.percent else ""
-    when = _validity(d.valid_from, d.valid_to, day)
-    return f"{icon} {name}{amount} — **{d.price}**{extra}{pct}" + (f" · {when}" if when else "")
+    when = _validity(d.valid_from, d.valid_to, day, weekday=False)
+    return f"{_discount_badge(d.percent)} {icon} {name}{amount} — **{d.price}**{extra}" + (f" · {when}" if when else "")
 
 
 def store_deals(
@@ -220,6 +232,16 @@ def store_deals(
         ):
             mine.append(d)
 
+    # stejný produkt za stejnou cenu jen jednou (Kupi má akci třeba ve dvou letácích, nebo u
+    # "Albert" i "Albert supermarket") – nechá se platná teď, s nejdelší platností
+    best: dict[tuple[str, str, str], kupi.Deal] = {}
+    for d in mine:
+        k = (d.product.lower(), d.amount, d.price)
+        rank = (d.is_current(day), d.valid_to or date.max)
+        if k not in best or rank > (best[k].is_current(day), best[k].valid_to or date.max):
+            best[k] = d
+    mine = list(best.values())
+
     def key(d: kupi.Deal):
         sure = view != VIEW_DRINKS or sugar_free(d) == SUGAR_FREE
         unit = price_per_liter(d) or 0.0
@@ -230,7 +252,11 @@ def store_deals(
 
 def _deals_embed(
     store: Store, view: DealView, deals: list[kupi.Deal], flt: str, only_discount: bool, day: date, limit: int, error: bool
-) -> discord.Embed:
+) -> discord.Embed | None:
+    """Kartička obchodu, nebo None, když v něm nic není (prázdné obchody jsou jen v hlavičce)."""
+    mine = store_deals(deals, store, flt, day, view.key, only_discount)[:MAX_DEALS * 2]
+    if not mine:
+        return None
     icon, label = view.filters.get(flt, view.button)
     title = f"{icon} {store.name}" + ("" if flt == ALL else f" · {label}")
     embed = discord.Embed(
@@ -238,15 +264,6 @@ def _deals_embed(
         url=f"{kupi.BASE}/slevy/{view.link_category}/{store.kupi_chain}",  # unikátní pro každý obchod
         color=store.color,
     )
-    mine = store_deals(deals, store, flt, day, view.key, only_discount)[:MAX_DEALS * 2]
-    if not mine:
-        if error:
-            embed.description = "⚠️ Slevy se nepodařilo načíst."
-        elif only_discount:
-            embed.description = "_Teď tu nic se slevou v % není._"
-        else:
-            embed.description = f"_{view.empty}_"
-        return embed
 
     if view.key == VIEW_DRINKS:
         sure = [d for d in mine if sugar_free(d) == SUGAR_FREE]
@@ -279,15 +296,24 @@ async def build_message(
     if view in DEAL_VIEWS:
         dv = DEAL_VIEWS[view]
         result = await getattr(shops, dv.loader)(force=force)
-        limit = render.per_embed_limit(len(stores))
+        with_deals = [s for s in stores if store_deals(result.deals, s, flt, day, view, only_discount)]
+        limit = render.per_embed_limit(max(len(with_deals), 1))
         embeds = [
-            _deals_embed(s, dv, result.deals, flt, only_discount, day, limit, bool(result.errors)) for s in stores
+            e for s in with_deals
+            if (e := _deals_embed(s, dv, result.deals, flt, only_discount, day, limit, bool(result.errors)))
         ]
         title = dv.title + (" · jen se slevou" if only_discount else "")
         if result.fetched_at:
             info += f" · aktualizováno <t:{int(result.fetched_at)}:R>"
         if dv.note:
             info += f"\n-# {dv.note}"
+        empty = [s.name for s in stores if s not in with_deals]
+        if result.errors:
+            info += "\n⚠️ Část slev se nepodařilo načíst, zkus Obnovit."
+        if not with_deals:
+            info += f"\n_{'Teď nikde nic se slevou v % není.' if only_discount else dv.empty}_"
+        elif empty:
+            info += f"\n-# {'Bez slev v %' if only_discount else 'Nic v akci'}: {', '.join(empty)}"
     else:
         pages = await shops.store_pages(force=force)
         embeds = [_leaflets_embed(s, pages, day) for s in stores]

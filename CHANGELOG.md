@@ -16,6 +16,8 @@ Nejnovější verze je vždy nahoře.
 - 🍺 Nový command `/pivo` ukáže pivo v akci v Lidlu, BILLE Srbská, Albertu Semilasso a Globusu Ivanovice.
 - 🍾 🥫 📦 Tlačítky se dá vybrat jen lahve, plechovky, nebo basy a multipacky. U multipacků je cena za litr, ať se dá porovnat, co se vyplatí víc.
 - 🚫 PET lahve, sudy a dárková balení s krýglem se nezobrazují.
+- ✨ Přehlednější výpisy slev: sleva v % je na začátku řádku pod sebou, piva se jmenují zkráceně podle značky (**Kozel** 12° ležák), stejná akce se neukazuje dvakrát a obchody, kde nic není, jsou jen vyjmenované nahoře.
+- 📅 Akce a letáky, které teprve začnou, mají „📅 od …“ místo nečitelné šipky.
 - 🏷️ `/maso`, `/napoje` i `/pivo` se teď otevírají rovnou s filtrem **Jen se slevou**. Tlačítkem se dá vypnout a ukázat všechny akce.
 - 🛒 Obchody se jmenují obecně (BILLA, Albert supermarket, Globus), protože akce platí pro celý řetězec. U Albertu jsou jen akce supermarketů, hypermarketové ne. Konkrétní pobočka je vidět u `/letaky`, kde se letáky a otevírací doba opravdu liší.
 
