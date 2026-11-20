@@ -221,3 +221,5 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+# Stažený jízdní řád MHD (GTFS)
+data/

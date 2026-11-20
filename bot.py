@@ -13,7 +13,7 @@ from lunch.fetcher import Fetcher
 
 log = logging.getLogger("bot")
 
-EXTENSIONS = ["cogs.menza", "cogs.restaurace"]
+EXTENSIONS = ["cogs.menza", "cogs.restaurace", "cogs.mhd"]
 
 
 class ObedBot(commands.Bot):

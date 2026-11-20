@@ -6,6 +6,7 @@ import asyncio
 import logging
 import time
 from dataclasses import dataclass
+from pathlib import Path
 
 import aiohttp
 
@@ -18,7 +19,8 @@ FORCE_MIN_AGE = 60.0
 
 @dataclass
 class _Entry:
-    text: str
+    raw: bytes
+    charset: str
     fetched: float  # time.monotonic()
     wall: float  # time.time(), pro zobrazení
 
@@ -41,8 +43,8 @@ class Fetcher:
         if self._session and not self._session.closed:
             await self._session.close()
 
-    async def get(self, url: str, ttl: float, force: bool = False) -> tuple[str, float]:
-        """Vrátí (html, unix čas stažení). Paralelní dotazy na stejné URL se slijí."""
+    async def _cached(self, url: str, ttl: float, force: bool) -> _Entry:
+        """Paralelní dotazy na stejné URL se slijí do jednoho stažení."""
         lock = self._locks.setdefault(url, asyncio.Lock())
         async with lock:
             entry = self._cache.get(url)
@@ -50,7 +52,7 @@ class Fetcher:
                 age = time.monotonic() - entry.fetched
                 max_age = FORCE_MIN_AGE if force else ttl
                 if age < max_age:
-                    return entry.text, entry.wall
+                    return entry
 
             session = await self._get_session()
             log.info("GET %s", url)
@@ -58,7 +60,29 @@ class Fetcher:
                 resp.raise_for_status()
                 raw = await resp.read()
                 charset = resp.charset or "utf-8"
-            text = raw.decode(charset, errors="replace")
-            entry = _Entry(text=text, fetched=time.monotonic(), wall=time.time())
+            entry = _Entry(raw=raw, charset=charset, fetched=time.monotonic(), wall=time.time())
             self._cache[url] = entry
-            return entry.text, entry.wall
+            return entry
+
+    async def get(self, url: str, ttl: float, force: bool = False) -> tuple[str, float]:
+        """Vrátí (text, unix čas stažení)."""
+        entry = await self._cached(url, ttl, force)
+        return entry.raw.decode(entry.charset, errors="replace"), entry.wall
+
+    async def get_bytes(self, url: str, ttl: float, force: bool = False) -> tuple[bytes, float]:
+        """Vrátí (data, unix čas stažení) – pro binární formáty (protobuf apod.)."""
+        entry = await self._cached(url, ttl, force)
+        return entry.raw, entry.wall
+
+    async def download(self, url: str, path: Path, timeout: float = 120.0) -> None:
+        """Stáhne velký soubor rovnou na disk (bez cache v paměti), atomicky přes .part."""
+        session = await self._get_session()
+        tmp = path.with_suffix(path.suffix + ".part")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        log.info("GET %s -> %s", url, path)
+        async with session.get(url, timeout=aiohttp.ClientTimeout(total=timeout)) as resp:
+            resp.raise_for_status()
+            with tmp.open("wb") as f:
+                async for chunk in resp.content.iter_chunked(1 << 16):
+                    f.write(chunk)
+        tmp.replace(path)

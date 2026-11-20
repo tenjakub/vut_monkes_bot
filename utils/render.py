@@ -90,7 +90,7 @@ def per_embed_limit(count: int) -> int:
     return TOTAL_BUDGET // count - 120
 
 
-def _add_fields(embed: discord.Embed, fields: list[Field], limit: int) -> None:
+def add_fields(embed: discord.Embed, fields: list[Field], limit: int) -> None:
     """Přidá fieldy a každou řadu inline kartiček doplní prázdnými do násobku GRID_COLUMNS.
 
     Bez toho Discord roztáhne osamocenou kartičku v poslední řadě přes celou šířku
@@ -132,7 +132,7 @@ def menu_embed(menu: Menu, fields: list[Field], limit: int, empty_text: str) -> 
     elif not fields:
         embed.description = f"ℹ️ {menu.note}" if menu.note else f"_{empty_text}_"
     else:
-        _add_fields(embed, fields, limit)
+        add_fields(embed, fields, limit)
     return embed
 
 

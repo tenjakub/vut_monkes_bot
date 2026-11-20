@@ -2,3 +2,4 @@ discord.py>=2.6
 beautifulsoup4>=4.12
 python-dotenv>=1.0
 tzdata  # časová zóna Europe/Prague i na Windows
+gtfs-realtime-bindings  # výluky MHD z GTFS Realtime feedu
