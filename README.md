@@ -25,6 +25,7 @@ Výpis je v embedech a pod ním jsou tlačítka na přepínání.
 | `/menzy` | Economy ze všech menz, kde ho vaří (Kolejní, Mozzarella, SP, Purkyňova, Q Technická, FCH, Rybkova) |
 | `/restaurace` | Polední menu: U 3 opic, Padagali, La Strada, U Karla, Portoriko |
 | `/mhd` | Nejbližší odjezdy z Technologického parku (tramvaje) a z Kolejní + výluky na těch linkách |
+| `/mhd-purkyne` | Totéž u kolejí Purkyňova: Červinkova (tramvaje) a Skácelova (autobusy, trolejbusy) |
 
 Všechny tři menzové commandy mají volitelný parametr `vse: True`. Ten místo Economy ukáže
 polévky a všechna hlavní jídla (saláty, přílohy a dezerty vynechá).
@@ -41,13 +42,18 @@ Emoji se vybírá podle klíčových slov v názvu jídla, pravidla jsou v `lunc
 
 ### /mhd
 
-Odjezdy na hodinu dopředu, seskupené do kartiček podle linky a cíle. Časy jsou Discord
-timestampy („in 5 minutes“ se samo odpočítává). U spojů, které končí na konečné, ale vůz
-z ní hned pokračuje dál (typicky 72 z Kolejní přes Technologický park), ukazuje kartička
-skutečný cíl („72 → Královo Pole, nádraží ↪ přes Technologický park“), u končících „🛑 dál nejede“.
-Některé linky jsou sloučené do jedné kartičky bez ohledu na cíl: tramvaje **12 / 10** z Technologického
-parku (u desítky je za časem `10`, bez označení je to dvanáctka) a autobus **65** z Kolejní.
-Zastávky, filtr typu vozidel a sloučené linky (`MERGED_LINES`) se nastavují v `transit/service.py`.
+Odjezdy na hodinu dopředu v kartičkách. Časy jsou Discord timestampy („in 5 minutes“ se samo
+odpočítává). Tlačítky se přepíná mezi oblastmi (Technopark + Kolejní / Koleje Purkyňova)
+a jednotlivými zastávkami. Každá zastávka má vlastní způsob zobrazení:
+
+| Zastávka | Zobrazení |
+|---|---|
+| Technologický park, Červinkova | jen tramvaje, **jedna kartička na směr**. Bez označení je to 12, u jiné linky je za časem její číslo (`10`, `4`). |
+| Kolejní | **72 → Semilasso** (spoje, které z Technoparku jedou dál) je vždy první. **65** má jednu kartičku bez ohledu na cíl. Končící 72 jsou nevýrazně na konci („🛑 dál nejede“). |
+| Skácelova | autobusy a trolejbusy, **kartička pro každou linku a směr**, seřazené podle čísla linky. V nadpisu je obvyklá konečná, jiná konečná je jen značka za časem. |
+
+Všechno se nastavuje v `BOARDS` a `AREAS` v `transit/service.py` (zastávka, typy vozidel, způsob
+zobrazení `layout`, výchozí linka, sloučené linky, popisek směru u pokračujících spojů).
 
 Odjezdy jsou **podle jízdního řádu, bez zpoždění**. Realtime feed KORDIS sice obsahuje polohy
 vozidel, ale nemá zpoždění a jeho ID spojů zatím nesedí na jízdní řád. Výluky z něj ale bot bere.
@@ -231,7 +237,7 @@ docker-compose.build.yml  # lokální sestavení image místo stažení z GHCR
 .github/workflows/  # CI: testy + build a push image do GHCR
 cogs/menza.py       # /ppv, /purkyne, /menzy + tlačítka
 cogs/restaurace.py  # /restaurace + tlačítko obnovit
-cogs/mhd.py         # /mhd + tlačítka
+cogs/mhd.py         # /mhd, /mhd-purkyne + tlačítka
 lunch/              # stahování a parsování (bez závislosti na Discordu)
   kam.py            #   menzy VUT – seznam menz a skupin (ppv, purkyne, vse)
   emoji.py          #   výběr emoji k jídlu podle klíčových slov

@@ -86,9 +86,22 @@ class Timetable:
     # nástupiště -> seřazený seznam (odjezd z první zastávky, trip_id) – pro hledání navazujících spojů
     trip_starts: dict[str, list[tuple[int, str]]]
     created: datetime = field(default_factory=lambda: datetime.now(TZ))
+    _usual: dict[tuple[str, str], str] = field(default_factory=dict, repr=False)
 
     def stops_named(self, name: str) -> list[str]:
         return sorted(sid for sid, n in self.stop_names.items() if n == name)
+
+    def usual_headsign(self, stop_id: str, line: str) -> str | None:
+        """Nejčastější cíl linky z daného nástupiště přes celý jízdní řád (ne jen příští hodinu)."""
+        key = (stop_id, line)
+        if key not in self._usual:
+            counts: dict[str, int] = defaultdict(int)
+            for _, trip_id in self.stop_index.get(stop_id, []):
+                trip = self.trips[trip_id]
+                if self.routes[trip.route_id].line == line:
+                    counts[trip.headsign] += 1
+            self._usual[key] = max(counts, key=counts.__getitem__) if counts else ""
+        return self._usual[key] or None
 
     def active_services(self, day: date) -> set[str]:
         active = {

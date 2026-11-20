@@ -105,12 +105,24 @@ def test_calendar_exceptions(tt):
     assert tt.active_services(date(2026, 11, 22)) == set()
 
 
+KOLEJNI = mhd.BOARDS["kolejni"]
+
+
 def test_cards_continuing_first_terminating_last(tt):
     deps = tt.departures(tt.stops_named("Kolejní"), at(2026, 11, 20, 10, 0))
-    cards = mhd._cards(deps)
+    generic = mhd.Board("x", "Kolejní", "🚌", 0)  # bez popisku směru
+    cards = mhd._cards(deps, generic)
     assert [c.name for c in cards] == ["🚌 72 ↪ jede dál", "🚌 72 → Technologický park"]
     assert cards[0].value.startswith("_přes Technologický park_\n**10:03**")
     assert cards[1].value.startswith("🛑")
+
+
+def test_continuing_direction_label_is_pinned_first(tt):
+    deps = tt.departures(tt.stops_named("Kolejní"), at(2026, 11, 20, 10, 0))
+    deps = [_dep("65", 0, "Řečkovice, hřbitov", "🚌")] + deps  # 65 jede dřív, i tak má být 72 první
+    cards = mhd._cards(deps, KOLEJNI)
+    assert [c.name for c in cards] == ["🚌 72 → Semilasso", "🚌 65", "🚌 72 → Technologický park"]
+    assert "přes" not in cards[0].value
 
 
 def test_board_embeds_have_unique_urls():
@@ -139,30 +151,64 @@ def test_alert_parsing():
     assert alerts.for_lines(parsed, {"12", "72"}) == parsed
 
 
-def _dep(line, minute, headsign, emoji="🚋", continues_to=None):
+def _dep(line, minute, headsign, emoji="🚋", continues_to=None, stop_id="T2"):
     return gtfs.Departure(
-        when=at(2026, 11, 23, 13, minute), line=line, emoji=emoji, headsign=headsign,
-        stop_id="T2", last_stop=headsign, continues_to=continues_to,
+        when=at(2026, 11, 20, 9, minute), line=line, emoji=emoji, headsign=headsign,
+        stop_id=stop_id, last_stop=headsign, continues_to=continues_to,
     )
 
 
-def test_merged_lines_one_card_with_line_tags():
+def test_merge_layout_one_card_per_direction_with_line_tags():
+    board = mhd.BOARDS["cervinkova"]
     deps = [
-        _dep("12", 1, "Komárov"),
-        _dep("10", 4, "Stránská skála - smyčka"),
-        _dep("12", 8, "Vozovna Pisárky"),
-        _dep("4", 9, "Babická"),
+        _dep("12", 1, "Komárov", stop_id="Z2"),
+        _dep("10", 4, "Konečného náměstí", stop_id="Z2"),
+        _dep("12", 5, "Technologický park", stop_id="Z1"),
+        _dep("4", 8, "Babická", stop_id="Z2"),
     ]
-    cards = mhd._cards(deps, merged=(("12", "10"),))
-    assert [c.name for c in cards] == ["🚋 12 / 10", "🚋 4 → Babická"]
+    cards = mhd._cards(deps, board)
+    assert [c.name for c in cards] == ["🚋 12 → Komárov", "🚋 12 → Technologický park"]
     rows = cards[0].value.split("\n")
     assert len(rows) == 3
-    assert rows[0].startswith("**13:01**") and "`" not in rows[0]  # výchozí linka bez označení
-    assert rows[1].startswith("**13:04**") and rows[1].endswith("· `10`")
+    assert "`" not in rows[0]  # výchozí linka bez označení
+    assert rows[1].endswith("· `10`") and rows[2].endswith("· `4`")
+
+
+def test_lines_layout_card_per_line_and_direction():
+    board = mhd.BOARDS["skacelova"]
+    deps = [
+        _dep("30", 1, "Černého", "🚎", stop_id="Z5"),
+        _dep("72", 2, "Královo Pole, nádraží", "🚌", stop_id="Z6"),
+        _dep("30", 3, "Klarisky", "🚎", stop_id="Z6"),
+        _dep("72", 6, "Poliklinika Lesná", "🚌", stop_id="Z6"),
+        _dep("72", 9, "Královo Pole, nádraží", "🚌", stop_id="Z6"),
+    ]
+    cards = mhd._cards(deps, board)
+    # seřazeno podle linky a nástupiště, ne podle času
+    assert [c.name for c in cards] == ["🚎 30 → Černého", "🚎 30 → Klarisky", "🚌 72 → Královo Pole, nádraží"]
+    rows = cards[2].value.split("\n")
+    assert rows[1].endswith("· `Poliklinika Lesná`") and "`" not in rows[0] + rows[2]
+    # obvyklá konečná z celého jízdního řádu má přednost před tou nejčastější v příští hodině
+    usual = lambda stop, line: "Areál Slatina" if line == "72" else None
+    cards = mhd._cards(deps, board, usual)
+    assert cards[2].name == "🚌 72 → Areál Slatina"
+    assert cards[2].value.count("`") == 6  # všechny tři časy mají značku
 
 
 def test_merged_line_ignores_destination():
     deps = [_dep("65", 1, "Řečkovice, hřbitov", "🚌"), _dep("65", 11, "Řečkovice, nádraží", "🚌")]
-    cards = mhd._cards(deps, merged=(("65",),))
+    cards = mhd._cards(deps, KOLEJNI)
     assert [c.name for c in cards] == ["🚌 65"]
     assert cards[0].value.count("**") == 4  # dva časy, oba tučně
+
+
+def test_every_area_and_board_has_buttons():
+    for group in mhd.GROUPS:
+        view = mhd.build_view(group)
+        assert len(view.children) <= 10
+
+
+def test_usual_headsign_uses_whole_timetable(tt):
+    k1 = tt.stops_named("Kolejní")[0]
+    assert tt.usual_headsign(k1, "72") == "Technologický park"
+    assert tt.usual_headsign(k1, "99") is None

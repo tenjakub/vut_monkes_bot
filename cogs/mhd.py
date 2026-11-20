@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import logging
 import re
-from collections import defaultdict
+from collections import Counter, defaultdict
+from collections.abc import Callable
 from datetime import datetime
 
 import discord
@@ -13,7 +14,7 @@ from discord.ext import commands, tasks
 
 from transit import alerts as alerts_mod
 from transit.gtfs import TZ, Departure, Timetable
-from transit.service import BOARDS, GROUPS, MERGED_LINES, Board, Transit
+from transit.service import AREAS, BOARDS, GROUPS, Board, Transit, area_of
 from utils import render
 
 log = logging.getLogger(__name__)
@@ -23,7 +24,8 @@ PER_CARD = 4  # kolik nejbližších odjezdů ukázat v jedné kartičce
 MAX_CARDS = 12
 MAX_ALERTS = 3
 
-GROUP_LABELS = {"vse": "Obě zastávky", **{k: b.name for k, b in BOARDS.items()}}
+UsualHeadsign = Callable[[str, str], "str | None"]  # (stop_id, linka) -> obvyklá konečná
+
 
 
 def _time_row(d: Departure, bold: bool = True, tag: str | None = None) -> str:
@@ -32,51 +34,106 @@ def _time_row(d: Departure, bold: bool = True, tag: str | None = None) -> str:
     return f"{row} · `{tag}`" if tag else row
 
 
-def _cards(departures: list[Departure], merged: tuple[tuple[str, ...], ...] = MERGED_LINES) -> list[render.Field]:
-    """Kartičky s nejbližšími odjezdy.
+def _most_common(values) -> str:
+    return Counter(values).most_common(1)[0][0]
 
-    - Sloučené linky (MERGED_LINES, např. 12 + 10, 65) mají jednu kartičku bez ohledu na cíl.
-      Výchozí linka skupiny se u času neoznačuje, ostatní mají za časem své číslo.
-    - U linek, kde část spojů na konečné pokračuje dál (72 z Kolejní přes Technologický park),
-      je jedno, kam přesně pak vůz jede – rozlišujeme jen "jede dál" a "končí". Končící spoje
-      jsou až na konci a nevýrazně (jen ať je vidět, že existují).
-    """
-    merged_of = {line: group for group in merged for line in group}
-    continuing_lines = {d.line for d in departures if d.continues_to and d.line not in merged_of}
-    # klíč: (nadpis kartičky, končící?) ; nadpis bez emoji, to se doplní z prvního odjezdu
-    groups: dict[tuple[str, bool], list[Departure]] = defaultdict(list)
+
+def _merge_cards(departures: list[Departure], board: Board) -> list[render.Field]:
+    """Jedna kartička na směr (nástupiště); výchozí linka bez označení, ostatní s číslem."""
+    by_platform: dict[str, list[Departure]] = defaultdict(list)
     for d in departures:
-        group = merged_of.get(d.line)
-        if group:
-            groups[(" / ".join(group), False)].append(d)
-        elif d.line in continuing_lines and d.continues_to:
-            groups[(f"{d.line} ↪ jede dál", False)].append(d)
-        elif d.line in continuing_lines:
-            groups[(f"{d.line} → {d.headsign}", True)].append(d)
-        else:
-            groups[(f"{d.line} → {d.headsign}", False)].append(d)
+        by_platform[d.stop_id].append(d)
+    cards = []
+    for deps in sorted(by_platform.values(), key=lambda ds: ds[0].when):
+        primary = board.primary_line
+        main = [d for d in deps if d.line == primary] or deps
+        line = primary if main is not deps else _most_common(d.line for d in deps)
+        title = f"{deps[0].emoji} {line} → {_most_common(d.headsign for d in main)}"
+        rows = [_time_row(d, tag=d.line if d.line != line else None) for d in deps[:PER_CARD]]
+        cards.append(render.Field(title, "\n".join(rows)))
+    return cards
 
-    fields = []
-    # nejdřív normální kartičky podle nejbližšího odjezdu, končící spoje až na konec
-    for (title, ends), deps in sorted(groups.items(), key=lambda kv: (kv[0][1], kv[1][0].when)):
-        group = merged_of.get(deps[0].line)
+
+def _line_key(line: str) -> tuple[int, int, str]:
+    """Řazení linek: 30, 44, 67, 72, 84, … a pak noční/ostatní (N93, x72)."""
+    return (0, int(line), "") if line.isdigit() else (1, 0, line)
+
+
+def _line_cards(departures: list[Departure], usual: UsualHeadsign | None = None) -> list[render.Field]:
+    """Kartička pro každou linku a směr, seřazené podle čísla linky (stálé pořadí v mřížce).
+
+    V nadpisu je obvyklá konečná linky z toho nástupiště (podle celého jízdního řádu),
+    jiné konečné jsou jen značka za časem.
+    """
+    groups: dict[tuple[str, str], list[Departure]] = defaultdict(list)
+    for d in departures:
+        groups[(d.line, d.stop_id)].append(d)
+    cards = []
+    for (line, stop_id), deps in sorted(groups.items(), key=lambda kv: (_line_key(kv[0][0]), kv[0][1])):
+        main = (usual(stop_id, line) if usual else None) or _most_common(d.headsign for d in deps)
+        rows = [_time_row(d, tag=d.headsign if d.headsign != main else None) for d in deps[:PER_CARD]]
+        cards.append(render.Field(f"{deps[0].emoji} {line} → {main}", "\n".join(rows)))
+    return cards
+
+
+def _auto_cards(departures: list[Departure], board: Board) -> list[render.Field]:
+    """Kartičky podle linky a cíle.
+
+    - `board.merged_lines` (65 na Kolejní) mají jednu kartičku bez ohledu na cíl.
+    - U linek, kde část spojů na konečné pokračuje dál (72 z Kolejní přes Technologický park),
+      je jedno, kam přesně pak vůz jede – rozlišujeme jen "jede dál" a "končí". Pokud má linka
+      v `board.continuing` popisek směru, kartička je "72 → Semilasso" a je vždy první. Končící
+      spoje jsou až na konci a nevýrazně (jen ať je vidět, že existují).
+    """
+    directions = dict(board.continuing)
+    continuing_lines = {d.line for d in departures if d.continues_to and d.line not in board.merged_lines}
+    # klíč: (nadpis bez emoji, připnutá?, končící?)
+    groups: dict[tuple[str, bool, bool], list[Departure]] = defaultdict(list)
+    for d in departures:
+        if d.line in board.merged_lines:
+            groups[(d.line, False, False)].append(d)
+        elif d.line in continuing_lines and d.continues_to:
+            if d.line in directions:
+                groups[(f"{d.line} → {directions[d.line]}", True, False)].append(d)
+            else:
+                groups[(f"{d.line} ↪ jede dál", False, False)].append(d)
+        elif d.line in continuing_lines:
+            groups[(f"{d.line} → {d.headsign}", False, True)].append(d)
+        else:
+            groups[(f"{d.line} → {d.headsign}", False, False)].append(d)
+
+    cards = []
+    # připnuté první, končící poslední, jinak podle nejbližšího odjezdu
+    for (title, pinned, ends), deps in sorted(groups.items(), key=lambda kv: (kv[0][2], not kv[0][1], kv[1][0].when)):
         if ends:
             rows = ["🛑 _končí, dál nejede_"] + [_time_row(d, bold=False) for d in deps[:2]]
-        elif group:
-            rows = [_time_row(d, tag=d.line if d.line != group[0] else None) for d in deps[:PER_CARD]]
         else:
-            via = deps[0].last_stop if deps[0].continues_to else None
-            rows = ([f"_přes {via}_"] if via else []) + [_time_row(d) for d in deps[:PER_CARD]]
-        fields.append(render.Field(f"{deps[0].emoji} {title}", "\n".join(rows)))
-    return fields[:MAX_CARDS]
+            show_via = deps[0].continues_to and not pinned
+            rows = ([f"_přes {deps[0].last_stop}_"] if show_via else []) + [_time_row(d) for d in deps[:PER_CARD]]
+        cards.append(render.Field(f"{deps[0].emoji} {title}", "\n".join(rows)))
+    return cards
 
 
-def _board_embed(board: Board, departures: list[Departure], limit: int) -> discord.Embed:
+def _cards(
+    departures: list[Departure], board: Board, usual: UsualHeadsign | None = None
+) -> list[render.Field]:
+    if board.layout == "merge":
+        cards = _merge_cards(departures, board)
+    elif board.layout == "lines":
+        cards = _line_cards(departures, usual)
+    else:
+        cards = _auto_cards(departures, board)
+    return cards[:MAX_CARDS]
+
+
+def _board_embed(
+    board: Board, departures: list[Departure], limit: int, usual: UsualHeadsign | None = None
+) -> discord.Embed:
     # Pozor: Discord slučuje embedy se stejnou URL do jednoho, proto unikátní kotva pro každou zastávku
     embed = discord.Embed(
         title=f"{board.emoji} {board.name}", url=f"{DEPARTURES_URL}#{board.key}", color=board.color
     )
-    fields = _cards(departures)
+    fields = _cards(departures, board, usual)
     if fields:
         render.add_fields(embed, fields, limit)
     else:
@@ -118,7 +175,7 @@ async def build_message(
     relevant = alerts_mod.for_lines(all_alerts, lines)
 
     limit = render.per_embed_limit(len(boards) + (1 if relevant else 0))
-    embeds = [_board_embed(b, deps, limit) for b, deps in zip(boards, per_board)]
+    embeds = [_board_embed(b, deps, limit, timetable.usual_headsign) for b, deps in zip(boards, per_board)]
     if relevant:
         embeds.append(_alerts_embed(relevant, lines))
 
@@ -127,7 +184,8 @@ async def build_message(
         info += " · ⚠️ výluky se nepodařilo načíst"
     elif not relevant:
         info += " · ✅ bez výluk"
-    content = f"### 🚏 Odjezdy MHD – {render.czech_date(now.date())}\n{info}"
+    area_label = AREAS[area_of(group)][0]
+    content = f"### 🚏 MHD {area_label} – {render.czech_date(now.date())}\n{info}"
     return content, embeds, build_view(group)
 
 
@@ -162,21 +220,27 @@ class MhdButton(discord.ui.DynamicItem[discord.ui.Button], template=r"mhd:(?P<gr
 
 
 def build_view(group: str) -> discord.ui.View:
+    """1. řada: oblasti (Technopark + Kolejní / Koleje Purkyňova), 2. řada: zastávky oblasti, obnovit, odkaz."""
     view = discord.ui.View(timeout=None)
-    for key, label in GROUP_LABELS.items():
+    area = area_of(group)
+
+    def button(key: str, label: str, row: int) -> MhdButton:
         current = key == group
-        view.add_item(
-            MhdButton(
-                key,
-                "g",
-                label=label,
-                style=discord.ButtonStyle.primary if current else discord.ButtonStyle.secondary,
-                disabled=current,
-                row=0,
-            )
+        return MhdButton(
+            key,
+            "g",
+            label=label,
+            style=discord.ButtonStyle.primary if current else discord.ButtonStyle.secondary,
+            disabled=current,
+            row=row,
         )
+
+    for key, (label, _) in AREAS.items():
+        view.add_item(button(key, label, 0))
+    for key in AREAS[area][1]:
+        view.add_item(button(key, BOARDS[key].name, 1))
     view.add_item(MhdButton(group, "r", label="Obnovit", emoji="🔄", style=discord.ButtonStyle.secondary, row=1))
-    view.add_item(discord.ui.Button(label="Online odjezdy IDS JMK", url=DEPARTURES_URL, row=1))
+    view.add_item(discord.ui.Button(label="IDS JMK", url=DEPARTURES_URL, row=1))
     return view
 
 
@@ -201,13 +265,23 @@ class Mhd(commands.Cog):
         except Exception:
             log.exception("Obnova jízdního řádu selhala")
 
-    @app_commands.command(name="mhd", description="Nejbližší odjezdy MHD z Technologického parku a Kolejní")
-    @app_commands.describe(zastavka="Kterou zastávku ukázat (výchozí: obě)")
-    @app_commands.choices(zastavka=[app_commands.Choice(name=v, value=k) for k, v in GROUP_LABELS.items()])
-    async def mhd(self, interaction: discord.Interaction, zastavka: str = "vse") -> None:
+    async def _send(self, interaction: discord.Interaction, group: str) -> None:
         await interaction.response.defer(thinking=True)
-        content, embeds, view = await build_message(self.transit, zastavka)
+        content, embeds, view = await build_message(self.transit, group)
         await interaction.followup.send(content=content, embeds=embeds, view=view)
+
+    @app_commands.command(name="mhd", description="Odjezdy MHD: Technologický park (tramvaje) a Kolejní")
+    @app_commands.describe(zastavka="Kterou zastávku ukázat (výchozí: obě)")
+    @app_commands.choices(
+        zastavka=[app_commands.Choice(name="Obě zastávky", value="vse")]
+        + [app_commands.Choice(name=BOARDS[k].name, value=k) for k in AREAS["vse"][1]]
+    )
+    async def mhd(self, interaction: discord.Interaction, zastavka: str = "vse") -> None:
+        await self._send(interaction, zastavka)
+
+    @app_commands.command(name="mhd-purkyne", description="Odjezdy MHD u kolejí Purkyňova: Červinkova (tramvaje) a Skácelova (busy)")
+    async def mhd_purkyne(self, interaction: discord.Interaction) -> None:
+        await self._send(interaction, "purkyne")
 
 
 async def setup(bot: commands.Bot) -> None:

@@ -5,7 +5,7 @@ Tenhle soubor je pro AI, která na projektu pracuje. Lidský návod je v [README
 ## O projektu
 
 - **VUT Monkes bot** – Discord bot pro kamarádský server studentů VUT (FIT). Python 3.14, discord.py 2.x.
-- Commandy: `/ppv`, `/purkyne`, `/menzy` (menzy VUT), `/restaurace` (polední menu), `/mhd` (odjezdy MHD Brno).
+- Commandy: `/ppv`, `/purkyne`, `/menzy` (menzy VUT), `/restaurace` (polední menu), `/mhd`, `/mhd-purkyne` (odjezdy MHD Brno).
 - **Celý kód píše AI.** Majitel repa zadává požadavky, testuje na Discordu a rozhoduje. Kód nepíše, ale čte ho.
 - **Jazyk:** komunikace s uživatelem, texty v botovi, komentáře, docstringy i commit zprávy jsou **česky**.
   Identifikátory v kódu jsou anglicky.
@@ -68,7 +68,7 @@ Pravidla:
 
 ## Oprávnění a intenty – kontrola při každé změně
 
-Aktuální stav (ověřeno pro verzi s `/ppv`, `/purkyne`, `/menzy`, `/restaurace`, `/mhd`):
+Aktuální stav (ověřeno pro verzi s `/ppv`, `/purkyne`, `/menzy`, `/restaurace`, `/mhd`, `/mhd-purkyne`):
 
 - **Intenty:** `discord.Intents.default()`, žádné privilegované (Message Content, Server Members, Presence vypnuté).
 - **Oprávnění bota:** View Channels, Send Messages, Embed Links → číselně `19456`.
@@ -109,9 +109,13 @@ Postup, když jsou nová oprávnění potřeba:
 **MHD – KORDIS JMK** (`transit/`), otevřená data CC BY:
 - Statické GTFS `https://kordis-jmk.cz/gtfs/gtfs.zip` (~6 MB, `stop_times` ~28 MB). Načítá se jen to, co je
   potřeba pro zastávky z `BOARDS`, mimo event loop (`asyncio.to_thread`), uloží se do `data/` (volume v Dockeru).
-- Kartičky na tabuli (`cogs/mhd._cards`): sloučené linky z `MERGED_LINES` (12 + 10, 65) mají jednu kartičku
-  bez cíle, výchozí linka (první ve skupině) bez označení, ostatní s `` `číslo` `` za časem. Linky, kde část spojů
-  pokračuje dál (72), se dělí na „jede dál“ a nevýraznou „končí“. Ostatní podle linky a cíle.
+- Tabule a oblasti jsou v `transit/service.py` (`BOARDS`, `AREAS`). Kartičky skládá `cogs/mhd._cards` podle `Board.layout`:
+  `merge` = jedna kartička na nástupiště/směr, `primary_line` bez značky, jiné linky s `` `číslo` ``
+  (Technopark, Červinkova); `lines` = kartička na linku + nástupiště, řazeno podle čísla linky, nadpis = obvyklá
+  konečná z celého JŘ (`Timetable.usual_headsign`), jiné konečné jako značka (Skácelova); `auto` = podle linky a cíle,
+  `merged_lines` bez cíle (65), `continuing` = popisek směru pokračujících spojů, připnuté první (72 → Semilasso),
+  končící spoje nevýrazně na konci (Kolejní).
+- Klíč oblasti `vse` (Technopark + Kolejní) se nesmí přejmenovat – je v `custom_id` tlačítek na starších zprávách.
 - GTFS nemá `block_id`. Navazující spoj se odvozuje: příjezd na nástupiště P v čase A → spoj stejné linky
   z P v okně A…A+5 min. Na lince 72 (Technologický park: Z4 = jede dál, Z3 = končí) to sedí.
 - GTFS Realtime `https://kordis-jmk.cz/gtfs/gtfsReal.dat`: **jen VehiclePositions + Alerts, žádné TripUpdates**

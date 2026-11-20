@@ -20,9 +20,21 @@ GTFS_MAX_AGE = 12 * 3600  # KORDIS jízdní řád přegenerovává denně ráno
 ALERTS_TTL = 5 * 60
 
 
+TRAM = (0,)
+BUS = (3, 11, 800)  # autobusy i trolejbusy
+
+
 @dataclass(frozen=True)
 class Board:
-    """Jedna "odjezdová tabule" – zastávka (všechna její nástupiště) a volitelný filtr."""
+    """Jedna "odjezdová tabule" – zastávka (všechna její nástupiště) a jak ji zobrazit.
+
+    layout:
+      "merge" – jedna kartička na směr (nástupiště) pro všechny linky. Linka `primary_line` je bez
+                označení, ostatní mají za časem své číslo (Technologický park, Červinkova).
+      "lines" – kartička pro každou linku a směr. Nejčastější konečná je v nadpisu, jiné konečné
+                jsou jen značka za časem (Skácelova).
+      "auto"  – kartička podle linky a cíle, s chytrostmi níže (Kolejní).
+    """
 
     key: str
     name: str  # přesný název zastávky v GTFS
@@ -30,28 +42,54 @@ class Board:
     color: int
     route_types: tuple[int, ...] | None = None  # 0 = tram, 3 = bus, 11 = trolejbus; None = vše
     note: str | None = None
+    layout: str = "auto"
+    primary_line: str | None = None  # "merge": výchozí linka bez označení
+    # "auto": linky sloučené do jedné kartičky bez ohledu na cíl
+    merged_lines: tuple[str, ...] = ()
+    # "auto": spoje, které na konečné pokračují dál, dostanou kartičku "linka → směr" a jsou vždy první
+    continuing: tuple[tuple[str, str], ...] = ()
 
 
 BOARDS: dict[str, Board] = {
     b.key: b
     for b in [
-        Board("technopark", "Technologický park", "🚋", 0x00CCFF, route_types=(0,), note="jen tramvaje"),
-        Board("kolejni", "Kolejní", "🚌", 0x2C82C8),
+        Board(
+            "technopark", "Technologický park", "🚋", 0x00CCFF,
+            route_types=TRAM, note="tramvaje", layout="merge", primary_line="12",
+        ),
+        Board(
+            "kolejni", "Kolejní", "🚌", 0x2C82C8,
+            merged_lines=("65",),  # Řečkovice, hřbitov / nádraží – je to jedno
+            continuing=(("72", "Semilasso"),),  # z Technoparku jede dál přes Skácelovu a Semilasso
+        ),
+        Board(
+            "cervinkova", "Červinkova", "🚋", 0x15AABF,
+            route_types=TRAM, note="tramvaje", layout="merge", primary_line="12",
+        ),
+        Board(
+            "skacelova", "Skácelova", "🚎", 0x5C7CFA,
+            route_types=BUS, note="autobusy a trolejbusy", layout="lines",
+        ),
     ]
 }
 
-# Linky, které se na tabulích slučují do jedné kartičky bez ohledu na cíl (stačí, kdy jedou).
-# První linka ve skupině je výchozí; u ostatních se za časem ukáže číslo linky.
-MERGED_LINES: tuple[tuple[str, ...], ...] = (
-    ("12", "10"),  # Technologický park: hlavně 12, v pracovní dny ráno a odpoledne i 10
-    ("65",),  # Kolejní: Řečkovice, hřbitov / Řečkovice, nádraží – je to jedno
-)
+# Oblasti = co ukazuje jeden command (klíč "vse" zůstává kvůli tlačítkům na starších zprávách)
+AREAS: dict[str, tuple[str, tuple[str, ...]]] = {
+    "vse": ("Technopark + Kolejní", ("technopark", "kolejni")),
+    "purkyne": ("Koleje Purkyňova", ("cervinkova", "skacelova")),
+}
 
-# skupiny pro command a tlačítka
+# skupiny pro command a tlačítka: celé oblasti i jednotlivé zastávky
 GROUPS: dict[str, tuple[str, ...]] = {
-    "vse": tuple(BOARDS),
+    **{k: boards for k, (_, boards) in AREAS.items()},
     **{k: (k,) for k in BOARDS},
 }
+
+
+def area_of(group: str) -> str:
+    if group in AREAS:
+        return group
+    return next(a for a, (_, boards) in AREAS.items() if group in boards)
 
 
 class Transit:
