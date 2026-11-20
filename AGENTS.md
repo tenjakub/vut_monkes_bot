@@ -173,7 +173,7 @@ Postup, když jsou nová oprávnění potřeba:
   dárková balení (krýgl, sklenice, metr piv…) a cena nad 150 Kč/l. Řadí se podle slevy a pak ceny za litr (`Deal.unit_price`).
 - Výpisy akcí se otevírají s „jen se slevou“ (`DEFAULT_ONLY_DISCOUNT`). Pozor: BILLA a Globus u piva slevu v % neuvádějí,
   takže tam pak bývá prázdno – je to záměr uživatele.
-- Obchody se v akcích jmenují obecně („BILLA“, „Albert“, „Globus“), protože akce na Kupi.cz jsou za celý řetězec;
+- Obchody se v akcích jmenují obecně („BILLA“, „Albert supermarket“, „Globus“), protože akce na Kupi.cz jsou za celý řetězec;
   pobočka je jen v řádku 📍 u letáků (letáky a otevírací doba jsou za pobočku).
 - Výpisy akcí (`cogs/slevy.DEAL_VIEWS`) sdílí kód; nový výpis = `DealView` (kategorie Kupi, tlačítka filtru, funkce
   `classify` akce → klíč filtru / None, `loader` v `Shops`) + kategorie v `shops/service.py`.

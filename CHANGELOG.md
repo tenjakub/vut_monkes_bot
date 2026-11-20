@@ -17,7 +17,7 @@ Nejnovější verze je vždy nahoře.
 - 🍾 🥫 📦 Tlačítky se dá vybrat jen lahve, plechovky, nebo basy a multipacky. U multipacků je cena za litr, ať se dá porovnat, co se vyplatí víc.
 - 🚫 PET lahve, sudy a dárková balení s krýglem se nezobrazují.
 - 🏷️ `/maso`, `/napoje` i `/pivo` se teď otevírají rovnou s filtrem **Jen se slevou**. Tlačítkem se dá vypnout a ukázat všechny akce.
-- 🛒 Obchody se jmenují obecně (BILLA, Albert, Globus), protože akce platí pro celý řetězec. Konkrétní pobočka je vidět u `/letaky`, kde se letáky a otevírací doba opravdu liší.
+- 🛒 Obchody se jmenují obecně (BILLA, Albert supermarket, Globus), protože akce platí pro celý řetězec. U Albertu jsou jen akce supermarketů, hypermarketové ne. Konkrétní pobočka je vidět u `/letaky`, kde se letáky a otevírací doba opravdu liší.
 
 ## 1.3 · 2026-11-20 · Nápoje bez cukru
 

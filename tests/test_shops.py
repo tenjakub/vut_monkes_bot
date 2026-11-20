@@ -223,7 +223,7 @@ def test_deal_views_default_to_only_discount():
 
 
 def test_generic_store_names_branch_in_leaflets():
-    assert [s.name for s in STORES.values()] == ["Lidl", "BILLA", "Albert", "Globus"]
+    assert [s.name for s in STORES.values()] == ["Lidl", "BILLA", "Albert supermarket", "Globus"]
     page = kupi.parse_store(read("kupi_billa_srbska.html"), DAY)
     embed = slevy._leaflets_embed(STORES["billa"], {STORES["billa"].branches[0].kupi_path: page}, DAY)
     assert embed.title == "🛒 BILLA"

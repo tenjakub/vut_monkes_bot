@@ -154,7 +154,7 @@ STORES: dict[str, Store] = {
         ),
         Store(
             # Albert na Semilasse = "Albert Brno, Kosmova" (supermarket) -> bez hypermarketových akcí
-            "albert", "Albert", "🛒", 0x009FE3, "albert", ("Albert", "Albert supermarket"),
+            "albert", "Albert supermarket", "🛒", 0x009FE3, "albert", ("Albert", "Albert supermarket"),
             (Branch("Semilasso (Kosmova)", "albert/albert-brno-kosmova"),),
         ),
         Store(
