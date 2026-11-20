@@ -39,21 +39,37 @@ class ObedBot(commands.Bot):
             await self.load_extension(ext)
         self.tree.on_error = self.on_app_command_error
 
+        await self.sync_commands()
+
+    async def sync_commands(self) -> None:
+        """Registrace slash commandů na serverech a v soukromém chatu (DM) s botem.
+
+        S GUILD_IDS:
+          1. Na vybraných serverech jako serverové commandy (objeví se hned). Kontext se
+             neposílá, takže na serveru se chovají stejně jako dřív.
+          2. Globálně, ale jen pro DM s botem. Na serverech se tak globální sada neukazuje
+             a commandy tam nejsou dvakrát.
+          Pozor: discord.py posílá u serverové kopie i globálního commandu stejný objekt,
+          proto se kontext DM nastaví na stromu až PO synchronizaci serverů.
+        Bez GUILD_IDS: jedna globální sada pro servery i DM.
+        """
+        tree = self.tree
+        installs = app_commands.AppInstallationType(guild=True, user=False)
         if config.GUILD_IDS:
-            # Synchronizace do konkrétních serverů je okamžitá (globální trvá až hodinu).
             guilds = [discord.Object(id=gid) for gid in config.GUILD_IDS]
             for guild in guilds:
-                self.tree.copy_global_to(guild=guild)
-            # Globální commandy z dřívějška (třeba z běhu bez GUILD_IDS) smazat,
-            # jinak by se na serveru ukazovaly dvakrát (globální + serverová kopie).
-            self.tree.clear_commands(guild=None)
-            await self.tree.sync()
-            for guild in guilds:
-                synced = await self.tree.sync(guild=guild)
+                tree.copy_global_to(guild=guild)
+                synced = await tree.sync(guild=guild)
                 log.info("Synchronizováno %d commandů na server %s", len(synced), guild.id)
+            tree.allowed_contexts = app_commands.AppCommandContext(guild=False, dm_channel=True, private_channel=False)
+            tree.allowed_installs = installs
+            synced = await tree.sync()
+            log.info("Synchronizováno %d commandů pro DM s botem", len(synced))
         else:
-            synced = await self.tree.sync()
-            log.info("Synchronizováno %d globálních commandů", len(synced))
+            tree.allowed_contexts = app_commands.AppCommandContext(guild=True, dm_channel=True, private_channel=False)
+            tree.allowed_installs = installs
+            synced = await tree.sync()
+            log.info("Synchronizováno %d globálních commandů (servery + DM)", len(synced))
 
     @tasks.loop(seconds=30)
     async def heartbeat(self) -> None:

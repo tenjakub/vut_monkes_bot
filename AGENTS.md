@@ -64,7 +64,10 @@ Pravidla:
 - Inline fieldy tvoří mřížku po 3. `add_fields()` doplňuje poslední řadu prázdnými fieldy, jinak se osamocená
   kartička roztáhne přes celou šířku.
 - Časy zobrazuj jako Discord timestampy `<t:UNIX:t>` / `<t:UNIX:R>` (lokalizované, samy se aktualizují).
-- Při nastaveném `GUILD_IDS` bot commandy kopíruje na servery a **maže globální commandy** (jinak by byly dvakrát).
+- Registrace commandů (`ObedBot.sync_commands`): při `GUILD_IDS` serverové kopie **bez kontextu** (na serveru
+  beze změny) + globální sada **jen s kontextem DM s botem** (v DM fungují, na serveru nejsou dvakrát). Kontext se
+  nastavuje na stromu až po synchronizaci serverů, protože serverová kopie a globální command jsou tentýž objekt.
+  Hlídá to `tests/test_sync.py`. Kód commandů nesmí počítat s `interaction.guild` (v DM je `None`).
 
 ## Oprávnění a intenty – kontrola při každé změně
 

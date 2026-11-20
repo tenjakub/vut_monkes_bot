@@ -143,8 +143,10 @@ Díky tomu se dá zkoušet nová verze na testovacím serveru, zatímco na hlavn
 Tlačítka pod zprávami patří vždy botovi, který zprávu poslal, takže se instance nepletou.
 Jen nikdy nespouštěj dvě instance se **stejným** tokenem, jinak by na commandy odpovídaly obě.
 
-Když je vyplněné `GUILD_IDS`, bot zaregistruje commandy jen na těch serverech (hned) a případné
-staré globální commandy smaže, aby se v nabídce neukazovaly dvakrát.
+Když je vyplněné `GUILD_IDS`, bot zaregistruje commandy na těch serverech (objeví se hned) a navíc
+globálně **jen pro soukromý chat s botem**. V DM tak commandy fungují taky, a na serveru se přitom
+neukazují dvakrát. Do DM se dostaneš přes profil bota → **Zpráva** (musíte mít společný server).
+Poprvé může chvíli trvat, než se commandy v DM objeví.
 
 ### Bio (About Me)
 
