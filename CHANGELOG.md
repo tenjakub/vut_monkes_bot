@@ -11,6 +11,10 @@ Formát (bot ho čte, viz utils/changelog.py):
 Nejnovější verze je vždy nahoře.
 -->
 
+## 1.5 · 2026-11-20 · Rychlost ⚡
+
+- ⚡ Bot si data stahuje průběžně sám na pozadí, takže všechny commandy odpovídají hned. `/maso`, `/pivo` a spol. dřív trvaly i několik sekund. Jídelníčky menz se obnovují každých 10 minut, restaurace každou půlhodinu, výluky MHD každých 5 minut a slevy a letáky každou hodinu. Tlačítko 🔄 Obnovit stáhne data hned.
+
 ## 1.4 · 2026-11-20 · Pivo 🍺
 
 - 🍺 Nový command `/pivo` ukáže pivo v akci v Lidlu, BILLE Srbská, Albertu Semilasso a Globusu Ivanovice.

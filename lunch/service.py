@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
@@ -16,8 +16,18 @@ from .models import Menu, Place
 log = logging.getLogger(__name__)
 
 TZ = ZoneInfo("Europe/Prague")
-MENZA_TTL = 5 * 60  # KaM průběžně maže vyprodaná jídla, takže kratší cache
-RESTAURANT_TTL = 30 * 60
+# Obnova na pozadí: stránky se stahují pravidelně samy, commandy pak berou data z cache.
+# TTL je delší než interval, aby command nikdy nestahoval sám (jen mimo LUNCH_HOURS, kdy obnova neběží).
+MENZA_REFRESH_MINUTES = 10  # KaM průběžně maže vyprodaná jídla, ať je to aktuální
+RESTAURANT_REFRESH_MINUTES = 30
+LUNCH_HOURS = (6, 20)  # obnova jen přes den (Purkyňova má výdej do 20:00)
+MENZA_TTL = 15 * 60
+RESTAURANT_TTL = 45 * 60
+
+
+def is_lunch_time(now: datetime | None = None) -> bool:
+    hour = (now or datetime.now(TZ)).hour
+    return LUNCH_HOURS[0] <= hour < LUNCH_HOURS[1]
 
 
 def today() -> date:
@@ -60,12 +70,24 @@ RESTAURANTS: list[Restaurant] = [
 ]
 
 
+# Naparsované menu podle URL: (čas stažení stránky, den, menu). Dokud se stránka znovu nestáhne,
+# další command jen vezme hotový výsledek (parsování HTML je to nejpomalejší).
+_parsed: dict[str, tuple[float, date, Menu]] = {}
+
+
 async def _load(fetcher: Fetcher, place: Place, url: str, ttl: float, force: bool, parse) -> Menu:
     try:
         html, fetched = await fetcher.get(url, ttl=ttl, force=force)
-        menu = parse(html)
-        menu.fetched_at = datetime.fromtimestamp(fetched, TZ)
-        return menu
+        day = today()
+        cached = _parsed.get(url)
+        if cached and cached[0] == fetched and cached[1] == day:
+            menu = cached[2]
+        else:
+            menu = await asyncio.to_thread(parse, html)  # ve vlákně, ať se bot mezitím nezasekne
+            menu.fetched_at = datetime.fromtimestamp(fetched, TZ)
+            _parsed[url] = (fetched, day, menu)
+        # kopie, protože volající do menu ještě dopisuje (otevírací doba)
+        return replace(menu, dishes=list(menu.dishes))
     except Exception as exc:  # jeden rozbitý zdroj nesmí shodit celý výpis
         log.exception("Načtení %s selhalo", place.name)
         return Menu(place, error=f"Nepodařilo se načíst ({type(exc).__name__}).")
@@ -78,7 +100,7 @@ async def _menza_hours(fetcher: Fetcher, force: bool) -> dict[int, str]:
     """Otevírací doby menz pro dnešek; když se nepovede, prostě se nezobrazí."""
     try:
         html, _ = await fetcher.get(kam.OVERVIEW_URL, ttl=HOURS_TTL, force=force)
-        return kam.parse_hours(html, today())
+        return await asyncio.to_thread(kam.parse_hours, html, today())
     except Exception:
         log.exception("Načtení otevíracích dob menz selhalo")
         return {}

@@ -17,7 +17,8 @@ log = logging.getLogger(__name__)
 GTFS_URL = "https://kordis-jmk.cz/gtfs/gtfs.zip"
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 GTFS_MAX_AGE = 12 * 3600  # KORDIS jízdní řád přegenerovává denně ráno
-ALERTS_TTL = 5 * 60
+ALERTS_TTL = 10 * 60
+ALERTS_REFRESH_MINUTES = 5  # výluky se obnovují na pozadí
 
 
 TRAM = (0,)

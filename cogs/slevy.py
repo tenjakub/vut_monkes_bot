@@ -21,6 +21,7 @@ from shops.service import (
     BEER_PACKS,
     DRINK_CATEGORIES,
     MEAT_CATEGORIES,
+    REFRESH_MINUTES,
     STORES,
     SUGAR_FREE,
     Shops,
@@ -397,17 +398,18 @@ class Slevy(commands.Cog):
 
     async def cog_load(self) -> None:
         self.bot.add_dynamic_items(SlevyButton)
-        self.warm_up.start()
+        if getattr(self.bot, "background_refresh", True):
+            self.warm_up.start()
 
     async def cog_unload(self) -> None:
         self.warm_up.cancel()
         self.bot.remove_dynamic_items(SlevyButton)
 
-    @tasks.loop(hours=3)
+    @tasks.loop(minutes=REFRESH_MINUTES)
     async def warm_up(self) -> None:
-        """Po startu a pak každé 3 h stáhne data z Kupi.cz na pozadí, ať commandy odpovídají hned."""
+        """Po startu a pak pravidelně stáhne a naparsuje data z Kupi.cz na pozadí, commandy odpovídají hned."""
         try:
-            await self.shops.warm_up()
+            await self.shops.refresh_all()
         except Exception:
             log.exception("Obnova slev z Kupi.cz selhala")
 

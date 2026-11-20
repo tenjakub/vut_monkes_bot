@@ -22,6 +22,7 @@ log = logging.getLogger(__name__)
 
 DEALS_TTL = 4 * 3600
 STORE_TTL = 6 * 3600
+REFRESH_MINUTES = 60  # jak často se slevy a letáky obnovují na pozadí (Kupi.cz se mění nejvýš párkrát denně)
 PAGE_DELAY = 1.0  # s mezi stránkami, ať Kupi.cz nezatěžujeme
 MAX_PAGES = 6  # pojistka na kategorii
 
@@ -249,9 +250,18 @@ class DealsResult:
 
 
 class Shops:
+    """Stahuje a parsuje Kupi.cz na pozadí a drží hotové výsledky v paměti.
+
+    Commandy dostanou poslední hotový výsledek okamžitě; nové se počítají jen při obnově na pozadí
+    (`refresh_all`, každých REFRESH_MINUTES) nebo tlačítkem Obnovit (force). Parsování velkých stránek
+    běží ve vlákně, aby nezastavilo bota.
+    """
+
     def __init__(self, fetcher: Fetcher) -> None:
         self.fetcher = fetcher
         self._lock = asyncio.Lock()
+        self._deals: dict[tuple[str, ...], DealsResult] = {}
+        self._stores: dict[str, kupi.StorePage | None] | None = None
 
     async def _page(self, url: str, ttl: float, force: bool) -> tuple[str, float, bool]:
         """(html, čas stažení, bylo to čerstvé stažení?)"""
@@ -261,29 +271,42 @@ class Shops:
 
     async def deals(self, categories: tuple[str, ...], force: bool = False) -> DealsResult:
         """Akce z daných kategorií Kupi.cz (všechny obchody, filtruje se až při zobrazení)."""
+        if not force and categories in self._deals:
+            return self._deals[categories]
         async with self._lock:
-            result = DealsResult()
-            seen: set[str] = set()
-            day = today()
-            for category in categories:
-                try:
-                    for page in range(1, MAX_PAGES + 1):
-                        url = f"{kupi.BASE}/slevy/{category}" + (f"?page={page}" if page > 1 else "")
-                        html, fetched, fresh = await self._page(url, DEALS_TTL, force)
-                        result.fetched_at = min(result.fetched_at or fetched, fetched)
-                        deals, has_next = kupi.parse_deals(html, category, day, page)
-                        for d in deals:
-                            if d.id not in seen:
-                                seen.add(d.id)
-                                result.deals.append(d)
-                        if not has_next:
-                            break
-                        if fresh:
-                            await asyncio.sleep(PAGE_DELAY)
-                except Exception as exc:
-                    log.exception("Načtení slev z kategorie %s selhalo", category)
-                    result.errors.append(f"{category}: {type(exc).__name__}")
+            if not force and categories in self._deals:  # mezitím to spočítal někdo jiný
+                return self._deals[categories]
+            result = await self._load_deals(categories, force)
+            previous = self._deals.get(categories)
+            if result.errors and previous is not None and not previous.errors:
+                log.warning("Obnova %s selhala (%s), nechávám předchozí data", categories, result.errors)
+                return previous
+            self._deals[categories] = result
             return result
+
+    async def _load_deals(self, categories: tuple[str, ...], force: bool) -> DealsResult:
+        result = DealsResult()
+        seen: set[str] = set()
+        day = today()
+        for category in categories:
+            try:
+                for page in range(1, MAX_PAGES + 1):
+                    url = f"{kupi.BASE}/slevy/{category}" + (f"?page={page}" if page > 1 else "")
+                    html, fetched, fresh = await self._page(url, DEALS_TTL, force)
+                    result.fetched_at = min(result.fetched_at or fetched, fetched)
+                    deals, has_next = await asyncio.to_thread(kupi.parse_deals, html, category, day, page)
+                    for d in deals:
+                        if d.id not in seen:
+                            seen.add(d.id)
+                            result.deals.append(d)
+                    if not has_next:
+                        break
+                    if fresh:
+                        await asyncio.sleep(PAGE_DELAY)
+            except Exception as exc:
+                log.exception("Načtení slev z kategorie %s selhalo", category)
+                result.errors.append(f"{category}: {type(exc).__name__}")
+        return result
 
     async def meat_deals(self, force: bool = False) -> DealsResult:
         return await self.deals(tuple(MEAT_CATEGORIES), force)
@@ -296,23 +319,29 @@ class Shops:
 
     async def store_pages(self, force: bool = False) -> dict[str, kupi.StorePage | None]:
         """Stránky poboček (letáky + otevírací doba). Klíč = Branch.kupi_path."""
+        if not force and self._stores is not None:
+            return self._stores
         pages: dict[str, kupi.StorePage | None] = {}
         day = today()
         for store in STORES.values():
             for branch in store.branches:
                 try:
                     html, _, fresh = await self._page(f"{kupi.BASE}/obchod/{branch.kupi_path}", STORE_TTL, force)
-                    pages[branch.kupi_path] = kupi.parse_store(html, day)
+                    pages[branch.kupi_path] = await asyncio.to_thread(kupi.parse_store, html, day)
                     if fresh:
                         await asyncio.sleep(PAGE_DELAY)
                 except Exception:
                     log.exception("Načtení pobočky %s selhalo", branch.kupi_path)
-                    pages[branch.kupi_path] = None
+                    # radši starší data pobočky než žádná
+                    pages[branch.kupi_path] = (self._stores or {}).get(branch.kupi_path)
+        self._stores = pages
         return pages
 
-    async def warm_up(self) -> None:
-        """Obnoví cache na pozadí (volá se pravidelně), aby commandy odpovídaly hned."""
+    async def refresh_all(self) -> None:
+        """Obnova na pozadí: stáhne a naparsuje všechno znovu, commandy pak odpovídají hned."""
+        await self.store_pages(force=True)
         await self.meat_deals(force=True)
         await self.drink_deals(force=True)
         await self.beer_deals(force=True)
-        await self.store_pages(force=True)
+
+    warm_up = refresh_all  # starší název

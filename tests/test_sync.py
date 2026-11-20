@@ -12,6 +12,7 @@ GUILD, BOT_DM = 0, 1
 def _sent_payloads(monkeypatch, guild_ids: str):
     monkeypatch.setenv("DISCORD_TOKEN", "x")
     monkeypatch.setenv("GUILD_IDS", guild_ids)
+    monkeypatch.setenv("BACKGROUND_REFRESH", "0")  # žádné stahování z internetu v testech
     for mod in ("config", "bot"):
         sys.modules.pop(mod, None)
     bot = importlib.import_module("bot")

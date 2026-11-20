@@ -14,7 +14,7 @@ from discord.ext import commands, tasks
 
 from transit import alerts as alerts_mod
 from transit.gtfs import TZ, Departure, Timetable
-from transit.service import AREAS, BOARDS, GROUPS, Board, Transit, area_of
+from transit.service import ALERTS_REFRESH_MINUTES, AREAS, BOARDS, GROUPS, Board, Transit, area_of
 from utils import render
 
 log = logging.getLogger(__name__)
@@ -256,11 +256,22 @@ class Mhd(commands.Cog):
 
     async def cog_load(self) -> None:
         self.bot.add_dynamic_items(MhdButton)
-        self.refresh_timetable.start()
+        if getattr(self.bot, "background_refresh", True):
+            self.refresh_timetable.start()
+            self.refresh_alerts.start()
 
     async def cog_unload(self) -> None:
         self.refresh_timetable.cancel()
+        self.refresh_alerts.cancel()
         self.bot.remove_dynamic_items(MhdButton)
+
+    @tasks.loop(minutes=ALERTS_REFRESH_MINUTES)
+    async def refresh_alerts(self) -> None:
+        """Výluky z realtime feedu na pozadí, ať /mhd nečeká na stažení."""
+        try:
+            await self.transit.alerts(force=True)
+        except Exception:
+            log.exception("Obnova výluk selhala")
 
     @tasks.loop(hours=3)
     async def refresh_timetable(self) -> None:

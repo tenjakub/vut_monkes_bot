@@ -34,6 +34,7 @@ class ObedBot(commands.Bot):
             activity=discord.CustomActivity(name=status_text()),
         )
         self.fetcher = Fetcher()
+        self.background_refresh = config.BACKGROUND_REFRESH  # obnova dat na pozadí (v testech vypnutá)
 
     async def setup_hook(self) -> None:
         log.info("Startuje VUT Monkes bot, %s", status_text())

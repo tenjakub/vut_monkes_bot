@@ -85,8 +85,18 @@ Ceny u menz jsou pro **studenty VUT** (1. cena na webu KaM). Změníš je v `lun
   (`kordis-jmk.cz/gtfs/gtfs.zip`, ukládá se do `data/` a obnovuje každých 12 h) a výluky
   z GTFS Realtime (`kordis-jmk.cz/gtfs/gtfsReal.dat`, cache 5 min).
 
-Stažené stránky se cachují (menzy 5 min, restaurace 30 min). Tlačítko „Obnovit“ stáhne data znovu,
-nejvýš jednou za minutu.
+Data se stahují a parsují **průběžně na pozadí**, commandy pak jen sáhnou do hotových výsledků v paměti:
+
+| Zdroj | Obnova na pozadí |
+|---|---|
+| menzy (KaM) | každých 10 min, jen 6:00–20:00 |
+| restaurace | každých 30 min, jen 6:00–20:00 |
+| výluky MHD | každých 5 min |
+| jízdní řád MHD | kontrola každé 3 h (stahuje se po 12 h) |
+| slevy a letáky (Kupi.cz) | každou hodinu |
+
+Tlačítko „Obnovit“ stáhne data hned (stejnou stránku nejvýš jednou za minutu). Intervaly jsou konstanty
+`*_REFRESH_MINUTES` v `lunch/service.py`, `transit/service.py` a `shops/service.py`.
 
 ## Discord aplikace
 

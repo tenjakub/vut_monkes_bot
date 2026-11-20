@@ -41,3 +41,6 @@ ISSUES_URL = f"{REPO_URL}/issues"
 
 # Soubor, který bot pravidelně "dotýká", dokud je připojený – kontroluje ho healthcheck.py
 HEALTH_FILE = os.environ.get("HEALTH_FILE", "/tmp/vut_monkes_bot.heartbeat")
+
+# Obnova dat na pozadí (menzy, restaurace, výluky, slevy). V testech se vypíná (BACKGROUND_REFRESH=0).
+BACKGROUND_REFRESH = os.environ.get("BACKGROUND_REFRESH", "1") != "0"

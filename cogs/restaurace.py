@@ -2,15 +2,19 @@
 
 from __future__ import annotations
 
+import logging
 import re
 
 import discord
 from discord import app_commands
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 from lunch import service
 from lunch.models import Menu
 from utils import render
+
+
+log = logging.getLogger(__name__)
 
 
 def restaurant_fields(menu: Menu) -> list[render.Field]:
@@ -66,9 +70,22 @@ class Restaurace(commands.Cog):
 
     async def cog_load(self) -> None:
         self.bot.add_dynamic_items(RefreshButton)
+        if getattr(self.bot, "background_refresh", True):
+            self.prefetch.start()
 
     async def cog_unload(self) -> None:
+        self.prefetch.cancel()
         self.bot.remove_dynamic_items(RefreshButton)
+
+    @tasks.loop(minutes=service.RESTAURANT_REFRESH_MINUTES)
+    async def prefetch(self) -> None:
+        """Přes den stahuje polední menu restaurací na pozadí, ať /restaurace odpovídá hned."""
+        if not service.is_lunch_time():
+            return
+        try:
+            await service.restaurant_menus(self.bot.fetcher, force=True)
+        except Exception:
+            log.exception("Obnova menu restaurací selhala")
 
     @app_commands.command(
         name="restaurace",

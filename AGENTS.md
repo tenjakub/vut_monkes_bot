@@ -157,8 +157,8 @@ Postup, když jsou nová oprávnění potřeba:
 - Jen veřejné HTML stránky, které povoluje `robots.txt`: kategorie `/slevy/<kategorie>?page=N` a stránky poboček
   `/obchod/<řetězec>/<pobočka>`. **Nepoužívej** interní endpointy `/get-slevy`, `/get-letaky`, `/get-akce` …
   (robots.txt je zakazuje), řazení `?ord=` ani vícenásobné filtry obchodů.
-- Stahuje se postupně s pauzou (`PAGE_DELAY`), cache 4–6 h, na pozadí se obnovuje každé 3 h (`Slevy.warm_up`).
-  Uživatelské commandy čtou z cache. Nepřidávej stahování „na každé kliknutí“.
+- Stahuje se postupně s pauzou (`PAGE_DELAY`), na pozadí každou hodinu (`REFRESH_MINUTES`, `Shops.refresh_all`).
+  Naparsované výsledky drží `Shops` v paměti, commandy je jen čtou. Nepřidávej stahování „na každé kliknutí“.
 - Kategorie: řádek slevy (`div.discount_row`) = jedna akce v jednom obchodě. Nahoře bývají sponzorované produkty
   jiných řetězců, proto se akce **vždy filtrují podle názvu obchodu** (`Store.shop_labels`). Další stránka =
   odkaz přesně na `?page=N+1`.
@@ -209,6 +209,15 @@ Postup, když jsou nová oprávnění potřeba:
   o který chce uživatel požádat.
 
 Obecně: na weby chodíme s cache (`lunch/fetcher.py`) a slušným User-Agentem, žádné agresivní dotazování.
+
+**Obnova na pozadí (rychlost commandů):** každý cog má `tasks.loop`, který data pravidelně stáhne a naparsuje
+(menzy 10 min a restaurace 30 min jen v `LUNCH_HOURS`, výluky 5 min, Kupi.cz 60 min). Commandy tak jen čtou
+hotové výsledky (desítky ms). Pravidla:
+- TTL cache musí být **delší** než interval obnovy, jinak by command stahoval sám.
+- Parsování větších HTML/zipů patří do `asyncio.to_thread`, jinak se zasekne celý bot.
+- Nová obnova na pozadí se spouští jen když `bot.background_refresh` (v testech `BACKGROUND_REFRESH=0`,
+  aby testy nestahovaly z internetu).
+- Při chybě obnovy se nechávají předchozí data (lepší starší výpis než žádný).
 
 ## Nasazení
 
