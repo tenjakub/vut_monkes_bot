@@ -32,7 +32,7 @@ from shops.service import (
     unit_price,
     sugar_free,
 )
-from utils import render
+from utils import loading, render
 
 log = logging.getLogger(__name__)
 
@@ -437,6 +437,7 @@ class Slevy(commands.Cog):
         self.bot.add_dynamic_items(SlevyButton)
         if getattr(self.bot, "background_refresh", True):
             self.warm_up.start()
+            loading.expect(self.bot, "slevy a letáky")
 
     async def cog_unload(self) -> None:
         self.warm_up.cancel()
@@ -446,7 +447,8 @@ class Slevy(commands.Cog):
     async def warm_up(self) -> None:
         """Po startu a pak pravidelně stáhne a naparsuje data z Kupi.cz na pozadí, commandy odpovídají hned."""
         try:
-            await self.shops.refresh_all()
+            async with loading.track(self.bot, "slevy a letáky"):
+                await self.shops.refresh_all()
         except Exception:
             log.exception("Obnova slev z Kupi.cz selhala")
 

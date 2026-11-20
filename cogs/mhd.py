@@ -25,7 +25,7 @@ from transit.service import (
     Transit,
     area_of,
 )
-from utils import render
+from utils import loading, render
 
 log = logging.getLogger(__name__)
 
@@ -371,6 +371,8 @@ class Mhd(commands.Cog):
         if getattr(self.bot, "background_refresh", True):
             self.refresh_timetable.start()
             self.refresh_alerts.start()
+            loading.expect(self.bot, "jízdní řád MHD")
+            loading.expect(self.bot, "výluky MHD")
 
     async def cog_unload(self) -> None:
         self.refresh_timetable.cancel()
@@ -381,7 +383,8 @@ class Mhd(commands.Cog):
     async def refresh_alerts(self) -> None:
         """Výluky z realtime feedu na pozadí, ať /mhd nečeká na stažení."""
         try:
-            await self.transit.alerts(force=True)
+            async with loading.track(self.bot, "výluky MHD"):
+                await self.transit.alerts(force=True)
         except Exception:
             log.exception("Obnova výluk selhala")
 
@@ -389,7 +392,8 @@ class Mhd(commands.Cog):
     async def refresh_timetable(self) -> None:
         """Načte jízdní řád hned po startu a pak ho průběžně obnovuje (stáhne, jen když je starý)."""
         try:
-            await self.transit.refresh()
+            async with loading.track(self.bot, "jízdní řád MHD"):
+                await self.transit.refresh()
         except Exception:
             log.exception("Obnova jízdního řádu selhala")
 

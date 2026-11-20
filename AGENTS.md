@@ -244,6 +244,10 @@ hotové výsledky (desítky ms). Pravidla:
 - Nová obnova na pozadí se spouští jen když `bot.background_refresh` (v testech `BACKGROUND_REFRESH=0`,
   aby testy nestahovaly z internetu).
 - Při chybě obnovy se nechávají předchozí data (lepší starší výpis než žádný).
+- Každá obnova na pozadí běží v `async with loading.track(self.bot, "<název>")` (`utils/loading.py`) a při startu
+  smyčky se registruje `loading.expect(...)`; když se zrovna nestahuje (mimo obědy), volá `loading.skip(...)`.
+  Tracker loguje „✅ Načteno: … za X s“ (po startu vždy, pak jen pomalé obnovy), jednou souhrn „🚀 Všechna data po startu
+  načtena“ a při načítání delším než 2 s přidá do statusu bota „⏳ načítám data“ (`ObedBot.update_presence`).
 
 ## Nasazení
 

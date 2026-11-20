@@ -11,7 +11,7 @@ from discord.ext import commands, tasks
 
 from lunch import kam, service
 from lunch.models import Menu
-from utils import render
+from utils import loading, render
 
 log = logging.getLogger(__name__)
 
@@ -124,6 +124,7 @@ class Menza(commands.Cog):
         self.bot.add_dynamic_items(MenzaButton)
         if getattr(self.bot, "background_refresh", True):
             self.prefetch.start()
+            loading.expect(self.bot, "jídelníčky menz")
 
     async def cog_unload(self) -> None:
         self.prefetch.cancel()
@@ -133,9 +134,11 @@ class Menza(commands.Cog):
     async def prefetch(self) -> None:
         """Přes den stahuje jídelníčky všech menz na pozadí, ať /ppv a spol. odpovídají hned."""
         if not service.is_lunch_time():
+            loading.skip(self.bot, "jídelníčky menz")
             return
         try:
-            await service.menza_menus(self.bot.fetcher, "vse", force=True)
+            async with loading.track(self.bot, "jídelníčky menz"):
+                await service.menza_menus(self.bot.fetcher, "vse", force=True)
         except Exception:
             log.exception("Obnova jídelníčků menz selhala")
 

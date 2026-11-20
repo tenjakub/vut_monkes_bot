@@ -11,7 +11,7 @@ from discord.ext import commands, tasks
 
 from lunch import service
 from lunch.models import Menu
-from utils import render
+from utils import loading, render
 
 
 log = logging.getLogger(__name__)
@@ -75,6 +75,7 @@ class Restaurace(commands.Cog):
         self.bot.add_dynamic_items(RefreshButton)
         if getattr(self.bot, "background_refresh", True):
             self.prefetch.start()
+            loading.expect(self.bot, "menu restaurací")
 
     async def cog_unload(self) -> None:
         self.prefetch.cancel()
@@ -84,9 +85,11 @@ class Restaurace(commands.Cog):
     async def prefetch(self) -> None:
         """Přes den stahuje polední menu restaurací na pozadí, ať /restaurace odpovídá hned."""
         if not service.is_lunch_time():
+            loading.skip(self.bot, "menu restaurací")
             return
         try:
-            await service.restaurant_menus(self.bot.fetcher, force=True)
+            async with loading.track(self.bot, "menu restaurací"):
+                await service.restaurant_menus(self.bot.fetcher, force=True)
         except Exception:
             log.exception("Obnova menu restaurací selhala")
 

@@ -11,7 +11,7 @@ from discord import app_commands
 from discord.ext import commands, tasks
 
 from lunch.service import today
-from utils import render
+from utils import loading, render
 from weather import openmeteo
 
 log = logging.getLogger(__name__)
@@ -104,6 +104,7 @@ class Pocasi(commands.Cog):
         self.bot.add_dynamic_items(PocasiButton)
         if getattr(self.bot, "background_refresh", True):
             self.prefetch.start()
+            loading.expect(self.bot, "počasí")
 
     async def cog_unload(self) -> None:
         self.prefetch.cancel()
@@ -113,7 +114,8 @@ class Pocasi(commands.Cog):
     async def prefetch(self) -> None:
         """Předpověď na pozadí, ať /pocasi odpovídá hned."""
         try:
-            await self.bot.fetcher.get(openmeteo.URL, ttl=TTL, force=True)
+            async with loading.track(self.bot, "počasí"):
+                await self.bot.fetcher.get(openmeteo.URL, ttl=TTL, force=True)
         except Exception:
             log.exception("Obnova počasí selhala")
 

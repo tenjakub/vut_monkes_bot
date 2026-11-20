@@ -12,16 +12,22 @@ from discord.ext import commands, tasks
 import config
 from lunch.fetcher import Fetcher
 from utils import changelog
+from utils.loading import LoadingTracker
 
 log = logging.getLogger("bot")
 
 EXTENSIONS = ["cogs.menza", "cogs.restaurace", "cogs.mhd", "cogs.slevy", "cogs.cojist", "cogs.obed", "cogs.pocasi", "cogs.novinky"]
 
 
-def status_text() -> str:
-    """Status pod jménem bota: verze z CHANGELOG.md + commit, např. "verze 1.1 · 3227e1b"."""
+LOADING_SUFFIX = " · ⏳ načítám data"
+
+
+def status_text(loading: bool = False) -> str:
+    """Status pod jménem bota: verze z CHANGELOG.md + commit, např. "verze 1.1 · 3227e1b".
+    Během delšího načítání dat na pozadí s ⏳ na konci."""
     release = changelog.current_version()
-    return f"verze {release} · {config.BOT_VERSION}" if release else f"verze {config.BOT_VERSION}"
+    text = f"verze {release} · {config.BOT_VERSION}" if release else f"verze {config.BOT_VERSION}"
+    return text + (LOADING_SUFFIX if loading else "")
 
 
 class ObedBot(commands.Bot):
@@ -31,16 +37,24 @@ class ObedBot(commands.Bot):
             command_prefix=commands.when_mentioned,
             intents=discord.Intents.default(),
             # vlastní status pod jménem bota – verze, ať je hned vidět, co běží
-            activity=discord.CustomActivity(name=status_text()),
+            # (po startu se hned načítají data, proto rovnou s ⏳; on_ready ho upraví podle skutečnosti)
+            activity=discord.CustomActivity(name=status_text(loading=config.BACKGROUND_REFRESH)),
         )
         self.fetcher = Fetcher()
         self.background_refresh = config.BACKGROUND_REFRESH  # obnova dat na pozadí (v testech vypnutá)
+        self.loading = LoadingTracker(self.update_presence)  # log "načteno" a ⏳ ve statusu
+
+    async def update_presence(self) -> None:
+        """Status podle toho, jestli se zrovna (déle) načítají data."""
+        if self.is_ready():
+            await self.change_presence(activity=discord.CustomActivity(name=status_text(self.loading.showing)))
 
     async def setup_hook(self) -> None:
         log.info("Startuje VUT Monkes bot, %s", status_text())
         self.heartbeat.start()
         for ext in EXTENSIONS:
             await self.load_extension(ext)
+        self.loading.seal()  # všechny zdroje se zaregistrovaly -> souhrn "vše načteno" může přijít
         self.tree.on_error = self.on_app_command_error
 
         await self.sync_commands()
@@ -83,6 +97,9 @@ class ObedBot(commands.Bot):
 
     async def on_ready(self) -> None:
         log.info("Přihlášen jako %s (%s)", self.user, self.user.id if self.user else "?")
+        # status podle skutečnosti: ⏳ jen pokud se ještě něco načítá (on_ready přijde i po výpadku spojení)
+        self.loading.showing = bool(self.loading.active)
+        await self.update_presence()
 
     async def on_app_command_error(
         self, interaction: discord.Interaction, error: app_commands.AppCommandError
