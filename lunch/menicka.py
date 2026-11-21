@@ -7,7 +7,7 @@ from datetime import date
 
 from bs4 import BeautifulSoup
 
-from .models import Category, Dish, Menu, Place, norm
+from .models import NO_MENU, Category, Dish, Menu, Place, norm
 
 URL = "https://www.menicka.cz/{id}.html"
 _DATE_RE = re.compile(r"(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})")
@@ -24,7 +24,7 @@ def parse(html: str, place: Place, today: date) -> Menu:
             block = candidate
             break
     if block is None:
-        return Menu(place, note="Na dnešek tu není zadané menu.")
+        return Menu(place, note=NO_MENU)
 
     hours = None
     hours_el = block.select_one(".obedovycas em")
@@ -61,4 +61,4 @@ def parse(html: str, place: Place, today: date) -> Menu:
             )
         )
 
-    return Menu(place, dishes=dishes, note=None if dishes else note, hours=hours)
+    return Menu(place, dishes=dishes, note=None if dishes else (note or NO_MENU), hours=hours)

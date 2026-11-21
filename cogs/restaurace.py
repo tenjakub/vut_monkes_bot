@@ -10,7 +10,7 @@ from discord import app_commands
 from discord.ext import commands, tasks
 
 from lunch import service
-from lunch.models import Menu
+from lunch.models import NO_MENU, Menu
 from cogs.obed import ObedNewButton
 from utils import loading, render
 
@@ -31,7 +31,7 @@ async def build_message(
 ) -> tuple[str, list[discord.Embed], discord.ui.View]:
     menus = await service.restaurant_menus(bot.fetcher, force=force)
     limit = render.per_embed_limit(len(menus))
-    embeds = [render.menu_embed(m, restaurant_fields(m), limit, "Menu je prázdné.") for m in menus]
+    embeds = [render.menu_embed(m, restaurant_fields(m), limit, NO_MENU) for m in menus]
     content = render.header("🍴 Polední menu restaurací", menus)
     return content, embeds, build_view()
 

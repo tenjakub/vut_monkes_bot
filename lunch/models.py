@@ -23,6 +23,10 @@ class Category(Enum):
     SIDE = "side"  # saláty, přílohy, dezerty… (u menz "O: Ostatní")
 
 
+# Jednotná hláška všech restaurací, když na dnešek menu není (stejná jako na menicka.cz).
+NO_MENU = "Pro tento den nebylo zadáno menu."
+
+
 @dataclass(frozen=True)
 class Place:
     """Jedno místo, kde se dá najíst (menza / restaurace)."""

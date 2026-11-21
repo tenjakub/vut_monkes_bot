@@ -182,3 +182,12 @@ def test_ukarla_weekday_and_missing_day():
     assert menu.soups[0].name == "Fazolová s brambory a kořenovou zeleninou"
     empty = ukarla.parse(read("ukarla.html"), place("ukarla"), date(2026, 12, 5))
     assert empty.dishes == [] and empty.note
+
+
+def test_restaurants_share_no_menu_text():
+    """Den bez menu hlásí všechny restaurace stejně jako menicka.cz."""
+    from lunch.models import NO_MENU
+
+    assert menicka.parse(read("menicka_u3opic.html"), place("u3opic"), date(2026, 11, 22)).note == NO_MENU
+    assert lastrada.parse(read("lastrada.html"), place("lastrada"), date(2026, 11, 22)).note == NO_MENU
+    assert ukarla.parse(read("ukarla.html"), place("ukarla"), date(2026, 12, 5)).note == NO_MENU

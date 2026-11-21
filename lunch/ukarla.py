@@ -12,7 +12,7 @@ from datetime import date
 
 from bs4 import BeautifulSoup
 
-from .models import Category, Dish, Menu, Place, norm
+from .models import NO_MENU, Category, Dish, Menu, Place, norm
 
 URL = "https://ukarlabrno.cz/menu/pages/poledni-menu"
 
@@ -45,5 +45,5 @@ def parse(html: str, place: Place, today: date) -> Menu:
             dishes.append(Dish(name=item[2], price=f"{item[3]} Kč" if item[3] else None, label=item[1]))
 
     if not dishes:
-        return Menu(place, note="Na dnešek tu není zadané menu.")
+        return Menu(place, note=NO_MENU)
     return Menu(place, dishes=dishes)

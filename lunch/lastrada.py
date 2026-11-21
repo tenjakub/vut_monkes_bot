@@ -11,7 +11,7 @@ from datetime import date
 
 from bs4 import BeautifulSoup
 
-from .models import Category, Dish, Menu, Place, norm
+from .models import NO_MENU, Category, Dish, Menu, Place, norm
 
 URL = "https://lastrada-brno.cz/poledni-menu/"
 
@@ -58,7 +58,7 @@ def parse(html: str, place: Place, today: date) -> Menu:
             day_card = card
 
     if day_card is None:
-        return Menu(place, note="Na dnešek tu není polední menu.")
+        return Menu(place, note=NO_MENU)
 
     chip = day_card.select_one("h3 .ls-chip")
     chip_text = norm(chip.get_text(" ")) if chip else ""
@@ -77,7 +77,7 @@ def parse(html: str, place: Place, today: date) -> Menu:
     # Svátek apod.: většina položek prázdná, v jedné je jen info text
     if empty_slots and len(items) <= 1:
         note = " – ".join(x for x in [chip_text, *(t for _, t in items)] if x)
-        return Menu(place, note=note or "Dnes se polední menu nevaří.")
+        return Menu(place, note=note or NO_MENU)
 
     dishes: list[Dish] = []
     if chip_text:

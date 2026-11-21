@@ -171,6 +171,8 @@ Postup, když jsou nová oprávnění potřeba:
   (mimo provoz „z“), používá se jen `x` a `a`. Zobrazuje se v patičce kartičky menzy („🕐 Dnes …“).
 
 **Restaurace** (`lunch/service.py` → `RESTAURANTS`):
+- Den bez menu hlásí všechny restaurace stejně: `lunch.models.NO_MENU` („Pro tento den nebylo zadáno menu.“,
+  jako menicka.cz). Vlastní hláška jen když web říká něco konkrétního (svátek, zavřeno). Nový scraper ji musí použít.
 - menicka.cz (`menicka.py`): blok `div.menicka` se hledá podle data v nadpisu, ne podle pořadí.
   Alergeny bývají jako `<em>1</em>` uvnitř názvu a vyhazují se. Nová restaurace = ID z URL + řádek v `RESTAURANTS`.
 - La Strada má vlastní web (`lastrada.py`): týdenní karty `.ls-card`, ceny v `.ls-pricing`. Je to nejkřehčí scraper.
