@@ -8,6 +8,7 @@ Tenhle soubor je pro AI, která na projektu pracuje. Lidský návod je v [README
 - Commandy: `/ppv`, `/purkyne`, `/menzy` (menzy VUT), `/restaurace` (polední menu), `/mhd`, `/mhd-purkyne` (odjezdy MHD Brno),
   `/letaky`, `/maso`, `/napoje`, `/pivo` (letáky a slevy supermarketů), `/domu` (spoje z centra na koleje),
   `/obed` (kdo jde na oběd), `/co-jist` (náhodné jídlo), `/pocasi`, `/novinky` (changelog).
+- Repo je veřejné, kód je pod licencí MIT ([LICENSE](LICENSE)). Data ze zdrojů patří jim (viz README → Licence).
 - **Celý kód píše AI.** Majitel repa zadává požadavky, testuje na Discordu a rozhoduje. Kód nepíše, ale čte ho.
 - **Jazyk:** komunikace s uživatelem, texty v botovi, komentáře, docstringy i commit zprávy jsou **česky**.
   Identifikátory v kódu jsou anglicky.

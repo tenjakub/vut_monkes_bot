@@ -1,333 +1,178 @@
 # VUT Monkes bot
 
-Discord bot v Pythonu ([discord.py](https://discordpy.readthedocs.io/) 2.x) pro jeden kamarádský
-server. Vypisuje, co je dnes k obědu v menzách VUT a v okolních restauracích a kdy jede MHD.
-Výpis je v embedech a pod ním jsou tlačítka na přepínání.
+Discord bot pro kamarádský server studentů VUT. Ukáže, co je dnes k obědu v menzách a okolních
+restauracích, kdy jede MHD, co je v akci v supermarketech a jaké bude počasí. Umí i svolat
+společný oběd. Napsaný v Pythonu ([discord.py](https://discordpy.readthedocs.io/) 2.x), výpisy jsou
+v embedech s tlačítky na přepínání.
 
 > [!NOTE]
 > 🤖 **Tenhle projekt je psaný AI.** Celý kód, testy i tohle README napsal
-> [Claude](https://www.anthropic.com/claude) (model od Anthropicu) v
-> [Claude Code](https://claude.com/claude-code). Majitel repa zadává, co má bot umět,
-> testuje ho na serveru a rozhoduje o směru, ale kód sám nepíše. Proto mají commity
-> `Co-Authored-By: Claude`.
+> [Claude](https://www.anthropic.com/claude) v [Claude Code](https://claude.com/claude-code).
+> Majitel repa zadává, co má bot umět, testuje ho na serveru a rozhoduje, ale kód sám nepíše.
+> Proto mají commity `Co-Authored-By: Claude`. Najdeš-li chybu nebo podivné řešení, je to nejspíš chyba AI. 🙂
 >
-> Pokud tu najdeš chybu nebo podivné řešení, je to nejspíš chyba AI, ne člověka. 🙂
->
-> Pokyny a kontext pro AI agenty (architektura, záludnosti zdrojů dat, oprávnění bota) jsou
-> v [AGENTS.md](AGENTS.md). [CLAUDE.md](CLAUDE.md) na něj jen odkazuje.
+> Kontext a pravidla pro AI agenty jsou v [AGENTS.md](AGENTS.md) ([CLAUDE.md](CLAUDE.md) na něj jen odkazuje).
 
 ## Commandy
 
 | Command | Co dělá |
 |---|---|
-| `/ppv` | Economy: Menza Kolejní, Pizzerie Mozzarella, Menza Starý pivovar |
-| `/purkyne` | Economy: Menza Purkyňova + Starý pivovar |
-| `/menzy` | Economy ze všech menz, kde ho vaří (Kolejní, Mozzarella, SP, Purkyňova, Q Technická, FCH, Rybkova) |
+| `/ppv` | Economy obědy: Menza Kolejní, Pizzerie Mozzarella, Menza Starý pivovar |
+| `/purkyne` | Economy obědy: Menza Purkyňova + Starý pivovar |
+| `/menzy` | Economy ze všech menz, kde ho vaří |
 | `/restaurace` | Polední menu: U 3 opic, Padagali, La Strada, U Karla, Portoriko |
-| `/mhd` | PPV (koleje Pod Palackého vrchem): odjezdy z Technologického parku (tramvaje) a z Kolejní + výluky na těch linkách |
-| `/mhd-purkyne` | Totéž u kolejí Purkyňova: Červinkova (tramvaje) a Skácelova (autobusy a trolejbusy zvlášť na východ a na západ) |
-| `/letaky` | Akční letáky a dnešní otevírací doba: Lidl (Palackého, Šumavská, Bayerova), BILLA (Srbská), Albert (Semilasso), Globus (Ivanovice) |
-| `/maso` | Slevy na maso v těch samých obchodech, seřazené podle slevy, s přepínačem vepřové / hovězí / drůbež a „jen se slevou“; nahoře 🏆 nejlevnější kus podle Kč/kg |
-| `/pivo` | Pivo v akci: lahve, plechovky, basy a multipacky (multipacky s cenou za kus, jiné velikosti za 0,5 l), bez PET lahví, sudů a dárkových balení; nahoře 🏆 nejlevnější za 0,5 l |
-| `/napoje` | Energetické nápoje a limonády bez cukru v akci (✅ výslovně bez cukru, 🤷 různé druhy značky, která má i verzi bez cukru) |
-| `/domu` | Jak se dostat z centra na koleje (jeden výpis s příjezdem na Purkyňovy i PPV): tramvaje a noční N99 z České, poslední denní spoj, o kolik dřív to jede z Hlavního nádraží |
-| `/obed` | Hlasování „Kdo jde na oběd?“ – tlačítka s menzami a restauracemi, časy, „Jdu teď“; svolat jde i tlačítkem pod menzami a restauracemi |
-| `/co-jist` | Náhodné jídlo z dnešních menz a restaurací (znovu / jen menzy / jen Economy / jen restaurace / do 150 Kč) |
-| `/pocasi` | Počasí u FITu a kolejí (Open-Meteo): teď, dalších 18 h, dnes a zítra, rady na oblečení, večer rada k otevřenému oknu |
-| `/novinky` | Co je nového v posledních verzích bota (z [CHANGELOG.md](CHANGELOG.md)), s listováním ke starším |
+| `/mhd` | Odjezdy u kolejí PPV (Technologický park, Kolejní) + výluky |
+| `/mhd-purkyne` | Odjezdy u Purkyňových kolejí (Červinkova, Skácelova) + výluky |
+| `/domu` | Jak se dostat z centra (Česká, Hlavní nádraží) na koleje: tramvaje, poslední denní spoj, noční N99 |
+| `/letaky` | Akční letáky a otevírací doba okolních Lidlů, BILLY, Alberta a Globusu |
+| `/maso` | Slevy na čerstvé maso, nahoře 🏆 nejlevnější za kilo |
+| `/pivo` | Pivo v akci (lahve, plechovky, multipacky), ceny za půllitr nebo za kus |
+| `/napoje` | Energetické nápoje a limonády bez cukru v akci |
+| `/obed` | Hlasování „Kdo jde na oběd?“: kam a v kolik |
+| `/co-jist` | Náhodné jídlo z dnešních menz a restaurací, volitelně do 150 Kč |
+| `/pocasi` | Počasí u FITu: teď, dalších 18 h, dnes a zítra, rady k oblečení a k oknu přes noc |
+| `/novinky` | Co je nového (z [CHANGELOG.md](CHANGELOG.md)) |
 
-Všechny tři menzové commandy mají volitelný parametr `vse: True`. Ten místo Economy ukáže
-polévky a všechna hlavní jídla (saláty, přílohy a dezerty vynechá).
-
-Tlačítka pod zprávou přepínají skupinu menz, Economy/vše a obnovují data. Stav je uložený
-přímo v ID tlačítka, takže tlačítka fungují i po restartu bota.
-
-Každé jídlo je ve výpisu jako kartička: emoji, štítek (`E1`…), cena a název. Kartičky se na desktopu
-skládají do mřížky po třech, polévky jsou nahoře přes celou šířku.
-Čas stažení dat je v hlavičce zprávy jako Discord timestamp (každý ho vidí ve svém čase
-a relativní „před X minutami“ se průběžně aktualizuje).
-Emoji se vybírá podle klíčových slov v názvu jídla, pravidla jsou v `lunch/emoji.py`
-(stačí připsat řádek s emoji a regexem).
-
-### /mhd
-
-Odjezdy na hodinu dopředu v kartičkách. Časy jsou Discord timestampy („in 5 minutes“ se samo
-odpočítává). Tlačítky se přepíná mezi oblastmi (PPV / Purkyně)
-a jednotlivými zastávkami. Každá zastávka má vlastní způsob zobrazení:
-
-| Zastávka | Zobrazení |
-|---|---|
-| Technologický park, Červinkova | jen tramvaje, **jedna kartička na směr**: „🚋 Tram → Centrum“ / „🚋 Tram → Technologický park“, u každého času číslo linky (`12`, `10`, `4`). |
-| Kolejní | **72 → Semilasso** (spoje, které z Technoparku jedou dál) je vždy první. **65** má jednu kartičku bez ohledu na cíl. Končící 72 jsou nevýrazně na konci („🛑 dál nejede“). |
-| Skácelova → východ / západ | autobusy a trolejbusy, rozdělené podle nástupiště: **východ** (další zastávka Slovanské náměstí) a **západ** (Záhřebská). Kartička pro každou linku, seřazené podle čísla linky. V nadpisu je obvyklá konečná, jiná konečná je jen značka za časem. |
-
-Všechno se nastavuje v `BOARDS` a `AREAS` v `transit/service.py` (zastávka, případně jen některá nástupiště,
-typy vozidel, způsob zobrazení `layout`, popisky směrů, sloučené linky, popisek směru u pokračujících spojů).
-
-Odjezdy jsou **podle jízdního řádu, bez zpoždění**. Realtime feed KORDIS sice obsahuje polohy
-vozidel, ale nemá zpoždění a jeho ID spojů zatím nesedí na jízdní řád. Výluky z něj ale bot bere.
-
-Pod každou menzou je malým písmem dnešní otevírací doba (z [přehledu KaM](https://www.kam.vut.cz/?p=otdo),
-včetně pátků, víkendů a státních svátků).
-
-Ceny u menz jsou pro **studenty VUT** (1. cena na webu KaM). Změníš je v `lunch/kam.py`
-(`PRICE_CLASS` / `PRICE_LABEL`).
+Menzové commandy mají parametr `vse: True`: místo Economy ukážou polévky a všechna hlavní jídla.
+Tlačítka pod zprávou mají stav uložený přímo v ID, takže fungují i po restartu bota.
+Commandy fungují i v soukromém chatu s botem.
 
 ## Zdroje dat
 
-- **Menzy:** `https://www.kam.vut.cz/?p=menu&provoz=<ID>`. ID provozů najdeš na
-  [přehledu KaM](https://www.kam.vut.cz/?p=otdo). Economy jídla se poznají podle prefixu `Economy N:`.
-- **U 3 opic** (ID 3225), **Padagali** (ID 4116, Kotlářská), **U Karla** (ID 6695) a **Portoriko**
-  (ID 8467, Srbská): [menicka.cz](https://www.menicka.cz)
-- **La Strada** (Kounicova): [lastrada-brno.cz/poledni-menu](https://lastrada-brno.cz/poledni-menu/).
-  Na menicka.cz není, takže má vlastní scraper.
+Data se stahují a parsují průběžně na pozadí, commandy jen sáhnou do hotových výsledků v paměti.
+Tlačítko 🔄 Obnovit stáhne data hned (stejnou stránku nejvýš jednou za minutu).
 
-- **Slevy a letáky:** [Kupi.cz](https://www.kupi.cz). Bot čte jen veřejné stránky, které `robots.txt`
-  povoluje (kategorie slev a stránky poboček), postupně se sekundovou pauzou. Data obnovuje na pozadí
-  každé 3 hodiny. Obchody a pobočky se nastavují v `STORES` v `shops/service.py`.
-- **Počasí:** [Open-Meteo](https://open-meteo.com) (zdarma, bez klíče, CC BY 4.0), souřadnice FITu, obnova každých 15 min.
-- **MHD:** otevřená data KORDIS JMK (licence CC BY) – jízdní řád ve formátu GTFS
-  (`kordis-jmk.cz/gtfs/gtfs.zip`, ukládá se do `data/` a obnovuje každých 12 h) a výluky
-  z GTFS Realtime (`kordis-jmk.cz/gtfs/gtfsReal.dat`, cache 5 min).
+| Zdroj | Odkud | Obnova na pozadí |
+|---|---|---|
+| Menzy | [KaM VUT](https://www.kam.vut.cz/?p=otdo) (ceny pro studenty VUT, otevírací doby) | 10 min, 6–20 h |
+| Restaurace | [menicka.cz](https://www.menicka.cz), La Strada z [vlastního webu](https://lastrada-brno.cz/poledni-menu/) | 30 min, 6–20 h |
+| MHD | otevřená data [KORDIS JMK](https://kordis-jmk.cz) (CC BY): jízdní řád GTFS a výluky z GTFS Realtime | jízdní řád po 12 h, výluky 5 min |
+| Slevy a letáky | [Kupi.cz](https://www.kupi.cz), jen veřejné stránky povolené v `robots.txt` | 1 h |
+| Počasí | [Open-Meteo](https://open-meteo.com) (CC BY 4.0) | 15 min |
 
-Data se stahují a parsují **průběžně na pozadí**, commandy pak jen sáhnou do hotových výsledků v paměti:
-
-| Zdroj | Obnova na pozadí |
-|---|---|
-| menzy (KaM) | každých 10 min, jen 6:00–20:00 |
-| restaurace | každých 30 min, jen 6:00–20:00 |
-| výluky MHD | každých 5 min |
-| jízdní řád MHD | kontrola každé 3 h (stahuje se po 12 h) |
-| slevy a letáky (Kupi.cz) | každou hodinu |
-
-Tlačítko „Obnovit“ stáhne data hned (stejnou stránku nejvýš jednou za minutu). Intervaly jsou konstanty
-`*_REFRESH_MINUTES` v `lunch/service.py`, `transit/service.py` a `shops/service.py`.
+Mimo 6–20 h platí jídelníčky stažené ten den až do půlnoci. MHD je **podle jízdního řádu, bez zpoždění**:
+realtime feed KORDIS zpoždění neobsahuje.
 
 ## Discord aplikace
 
-Postup je stejný pro vývojového i produkčního bota, jen se udělá dvakrát (každý bot = vlastní aplikace).
-
-### 1. Založení a nastavení aplikace
-
-Na <https://discord.com/developers/applications> → **New Application**. Pak nastav:
-
-| Záložka | Nastavení |
-|---|---|
-| **Bot** | **Reset Token** → token do `.env` / Portaineru (ukáže se jen jednou, nikomu ho neposílej) |
-| **Bot** | **Public Bot**: vypnout (pozvat ho pak můžeš jen ty) |
-| **Bot** | **Requires OAuth2 Code Grant**: vypnout |
-| **Bot** | **Privileged Gateway Intents** (Presence, Server Members, Message Content): **všechny vypnout**. Bot používá jen slash commandy a tlačítka, nic z toho nepotřebuje. |
-| **Installation** | **Installation Contexts**: jen **Guild Install** (User Install vypnout) |
-| **Installation** | **Install Link**: *None* (pozývá se odkazem níže) |
-
-### 2. Oprávnění
-
-Bot potřebuje jen základní oprávnění:
-
-- **View Channels**: vidět kanál, kde se command použil
-- **Send Messages**: odpovídat
-- **Embed Links**: kartičky s jídly a odjezdy jsou embedy
-
-Nic dalšího (správa zpráv, rolí, administrátor apod.) nedávej. Číselně je to `19456`.
-
-### 3. Pozvání na server
-
-Pozvánka nezávisí na tom, kde bot běží. Vývojového bota, který běží lokálně, pozveš úplně stejně
-jako produkčního, jen jeho vlastním odkazem na testovací server.
-
-1. Zkopíruj **Application ID** (záložka **General Information**).
-2. Otevři v prohlížeči tenhle odkaz, místo `APP_ID` dej to číslo:
-
-   ```
-   https://discord.com/oauth2/authorize?client_id=APP_ID&scope=bot+applications.commands&permissions=19456&integration_type=0
-   ```
-
-   Případně si stejný odkaz naklikej v **OAuth2 → URL Generator**: scopes `bot` + `applications.commands`,
-   oprávnění ze seznamu výše, Integration Type *Guild Install*.
-3. Vyber server a potvrď. Musíš na něm mít oprávnění **Spravovat server**.
-4. ID serveru (pravý klik na server → **Kopírovat ID serveru**, potřebuje zapnutý *Režim vývojáře*
-   v Nastavení → Pokročilé) dej do `GUILD_IDS`.
-5. Spusť bota (lokálně `python bot.py`, na serveru redeploy stacku). Commandy se na serveru objeví hned.
-
-Kdo smí které commandy používat a ve kterých kanálech, se dá na serveru omezit v
-**Nastavení serveru → Integrace → (bot)**.
-
-### Vývojový a produkční bot
-
-Používají se dvě samostatné aplikace v Developer Portalu. Kód je stejný, liší se jen token a server:
+Vývojový a produkční bot jsou dvě samostatné aplikace v Developer Portalu. Kód mají stejný, liší se
+token a `GUILD_IDS`. Postup níže se proto dělá pro každého zvlášť.
 
 | | Vývojový bot | Produkční bot |
 |---|---|---|
 | kde běží | lokálně (`python bot.py`) | homelab, Docker z `main` |
 | token a server | `.env` ve složce projektu | proměnné stacku v Portaineru |
-| `GUILD_IDS` | ID testovacího serveru | ID vašeho serveru |
+| `GUILD_IDS` | ID testovacího serveru | ID hlavního serveru |
 
-Díky tomu se dá zkoušet nová verze na testovacím serveru, zatímco na hlavním serveru běží ta stabilní.
-Tlačítka pod zprávami patří vždy botovi, který zprávu poslal, takže se instance nepletou.
-Jen nikdy nespouštěj dvě instance se **stejným** tokenem, jinak by na commandy odpovídaly obě.
+Nikdy nespouštěj dvě instance se **stejným** tokenem, jinak na commandy odpovídají obě.
 
-Když je vyplněné `GUILD_IDS`, bot zaregistruje commandy na těch serverech (objeví se hned) a navíc
-globálně **jen pro soukromý chat s botem**. V DM tak commandy fungují taky, a na serveru se přitom
-neukazují dvakrát. Do DM se dostaneš přes profil bota → **Zpráva** (musíte mít společný server).
-Poprvé může chvíli trvat, než se commandy v DM objeví.
+### 1. Nastavení aplikace
 
-### Bio (About Me)
+Na <https://discord.com/developers/applications> → **New Application**:
 
-Bio bota je **popis aplikace**: Developer Portal → **General Information → Description** (max 400 znaků).
-Na profilu bota se pak ukáže jako „About Me“ a projeví se hned. Nastavuje se zvlášť pro každého bota.
-Návrh textu:
+| Záložka | Nastavení |
+|---|---|
+| **Bot** | **Reset Token** → token do `.env` / Portaineru (ukáže se jen jednou, nikomu ho neposílej) |
+| **Bot** | **Public Bot** a **Requires OAuth2 Code Grant**: vypnout |
+| **Bot** | **Privileged Gateway Intents**: všechny vypnout (bot používá jen slash commandy a tlačítka) |
+| **Installation** | jen **Guild Install**, Install Link *None* |
+
+### 2. Oprávnění
+
+**View Channels**, **Send Messages** a **Embed Links**, číselně `19456`. Nic dalšího nedávej.
+
+### 3. Pozvání na server
+
+Do odkazu dosaď **Application ID** (záložka **General Information**) a otevři ho v prohlížeči:
 
 ```
-🐒 Bot pro VUT Monkes – obědy v menzách a restauracích a odjezdy MHD.
-
-🍽️ /ppv · /purkyne · /menzy · /restaurace
-🚏 /mhd · /mhd-purkyne
-
-🐛 Něco nefunguje nebo máš nápad? Napiš issue: https://github.com/tenjakub/vut_monkes_bot/issues
+https://discord.com/oauth2/authorize?client_id=APP_ID&scope=bot+applications.commands&permissions=19456&integration_type=0
 ```
 
-### Status s verzí
+Vyber server (potřebuješ na něm oprávnění **Spravovat server**). Jeho ID (pravý klik na server → **Kopírovat ID
+serveru**, potřebuje zapnutý *Režim vývojáře*) dej do `GUILD_IDS`, víc serverů odděl čárkou. Pak se commandy objeví
+hned. Kdo smí které commandy používat, se nastavuje v **Nastavení serveru → Integrace**.
 
-Pod jménem bota je vlastní status `verze <číslo> · <hash>`. Číslo je nejnovější verze z [CHANGELOG.md](CHANGELOG.md),
-hash na serveru je krátký hash
-commitu, ze kterého je sestavený Docker image (stejný jako tag `sha-<hash>`). Lokálně je to `dev <hash>`
-podle aktuálního commitu. Stejnou verzi bot vypíše v logu při startu a v chybové hlášce, ve které je
-i odkaz na GitHub Issues.
+### Profil bota
 
-### Jméno, profilovka a banner
+- **Jméno, profilovka, banner:** záložka **Bot**, projeví se hned (klient obrázky cachuje, případně `Ctrl+R`).
+- **Status:** bot si ho nastavuje sám: `verze <číslo> · <hash>` (číslo z CHANGELOG.md, hash commitu = tag image
+  `sha-<hash>`, lokálně `dev <hash>`).
+- **Bio (About Me):** **General Information → Description** (max 400 znaků). Návrh:
 
-Úpravy v Developer Portalu (záložka **Bot** → Username, Icon, Banner) se projeví hned, bota není
-potřeba restartovat ani znovu nasazovat. Discord klient si ale obrázky cachuje, takže je někdy uvidíš
-až po `Ctrl+R`. Jméno jde měnit jen párkrát za hodinu. Pokud má bot na serveru nastavenou přezdívku,
-zobrazuje se místo jména ta (Nastavení serveru → Členové). Název a ikona v **General Information**
-patří aplikaci. Ty jsou vidět u slash commandů a v profilu aplikace.
+  ```
+  🐒 Bot pro VUT Monkes – obědy, MHD, slevy a počasí.
+
+  🍽️ /ppv · /purkyne · /menzy · /restaurace · /co-jist · /obed
+  🚏 /mhd · /mhd-purkyne · /domu
+  🛒 /letaky · /maso · /pivo · /napoje
+  ☀️ /pocasi · 📰 /novinky
+
+  🐛 Něco nefunguje nebo máš nápad? https://github.com/tenjakub/vut_monkes_bot/issues
+  ```
 
 ## Nasazení (Docker, homelab)
 
-Jak to funguje: každý push do jakékoli branche spustí [GitHub Actions](.github/workflows/ci.yml) s testy.
-U pushe do `main` navíc, když testy projdou, sestaví Docker image a nahrají ho do GitHub Container Registry jako
-`ghcr.io/tenjakub/vut_monkes_bot:latest` (a navíc `:sha-<commit>`). Na serveru běží vedle bota
-[Watchtower](https://watchtower.nickfedor.com/), který každých 5 minut zkontroluje, jestli je nový image,
-a když ano, bota sám restartuje s novou verzí. Na serveru se nic nesestavuje a nic se neotevírá ven.
+Každý push spustí [GitHub Actions](.github/workflows/ci.yml) s testy. Push do `main` navíc sestaví image
+`ghcr.io/tenjakub/vut_monkes_bot:latest` (a `:sha-<commit>`). Na serveru vedle bota běží
+[Watchtower](https://watchtower.nickfedor.com/), který každých 5 minut hledá nový image a bota sám aktualizuje.
+Na serveru se nic nesestavuje a nic se neotevírá ven.
 
-### Portainer
+**Portainer:** **Stacks → Add stack** → Repository `https://github.com/tenjakub/vut_monkes_bot`, reference
+`refs/heads/main`, compose path `docker-compose.yml`. Do **Environment variables** dej `DISCORD_TOKEN` a `GUILD_IDS`,
+volitelně `BOT_TAG` a `WATCHTOWER_POLL_INTERVAL` (viz [.env.example](.env.example)). Bez Portaineru stačí
+`docker-compose.yml` + `.env` a `docker compose up -d`.
 
-1. **Stacks → Add stack**, pojmenuj ho třeba `vut-monkes-bot`.
-2. Build method **Repository**: URL `https://github.com/tenjakub/vut_monkes_bot`, reference
-   `refs/heads/main`, compose path `docker-compose.yml`. (Nebo **Web editor** a vlož obsah
-   [docker-compose.yml](docker-compose.yml).)
-3. **Environment variables**: `DISCORD_TOKEN` a ideálně `GUILD_IDS`. Volitelně `BOT_TAG`
-   a `WATCHTOWER_POLL_INTERVAL` (viz [.env.example](.env.example)).
-4. **Deploy the stack**. Nastartují dva kontejnery: `vut-monkes-bot` a `vut-monkes-watchtower`.
+- **Aktualizace hned:** v Portaineru **Pull and redeploy**, nebo `docker compose pull && docker compose up -d`.
+- **Návrat ke starší verzi:** `BOT_TAG` nastav na konkrétní verzi, např. `sha-fbc4bee`
+  ([seznam](https://github.com/tenjakub/vut_monkes_bot/pkgs/container/vut_monkes_bot)), a redeployni.
+  Pro návrat k automatice dej zpět `latest`.
+- **Logy:** `docker logs -f vut-monkes-bot`. Healthcheck „healthy“ znamená, že je bot opravdu připojený k Discordu.
+- **AlmaLinux (SELinux):** bot má named volume `bot_data` (jízdní řád MHD), Watchtower kvůli `docker.sock`
+  `security_opt: label=disable`.
+- **Lokální build image:** `docker compose -f docker-compose.yml -f docker-compose.build.yml up --build bot`
 
-### Bez Portaineru
+## Vývoj
 
-Na serveru stačí složka s `docker-compose.yml` a `.env` (podle `.env.example`):
-
-```bash
-docker compose up -d
-```
-
-### Aktualizace a návrat ke starší verzi
-
-- **Automaticky:** do ~5 minut po zeleném CI na GitHubu.
-- **Hned:** v Portaineru u stacku **Pull and redeploy**, nebo `docker compose pull && docker compose up -d`.
-- **Návrat zpět:** nastav `BOT_TAG` na konkrétní verzi, např. `sha-fbc4bee`
-  ([seznam verzí](https://github.com/tenjakub/vut_monkes_bot/pkgs/container/vut_monkes_bot)),
-  a redeployni. Dokud je tam konkrétní tag, Watchtower bota nemění. Pro návrat k automatice dej zpět `latest`.
-- Jakou verzi bot právě běží, je vidět v logu hned na začátku (`Startuje VUT Monkes bot, verze …`).
-
-### Logy a stav
-
-- Portainer → kontejner `vut-monkes-bot` → **Logs**, nebo `docker logs -f vut-monkes-bot`.
-- Kontejner má healthcheck. „healthy“ znamená, že je bot opravdu připojený k Discordu, nejen že proces běží.
-- Stažený jízdní řád MHD je ve volume `bot_data`, takže přežije restart i update.
-
-### Poznámky k AlmaLinuxu (SELinux)
-
-- Bot používá named volume, takže nic se SELinuxem řešit nemusí.
-- Watchtower potřebuje přístup k `/var/run/docker.sock`. Kvůli SELinuxu má v compose `security_opt: label=disable`,
-  jinak by ho SELinux zablokoval.
-
-### Lokální sestavení image (test před pushem)
+Lokálně se vyvíjí přímo v Pythonu (3.14), Docker je jen pro produkci.
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.build.yml up --build bot
-```
-
-## Spuštění lokálně bez Dockeru (vývoj)
-
-```bash
-python3 -m venv .venv
-```
-
-```bash
-.venv/bin/pip install -r requirements.txt
+python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
 ```
 
 ```bash
 cp .env.example .env
 ```
 
-Do `.env` vyplň `DISCORD_TOKEN`. Do `GUILD_IDS` doporučuju dát ID vašeho serveru,
-pak se commandy objeví hned. Bez něj se registrují globálně, což může trvat až hodinu.
+Do `.env` vyplň `DISCORD_TOKEN` a `GUILD_IDS` vývojového bota.
 
 ```bash
 .venv/bin/python bot.py
 ```
 
-## Struktura
-
-```
-bot.py              # vstupní bod, načte cogy, synchronizuje slash commandy, heartbeat
-config.py           # načtení .env
-healthcheck.py      # Docker healthcheck (je bot připojený?)
-Dockerfile          # image bota
-docker-compose.yml  # nasazení: bot + Watchtower (automatické aktualizace)
-docker-compose.build.yml  # lokální sestavení image místo stažení z GHCR
-.github/workflows/  # CI: testy + build a push image do GHCR
-cogs/menza.py       # /ppv, /purkyne, /menzy + tlačítka
-cogs/restaurace.py  # /restaurace + tlačítko obnovit
-cogs/mhd.py         # /mhd, /mhd-purkyne + tlačítka
-cogs/novinky.py     # /novinky (changelog s listováním)
-cogs/obed.py        # /obed (hlasování, stav je přímo v embedu zprávy)
-cogs/cojist.py      # /co-jist (náhodné jídlo)
-cogs/pocasi.py      # /pocasi
-cogs/slevy.py       # /letaky, /maso, /napoje, /pivo
-lunch/              # stahování a parsování (bez závislosti na Discordu)
-  kam.py            #   menzy VUT – seznam menz a skupin (ppv, purkyne, vse)
-  emoji.py          #   výběr emoji k jídlu podle klíčových slov
-  menicka.py        #   menicka.cz
-  lastrada.py       #   La Strada
-  service.py        #   seznam restaurací, paralelní načítání
-  fetcher.py        #   HTTP + cache
-shops/              # slevy a letáky z Kupi.cz (bez závislosti na Discordu)
-  kupi.py           #   parser stránek Kupi.cz
-  service.py        #   obchody a pobočky (STORES), stahování a cache
-weather/            # počasí z Open-Meteo (bez závislosti na Discordu)
-transit/            # MHD (bez závislosti na Discordu)
-  gtfs.py           #   načtení jízdního řádu, odjezdy, navazující spoje
-  alerts.py         #   výluky z GTFS Realtime
-  service.py        #   zastávky (BOARDS), stahování a obnova dat
-utils/render.py     # převod na Discord embedy (limity délky apod.)
-utils/changelog.py  # čtení CHANGELOG.md
-CHANGELOG.md        # novinky pro uživatele (/novinky, číslo verze ve statusu)
-tests/              # testy parserů, emoji, vykreslování a MHD
-AGENTS.md           # kontext a pravidla pro AI agenty (CLAUDE.md na něj odkazuje)
-```
-
-**Přidání restaurace z menicka.cz:** najdi její ID v URL (`menicka.cz/1234-nazev.html`)
-a přidej položku do `RESTAURANTS` v `lunch/service.py`.
-
-**Přidání menzy nebo skupiny:** uprav `MENZY` / `GROUPS` v `lunch/kam.py`. Popisek tlačítka
-pro novou skupinu přidej do `GROUP_BUTTONS` v `cogs/menza.py` a případně k ní přidej command.
-
-## Testy
-
 ```bash
-.venv/bin/pip install -r requirements-dev.txt
+.venv/bin/python -m pytest -q
 ```
 
-```bash
-.venv/bin/python -m pytest
+Testy jsou offline (uložené stránky v `tests/fixtures/`).
+
 ```
+bot.py           # vstupní bod: cogy, registrace commandů, status, healthcheck
+cogs/            # Discord vrstva: commandy, embedy, tlačítka
+lunch/           # menzy a restaurace (stahování, parsování, emoji k jídlům)
+transit/         # MHD: jízdní řád GTFS, výluky, zastávky
+shops/           # slevy a letáky z Kupi.cz
+weather/         # počasí z Open-Meteo
+utils/           # vykreslování embedů, changelog, načítání na pozadí
+tests/           # testy
+```
+
+**Nová restaurace z menicka.cz:** ID z URL (`menicka.cz/1234-nazev.html`) a řádek v `RESTAURANTS`
+v `lunch/service.py`. **Nová menza nebo skupina:** `MENZY` / `GROUPS` v `lunch/kam.py`, tlačítko v `GROUP_BUTTONS`
+v `cogs/menza.py`. **Obchody a pobočky:** `STORES` v `shops/service.py`. **Zastávky MHD:** `BOARDS` a `AREAS`
+v `transit/service.py`.
+
+## Licence
+
+Kód je pod licencí [MIT](LICENSE). Data, která bot zobrazuje, patří jejich zdrojům (KaM VUT, menicka.cz,
+restaurace, Kupi.cz). Jízdní řády KORDIS JMK a počasí z Open-Meteo jsou pod licencí CC BY, s uvedením zdroje.
