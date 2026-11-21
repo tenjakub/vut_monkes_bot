@@ -49,6 +49,13 @@ class Restaurant:
     place: Place
     fetch_url: str
     parser: Callable[[str, Place, date], Menu]
+    # volitelně doplňková stránka (velké menu s přísadami): stáhne se jednou za EXTRA_TTL a `extra(menu, html)`
+    # menu doplní. Když se nepovede, menu se ukáže bez doplňků.
+    extra_url: str | None = None
+    extra: Callable[[Menu, str], Menu] | None = None
+
+
+EXTRA_TTL = 12 * 60 * 60
 
 
 RESTAURANTS: list[Restaurant] = [
@@ -81,6 +88,8 @@ RESTAURANTS: list[Restaurant] = [
         Place("sesamo", "Sesamo", sesamo.PAGE_URL, "🥐", 0xE8590C),
         sesamo.URL,  # vlastní web (Purkyňova), menu i o víkendu
         sesamo.parse,
+        sesamo.BIG_MENU_URL,  # přísady pizz z velkého menu
+        sesamo.add_descriptions,
     ),
 ]
 
@@ -137,20 +146,30 @@ async def menza_menus(fetcher: Fetcher, group: str, force: bool = False) -> list
     return list(menus)
 
 
+async def _with_extra(fetcher: Fetcher, r: Restaurant, menu: Menu) -> Menu:
+    if not (r.extra and r.extra_url and menu.dishes):
+        return menu
+    try:
+        html, _ = await fetcher.get(r.extra_url, ttl=EXTRA_TTL)
+        return r.extra(menu, html)
+    except Exception:  # doplňky nejsou nutné, menu se ukáže i bez nich
+        log.exception("Doplnění menu %s selhalo", r.place.name)
+        return menu
+
+
 async def restaurant_menus(fetcher: Fetcher, force: bool = False) -> list[Menu]:
     day = today()
-    return list(
-        await asyncio.gather(
-            *(
-                _load(
-                    fetcher,
-                    r.place,
-                    r.fetch_url,
-                    RESTAURANT_TTL,
-                    force,
-                    lambda html, r=r: r.parser(html, r.place, day),
-                )
-                for r in RESTAURANTS
+    menus = await asyncio.gather(
+        *(
+            _load(
+                fetcher,
+                r.place,
+                r.fetch_url,
+                RESTAURANT_TTL,
+                force,
+                lambda html, r=r: r.parser(html, r.place, day),
             )
+            for r in RESTAURANTS
         )
     )
+    return list(await asyncio.gather(*(_with_extra(fetcher, r, m) for r, m in zip(RESTAURANTS, menus))))

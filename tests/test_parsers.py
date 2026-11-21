@@ -207,3 +207,48 @@ def test_sesamo():
     from lunch.models import NO_MENU
 
     assert sesamo.parse(read("sesamo.html"), place("sesamo"), date(2026, 11, 23)).note == NO_MENU
+
+
+def test_sesamo_groups_and_pizza_ingredients():
+    """Pizzy a těstoviny jsou ve skupinách, přísady pizz z velkého menu (hlavní stránka, PIZZAS v JS)."""
+    menu = sesamo.parse(read("sesamo.html"), place("sesamo"), date(2026, 11, 16))
+    menu = sesamo.add_descriptions(menu, read("sesamo_index.html"))
+    groups = {d.name: d.group for d in menu.mains}
+    assert groups["Penne se smetanou a šunkou"] == sesamo.PASTA and groups["Lasagne Bolognese"] == sesamo.PASTA
+    assert groups["Pizza šunka"] == sesamo.PIZZA and groups["Gurmánská pizza se špekem a mascarpone"] == sesamo.PIZZA
+    assert groups["Vepřová panenka s bramborovou kaší"] is None
+    desc = {d.name: d.description for d in menu.mains}
+    assert desc["Pizza šunka"] == "Rajčatová omáčka, sýr mozzarella, šunka"
+    assert desc["Pizza diavola"] == "Rajčatová omáčka, sýr mozzarella, pikantní salám, chilli"  # = salami diavola
+    assert desc["Pizza chef"] == ""  # ve velkém menu není
+    # bez seznamu pizz (změna webu) zůstane menu, jak bylo
+    plain = sesamo.parse(read("sesamo.html"), place("sesamo"), date(2026, 11, 16))
+    assert sesamo.add_descriptions(plain, "<html></html>").dishes == plain.dishes
+
+
+def test_extra_page_failure_keeps_menu():
+    import asyncio
+
+    r = next(r for r in service.RESTAURANTS if r.place.key == "sesamo")
+    menu = sesamo.parse(read("sesamo.html"), r.place, date(2026, 11, 16))
+
+    class BrokenFetcher:
+        async def get(self, url, ttl, force=False):
+            raise OSError("web nejede")
+
+    assert asyncio.run(service._with_extra(BrokenFetcher(), r, menu)) is menu
+
+
+def test_restaurant_fields_put_groups_below_grid():
+    from cogs import restaurace
+
+    menu = sesamo.add_descriptions(
+        sesamo.parse(read("sesamo.html"), place("sesamo"), date(2026, 11, 16)), read("sesamo_index.html")
+    )
+    fields = restaurace.restaurant_fields(menu)
+    names = [f.name for f in fields]
+    assert names[0] == "🥣 Polévky" and names[-2:] == ["🍝 Těstoviny", "🍕 Pizza"]
+    pizza = fields[-1].value.splitlines()
+    assert pizza[1] == "• 8. **Šunka** · 229 Kč – rajčatová omáčka, sýr mozzarella, šunka"
+    assert pizza[0] == "• 7. **Chef** · 199 Kč"
+    assert not any(f.inline for f in fields[-2:])

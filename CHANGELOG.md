@@ -13,7 +13,7 @@ Nejnovější verze je vždy nahoře.
 
 ## 1.11 · 2026-11-21 · Sesamo 🥐
 
-- 🥐 `/restaurace` ukazuje i denní menu **Sesamo** (italská pekárna a pizzerie na Purkyňově 97c) – těstoviny, pizzu, saláty a polévky, a to i o víkendu. Sesamo jde vybrat i v `/obed` a losuje z něj `/co-jist`.
+- 🥐 `/restaurace` ukazuje i denní menu **Sesamo** (italská pekárna a pizzerie na Purkyňově 97c), a to i o víkendu. Saláty a hlavní jídla jsou v mřížce, těstoviny a pizzy pod nimi a u pizz jsou i přísady z jejich velkého menu. Sesamo jde vybrat i v `/obed` a losuje z něj `/co-jist`.
 
 ## 1.10 · 2026-11-21 · Počasí na pivo ☀️
 

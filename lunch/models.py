@@ -47,6 +47,9 @@ class Dish:
     economy: bool = False
     # na výběr v rámci jednoho menu (pizza dne v La Stradě): (název, popis)
     options: list[tuple[str, str]] = field(default_factory=list)
+    # skupina („Pizza“, „Těstoviny“): v /restaurace se vypíše pod mřížkou přes celou šířku, i s popisem
+    group: str | None = None
+    description: str = ""  # přísady (třeba z velkého menu), jen pro představu
 
 
 @dataclass

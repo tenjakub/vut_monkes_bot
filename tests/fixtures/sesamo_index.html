@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SESAMO Bakery Pizza – Brno</title>
+<meta name="description" content="Řemeslná italská pekárna, pizza a bistro v Brně. Denní menu, panettone a sicilské dezerty.">
+<link rel="icon" href="assets/img/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;1,500&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav><div class="wrap">
+  <a class="brand" href="#"><img src="assets/img/SesamoLogoRedTransparent.png" alt="">SESAMO</a>
+  <ul>
+    <li><a href="#panettone">Panettone</a></li>
+    <li><a href="#menu">Denní menu</a></li>
+    <li><a href="#pizza">Pizza</a></li>
+    <li><a href="#social">Instagram</a></li>
+    <li><a href="#navstivte">Navštivte nás</a></li>
+  </ul>
+</div></nav>
+
+<header class="hero"><div class="wrap">
+  <span class="tag">Purkyňova 97c · 612 00 Brno</span>
+  <h1>Italská chuť,<br>řemeslně.</h1>
+  <p>Pečivo, římská pizza a sicilské dezerty z dlouho kynutého těsta. Každý den čerstvě v Brně.</p>
+  <div class="btns"><a class="btn" href="#menu">Denní menu</a><a class="btn ghost" href="#panettone">Vánoční panettone</a><a class="btn ghost" href="tel:+420775041898">📞 +420 775 041 898</a></div>
+</div></header>
+
+<section id="panettone"><div class="wrap grid">
+  <div class="art">
+    <!-- Přidejte fotku jako assets/img/panettone.jpg, jinak se zobrazí ilustrace -->
+    <svg viewBox="0 0 120 120" fill="none" stroke="#5a3a14" stroke-width="3" stroke-linecap="round"><path d="M32 100V58c0-22 12-38 28-38s28 16 28 38v42z" fill="#f3dba5"/><path d="M60 20c-4-6-2-10 2-12M32 100h56M46 44c3 6 9 6 12 0M66 62c3 6 9 6 12 0M40 78c3 6 9 6 12 0"/></svg>
+    <img src="assets/img/panettone.jpg" alt="Panettone SESAMO" onerror="this.remove()">
+  </div>
+  <div>
+    <p class="eyebrow">Vánoční specialita</p>
+    <h2>Panettone</h2>
+    <p class="lead"><b>Chuť italských Vánoc v SESAMO!</b> Řemeslné panettone připravované s láskou podle italské tradice a z kvalitních surovin. Nadýchané, jemné, voňavé a plné sváteční chuti – kousek Itálie v každém soustu.</p>
+    <div class="flavours">
+      <div class="row head"><span>Příchuť</span><span class="p">500 g</span><span class="p">750 g</span></div>
+      <div class="row"><b>Klasické tradiční</b><span class="p">350 Kč</span><span class="p">450 Kč</span></div>
+      <div class="row"><span><b>Kandované ovoce</b><small>pomeranč, citron</small></span><span class="p">390 Kč</span><span class="p">490 Kč</span></div>
+      <div class="row"><b>Čokoláda</b><span class="p">390 Kč</span><span class="p">490 Kč</span></div>
+      <div class="row"><span><b>Pistácie</b><small>v ceně sáček s pistáciovým krémem</small></span><span class="p">490 Kč</span><span class="p">690 Kč</span></div>
+    </div>
+    <p class="note">Ruční výroba s láskou v SESAMO Bakery Pizza. Ideální na sváteční stůl, jako dárek nebo jen tak pro radost.</p>
+  </div>
+</div></section>
+
+<section id="menu"><div class="wrap">
+  <div class="menu-head">
+    <div><p class="eyebrow">Každý den nové</p><h2>Denní menu</h2></div>
+    <div class="langs" id="langs"><button class="on" data-l="CZ">CZ</button><button data-l="EN">EN</button><button data-l="IT">IT</button></div>
+  </div>
+  <div class="menu-card"><iframe id="menuFrame" title="Denní menu" src="menu_cz.html"></iframe></div>
+</div></section>
+
+<section id="pizza"><div class="wrap">
+  <p class="eyebrow">Římská &amp; neapolská</p>
+  <h2>Pizza</h2>
+  <p class="lead">Dlouho kynuté těsto, mozzarella a poctivé italské suroviny. Objednávejte telefonicky.</p>
+  <input id="search" class="search" type="search" placeholder="🔍 Hledat pizzu nebo surovinu…" aria-label="Hledat pizzu">
+  <div class="pizzas" id="pizzaGrid"></div>
+</div></section>
+
+<section><div class="wrap">
+  <p class="eyebrow">Z naší pekárny</p>
+  <h2>Z pece a z vitríny</h2>
+  <p class="lead">Croissanty z těsta manitoba, sicilské cannoli plněné ricottou a římská pizza al taglio.</p>
+  <div class="cards">
+    <article class="card"><img src="assets/img/croissant.webp" alt="Croissanty" loading="lazy"><div><h3>Croissanty</h3><p>Máslové, s čokoládou, džemem nebo pistáciovým krémem.</p></div></article>
+    <article class="card"><img src="assets/img/cannoli.webp" alt="Cannoli a tarteletky" loading="lazy"><div><h3>Cannoli &amp; dezerty</h3><p>Křupavé cannoli, tarteletky a mini tiramisù.</p></div></article>
+    <article class="card"><img src="assets/img/pizza.webp" alt="Pizza" loading="lazy"><div><h3>Pizza &amp; focaccia</h3><p>Dlouho kynuté těsto, mozzarella a poctivé suroviny.</p></div></article>
+  </div>
+</div></section>
+
+<section id="social"><div class="wrap">
+  <p class="eyebrow">Sledujte nás</p>
+  <h2>Naše příspěvky</h2>
+  <p class="lead">Čerstvé novinky z pekárny a z kuchyně.</p>
+  <div class="posts" id="posts"></div>
+</div></section>
+
+<section id="navstivte"><div class="wrap visit">
+  <img src="assets/img/sesamoshop.webp" alt="SESAMO" loading="lazy">
+  <div>
+    <p class="eyebrow">Brno</p>
+    <h2>Navštivte nás</h2>
+    <ul>
+      <li>📍 Purkyňova 97c, 612 00 Brno</li>
+      <li>🕐 <!-- DOPLNIT otevírací dobu -->Otevírací doba</li>
+      <li>📞 <a href="tel:+420775041898">+420 775 041 898</a></li>
+    </ul>
+    <a class="btn" href="tel:+420775041898">Objednat telefonicky</a>
+  </div>
+</div></section>
+
+<a class="floating-order" href="tel:+420775041898" aria-label="Objednat telefonicky">📞</a>
+
+<footer>© <span id="y"></span> SESAMO Bakery Pizza, Brno · <a href="https://www.instagram.com/" rel="noopener">Instagram</a></footer>
+
+<script>
+document.getElementById('y').textContent=new Date().getFullYear();
+
+// Denní menu: lokální soubory menu_cz.html / menu_en.html / menu_it.html (stahuje cron)
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const frame=document.getElementById('menuFrame');
+const fit=()=>{try{frame.style.height=frame.contentDocument.documentElement.scrollHeight+'px'}catch(e){}};
+frame.addEventListener('load',fit);
+window.addEventListener('resize',fit);
+document.getElementById('langs').addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  document.querySelectorAll('#langs button').forEach(x=>x.classList.toggle('on',x===b));
+  frame.src='menu_'+b.dataset.l.toLowerCase()+'.html';
+});
+
+// Pizza: [název, cena, popis, obrázek v content/03/]
+const TEL='+420775041898';
+const PIZZAS=[
+  ["Pizza margherita", "199 Kč", "Rajčatová omáčka, sýr mozzarella, bazalka", "margherita_new_2.jpg"],
+  ["Pizza salsiccia e ricotta", "259 Kč", "Rajčatová omáčka, sýr mozzarella, čerstvá klobása, ricotta sýr", "s_salsiccia_patate.jpg"],
+  ["Pizza salami diavola", "249 Kč", "Rajčatová omáčka, sýr mozzarella, pikantní salám, chilli", "diavola_new_1.jpg"],
+  ["Pizza šunka", "229 Kč", "Rajčatová omáčka, sýr mozzarella, šunka", "s_pizza_sunka.jpg"],
+  ["Pizza 4 formaggi", "249 Kč", "Sýr mozzarella, sýr ementál, sýr gorgonzola, parmezán sýr", "quattro_formaggi_3.png"],
+  ["Pizza capricciosa", "259 Kč", "Rajčatová omáčka, sýr mozzarella, houby, šunka, artyčoky, olivový olej", "s_capricciosa_1.jpg"],
+  ["Pizza marinara", "209 Kč", "Rajčatová omáčka, ančovičky, kapary, česnekový olej, oregano", "s_marinara2.jpg"],
+  ["Pizza crudo e rucola", "279 Kč", "Rajčatová omáčka, sýr mozzarella, parma šunka, rukola, parmezán sýr", "s_speck_mascarpone-300x300.jpg"],
+  ["Mortadella e pistacchio", "269 Kč", "Pistáciové pesto, mozzarella, mortadella, kousky pistácie", "mortadella_pistacchio.jpg"],
+  ["Salsiccia e friarielli", "249 Kč", "Sýr mozzarella, tuřín, čerstvá klobása", "salsiccia_friarielli_4-scaled.jpg"],
+  ["Funghi", "229 Kč", "Rajčatová omáčka, sýr mozzarella, houby", "s_funghi.jpg"],
+  ["Pizza prosciutto e funghi", "239 Kč", "Rajčatová omáčka, sýr mozzarella, houby, šunka, artyčoky, olivový olej", "schiacciata_mortadella.jpg"],
+  ["Pizza bufala e crudo", "329 Kč", "Rajčatová omáčka, buvolí mozzarella, parma šunka, parmezán sýr", "pizzamargherita.jpg"],
+  ["Pizza bufala pancetta", "309 Kč", "Rajčatová omáčka, buvolí mozzarella, slanina, parmezán sýr", "bufala_pancetta.jpg"],
+  ["Calzone", "229 Kč", "Rajčatová omáčka, sýr mozzarella, šunka", "s_calzone_new_3.jpg"],
+  ["Pizza vegetariana", "249 Kč", "Pizza s čerstvou zeleninou", "vegetariana_new_2-rotated.jpg"],
+  ["Pizza tonno e cipolla", "239 Kč", "Rajčatová omáčka, sýr mozzarella, tuňák, cibule", "s_tonno_Cipolla.jpg"],
+  ["Pizza bufala", "279 Kč", "Rajčatová omáčka, buvolí mozzarella, bazalka", "s_pizza_special.jpg"]
+];
+const grid=document.getElementById('pizzaGrid');
+function renderPizzas(q=''){
+  q=q.trim().toLowerCase();
+  const list=PIZZAS.filter(p=>(p[0]+' '+p[2]).toLowerCase().includes(q));
+  grid.innerHTML=list.length?list.map(p=>`<article class="pizza"><div class="img"><img src="content/03/${p[3]}" alt="${esc(p[0])}" loading="lazy"><span class="price">${p[1]}</span></div><div class="body"><h3>${esc(p[0])}</h3><p>${esc(p[2])}</p><a class="btn" href="tel:${TEL}">Objednat</a></div></article>`).join(''):'<p class="empty">Nic jsme nenašli, zkuste jiné slovo.</p>';
+}
+renderPizzas();
+document.getElementById('search').addEventListener('input',e=>renderPizzas(e.target.value));
+
+// Instagram: vložte URL příspěvků, např. 'https://www.instagram.com/p/XXXXXXXXXXX/'
+const IG_POSTS=[
+];
+const box=document.getElementById('posts');
+if(!IG_POSTS.length){
+  box.innerHTML='<div class="empty">Zatím žádné příspěvky. V souboru <code>index.html</code> doplňte odkazy do seznamu <code>IG_POSTS</code>.</div>';
+}else{
+  IG_POSTS.forEach(u=>{const q=document.createElement('blockquote');q.className='instagram-media';q.dataset.instgrmPermalink=u;q.dataset.instgrmVersion='14';box.appendChild(q);});
+  const s=document.createElement('script');s.async=true;s.src='https://www.instagram.com/embed.js';document.body.appendChild(s);
+}
+</script>
+</body>
+</html>

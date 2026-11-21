@@ -74,6 +74,7 @@ def pick_embed(pick: Pick) -> discord.Embed:
         title=f"{emoji.for_dish(d)} {name}"[:256],
         url=place.url,
         color=place.color,
+        description=f"_{d.description}_" if d.description else None,  # přísady (pizzy v Sesamu)
     )
     embed.add_field(name="📍 Kde", value=f"{place.emoji} {place.name}", inline=True)
     if d.price:

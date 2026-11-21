@@ -184,6 +184,10 @@ Postup, když jsou nová oprávnění potřeba:
 - Sesamo (`sesamo.py`): menu je v iframu `https://sesamobrno.cz/menu_cz.html` (do embedu odkaz `/#menu`). Týden jako
   `.section` s nadpisem dne nebo rozsahu („Sobota 21.11.2026 – Neděle 22.11.2026“), `.item` = `.num` + `.text` +
   `.price`; bez čísla = polévka. `.aperitivo` (večerní akce) se přeskakuje. Vaří i o víkendu.
+  Pizzy a těstoviny mají `Dish.group` a v /restaurace jsou pod mřížkou přes celou šířku (`render.group_field`).
+  Přísady pizz (`Dish.description`) jsou z velkého menu na hlavní stránce (`const PIZZAS=[…]` v JS), stahuje se
+  přes `Restaurant.extra_url` / `extra` jednou za 12 h (`EXTRA_TTL`); denní název se páruje i zkrácený
+  („Pizza diavola“ = „Pizza salami diavola“). Když velké menu nejde, menu se ukáže bez přísad.
 - Odkazy na restaurace v `/restaurace` jsou tlačítka po pěti v řadě, Obnovit a Svolat oběd v řadě pod nimi.
 
 **Slevy a letáky – Kupi.cz** (`shops/`):

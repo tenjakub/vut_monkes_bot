@@ -74,6 +74,22 @@ def options_field(d: Dish) -> Field:
     return Field(f"{emoji.for_dish(d)} {head}"[:256], "\n".join(lines)[:FIELD_VALUE_LIMIT], inline=False)
 
 
+def group_field(group: str, dishes: list[Dish]) -> Field:
+    """Skupina jídel (pizzy, těstoviny v Sesamu) přes celou šířku: každé na řádek s cenou a přísadami.
+    „• 8. **Šunka** · 229 Kč – rajčatová omáčka, sýr mozzarella, šunka“"""
+    lines = []
+    for d in dishes:
+        name = d.name
+        if name.lower().startswith(group.lower() + " ") and len(name) > len(group) + 1:
+            name = name[len(group) + 1 :]  # „Pizza šunka“ ve skupině Pizza -> „Šunka“
+            name = name[:1].upper() + name[1:]
+        line = "• " + (f"{d.label}. " if d.label else "") + f"**{name}**" + (f" · {d.price}" if d.price else "")
+        if d.description:
+            line += f" – {d.description[:1].lower()}{d.description[1:]}"
+        lines.append(line)
+    return Field(f"{emoji.for_dish(dishes[0])} {group}"[:256], "\n".join(lines)[:FIELD_VALUE_LIMIT], inline=False)
+
+
 def _soup_name(name: str) -> str:
     """'Polévka rajčatová s těstovinou' -> 'Rajčatová s těstovinou' (nadpis už říká Polévka)."""
     title, rest = _split_caps_title(name)
