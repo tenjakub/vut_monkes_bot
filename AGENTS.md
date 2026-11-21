@@ -176,6 +176,9 @@ Postup, když jsou nová oprávnění potřeba:
 - La Strada má vlastní web (`lastrada.py`): týdenní karty `.ls-card`, ceny v `.ls-pricing`. Je to nejkřehčí scraper.
   Karta „Menu č. 3 – výběr pizzy“ (4 pizzy týdne s ingrediencemi) se načte do `Dish.options` a v `/restaurace`
   se vykreslí zvlášť přes celou šířku (`render.options_field`).
+- U Karla má vlastní web (`ukarla.py`, `https://ukarlabrno.cz/menu/pages/poledni-menu`), protože na menicka.cz (6695)
+  chybí víkendy. Jeden blok `div[class*=WysiwygContent_root]`: `<strong>Sobota 21.11. Polévka: …</strong>` a pod ním
+  odstavce `1) název … 194` (cena bez Kč). Otevírací doba menu na webu není, proto se u U Karla nezobrazuje.
 
 **Slevy a letáky – Kupi.cz** (`shops/`):
 - Jen veřejné HTML stránky, které povoluje `robots.txt`: kategorie `/slevy/<kategorie>?page=N` a stránky poboček

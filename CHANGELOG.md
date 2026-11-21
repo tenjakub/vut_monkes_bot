@@ -16,6 +16,10 @@ Nejnovější verze je vždy nahoře.
 - ☀️ V `/na-pivo-termin` má každý den na tlačítku ikonku počasí na večer a u nejlepšího termínu je předpověď na čas, od kdy můžou všichni. Pozvánka `/na-pivo` ukazuje počasí na vybraný čas.
 - 🎂 `/pocasi` ukáže, kdo má dnes svátek.
 
+## 1.9.1 · 2026-11-21 · U Karla i o víkendu
+
+- 🍺 `/restaurace` ukazuje polední menu U Karla i o víkendu. Bot ho teď bere přímo z jejich webu, kde je na celý týden včetně soboty a neděle.
+
 ## 1.9 · 2026-11-21 · Na pivo 🍺
 
 - 🍺 Nový command `/na-pivo` svolá dnešní pivo. Ve výběrech pod zprávou se nastaví, v kolik a kam se jde (kdokoliv to může změnit), a každý klikne **✅ Jdu**, **📅 Jindy** nebo **❌ Nejdu**. U vybrané hospody je adresa a odkaz na mapu.

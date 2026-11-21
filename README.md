@@ -47,7 +47,7 @@ Tlačítko 🔄 Obnovit stáhne data hned (stejnou stránku nejvýš jednou za m
 | Zdroj | Odkud | Obnova na pozadí |
 |---|---|---|
 | Menzy | [KaM VUT](https://www.kam.vut.cz/?p=otdo) (ceny pro studenty VUT, otevírací doby) | 10 min, 6–20 h |
-| Restaurace | [menicka.cz](https://www.menicka.cz), La Strada z [vlastního webu](https://lastrada-brno.cz/poledni-menu/) | 30 min, 6–20 h |
+| Restaurace | [menicka.cz](https://www.menicka.cz), La Strada a U Karla z vlastních webů ([La Strada](https://lastrada-brno.cz/poledni-menu/), [U Karla](https://ukarlabrno.cz/menu/pages/poledni-menu)) | 30 min, 6–20 h |
 | MHD | otevřená data [KORDIS JMK](https://kordis-jmk.cz) (CC BY): jízdní řád GTFS a výluky z GTFS Realtime | jízdní řád po 12 h, výluky 5 min |
 | Slevy a letáky | [Kupi.cz](https://www.kupi.cz), jen veřejné stránky povolené v `robots.txt` | 1 h |
 | Počasí | [Open-Meteo](https://open-meteo.com) (CC BY 4.0) | 15 min |

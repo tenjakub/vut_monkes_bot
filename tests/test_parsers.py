@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from lunch import kam, lastrada, menicka, service
+from lunch import kam, lastrada, menicka, service, ukarla
 from lunch.models import Category
 
 FIX = Path(__file__).parent / "fixtures"
@@ -165,3 +165,20 @@ def test_menus_cached_until_midnight_outside_lunch_hours():
     assert service.effective_ttl(900, at(21, 30)) == 21.5 * 3600  # večer platí, co se dnes stáhlo
     assert service.effective_ttl(900, at(0, 5)) == 900  # po půlnoci se stáhne jednou znovu
     assert service.effective_ttl(900, at(3)) == 3 * 3600
+
+
+def test_ukarla_weekend():
+    """U Karla z vlastního webu (stažený 21. 11. 2026) – menu i o víkendu, které na menicka.cz chybí."""
+    menu = ukarla.parse(read("ukarla.html"), place("ukarla"), date(2026, 11, 21))
+    assert [d.name for d in menu.soups] == ["Kuřecí vývar s trhaným masem a nudlemi"]
+    mains = menu.mains
+    assert [(d.label, d.price) for d in mains] == [("1", "194 Kč"), ("2", "214 Kč"), ("3", "204 Kč")]
+    assert mains[0].name == "Smažený kuřecí řízek, vařené brambory s máslem a pažitkou, okurkový salátek"
+
+
+def test_ukarla_weekday_and_missing_day():
+    menu = ukarla.parse(read("ukarla.html"), place("ukarla"), date(2026, 11, 23))
+    assert len(menu.mains) == 4 and menu.mains[2].name.startswith("BBQ Burger (")
+    assert menu.soups[0].name == "Fazolová s brambory a kořenovou zeleninou"
+    empty = ukarla.parse(read("ukarla.html"), place("ukarla"), date(2026, 12, 5))
+    assert empty.dishes == [] and empty.note
