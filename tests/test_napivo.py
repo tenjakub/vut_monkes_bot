@@ -63,7 +63,7 @@ def test_place_roundtrip_for_pub_area_and_none():
 
 
 def test_meetup_roundtrip_and_answers():
-    m = napivo.Meetup(TODAY, CREATED, "42", "19:00", "orel")
+    m = napivo.Meetup(TODAY, CREATED, "42", "19:00", "vlk")
     m.apply(1, "jdu")
     m.apply(2, "jindy")
     m.apply(3, "jdu")

@@ -259,7 +259,8 @@ Datum založení je v `embed.timestamp` (z něj se dopočítá rok a 14 dní hla
   (je hodnotou ve výběru), podnik se v embedu pozná podle názvu (`by_name`). Výběr „Kam“ má oblasti i podniky
   dohromady a **unese max. 25 možností** (hlídá test). Při překročení je potřeba dvoustupňový výběr (oblast → podnik).
 - Mapa = Google Maps vyhledávání z názvu a adresy, `query` ho upřesní, `map_url` (odkaz ze „Sdílet“) má přednost.
-  Adresy u Zach klubu, Mystiky, Utopie a Starověké krčmy nejsou ověřené (mapa je jen hledání podle názvu).
+  Seznam podniků potvrdil uživatel. U Mystiky a Utopie chybí adresa (mapa hledá jen podle názvu). Pivní burza jen Jánská,
+  U Dřevěného orla schválně ne (je hned vedle vlka a kluci znají vlka).
 - /na-pivo: `napivo:cas` a `napivo:kam` jsou výběry (DynamicItem[Select]), `napivo:a:<jdu|jindy|nejdu>` odpovědi,
   `napivo:mapa` = 🗺️ Kde co je (ephemeral), `napivo:termin` = založí hledání termínu se stejným místem.
 - /na-pivo-termin: den = tlačítko `pivokdy:d:<RRRRMMDD>` → okno (Modal se Select v Label) „od kolika“

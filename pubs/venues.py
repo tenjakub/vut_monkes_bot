@@ -51,17 +51,16 @@ AREAS: dict[str, Area] = {
 PUBS: dict[str, Pub] = {
     p.key: p
     for p in [
-        Pub("zach", "Zach klub", "ppv", "Kolejní 2 (koleje PPV)", "🎓", query="Kolejní 2, Brno"),
+        Pub("yacht", "Yacht klub", "ppv", "Kolejní 2 (koleje PPV)", "⛵", query="Kolejní 2, Brno"),
         Pub("purkynka", "Na Purkyňce", "purkyne", "Purkyňova 80"),
         Pub("kachnicka", "U Kachničky", "fit", "Božetěchova 2 (FIT)", "🦆", query="Božetěchova 2, Brno"),
         Pub("mystika", "Mystika", "fit"),
         Pub("burza", "Pivní burza", "centrum", "Jánská 16"),
         Pub("vlk", "U Dřevěného vlka", "centrum", "Zelný trh", "🐺"),
-        Pub("orel", "U Dřevěného orla", "centrum", "Orlí 3", "🦅"),
         Pub("utopie", "Utopie", "centrum"),
         Pub("palac", "Pivní palác", "centrum", "Běhounská 18", query="Pivní palác U Vodičků, Brno"),
         Pub("narohu", "Na Rohu", "centrum", "roh Divadelní a Orlí", query="Pivnice Na Rohu, Divadelní, Brno"),
-        Pub("krcma", "Starověká krčma", "centrum", "", "🍯"),
+        Pub("krcma", "Rytířská krčma", "centrum", "Lidická 9", "⚔️", query="Rytířská krčma, Brno"),
     ]
 }
 
