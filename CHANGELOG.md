@@ -11,6 +11,12 @@ Formát (bot ho čte, viz utils/changelog.py):
 Nejnovější verze je vždy nahoře.
 -->
 
+## 1.9 · 2026-11-21 · Na pivo 🍺
+
+- 🍺 Nový command `/na-pivo` svolá dnešní pivo. Ve výběrech pod zprávou se nastaví, v kolik a kam se jde (kdokoliv to může změnit), a každý klikne **✅ Jdu**, **📅 Jindy** nebo **❌ Nejdu**. U vybrané hospody je adresa a odkaz na mapu.
+- 🗓️ Nový command `/na-pivo-termin` hledá společný den v příštích dvou týdnech. Klikneš na každý den, kdy můžeš, a vybereš, od kolika. Nahoře je vidět nejlepší termín 🏆 a tlačítkem **🍺 Svolat nejlepší den** se z něj udělá pozvánka, která označí všechny, kdo ten den můžou.
+- 📍 Kam se jde, se vybírá z hospod u PPV, u Purkyní, u FITu a v centru. Když se ještě neví kam přesně, dá se vybrat jen oblast („V centru“). Tlačítko **🗺️ Kde co je** ukáže všechny podniky s mapou.
+
 ## 1.8 · 2026-11-20 · Oběd do 150 Kč 💸
 
 - 💸 `/co-jist` má tlačítko **💸 Do 150 Kč**, se kterým losuje jen jídla do 150 Kč.

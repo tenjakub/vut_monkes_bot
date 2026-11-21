@@ -7,7 +7,8 @@ Tenhle soubor je pro AI, která na projektu pracuje. Lidský návod je v [README
 - **VUT Monkes bot** – Discord bot pro kamarádský server studentů VUT (FIT). Python 3.14, discord.py 2.x.
 - Commandy: `/ppv`, `/purkyne`, `/menzy` (menzy VUT), `/restaurace` (polední menu), `/mhd`, `/mhd-purkyne` (odjezdy MHD Brno),
   `/letaky`, `/maso`, `/napoje`, `/pivo` (letáky a slevy supermarketů), `/domu` (spoje z centra na koleje),
-  `/obed` (kdo jde na oběd), `/co-jist` (náhodné jídlo), `/pocasi`, `/novinky` (changelog).
+  `/obed` (kdo jde na oběd), `/na-pivo`, `/na-pivo-termin` (domluva na pivo), `/co-jist` (náhodné jídlo), `/pocasi`,
+  `/novinky` (changelog).
 - Repo je veřejné, kód je pod licencí MIT ([LICENSE](LICENSE)). Data ze zdrojů patří jim (viz README → Licence).
 - **Celý kód píše AI.** Majitel repa zadává požadavky, testuje na Discordu a rozhoduje. Kód nepíše, ale čte ho.
 - **Jazyk:** komunikace s uživatelem, texty v botovi, komentáře, docstringy i commit zprávy jsou **česky**.
@@ -104,6 +105,7 @@ cogs/             Discord vrstva – každý cog má build_message() -> (content
 lunch/            menzy a restaurace, BEZ závislosti na discord.py
 shops/            slevy a letáky z Kupi.cz, BEZ závislosti na discord.py
 weather/          počasí z Open-Meteo, BEZ závislosti na discord.py
+pubs/             hospody a hledání termínu pro /na-pivo, BEZ závislosti na discord.py
 transit/          MHD (GTFS), BEZ závislosti na discord.py
 utils/render.py   Field (kartička), mřížka, limity embedů, header s časem
 ```
@@ -132,7 +134,7 @@ Pravidla:
 
 ## Oprávnění a intenty – kontrola při každé změně
 
-Aktuální stav (ověřeno pro verzi s `/ppv`, `/purkyne`, `/menzy`, `/restaurace`, `/mhd`, `/mhd-purkyne`, `/letaky`, `/maso`, `/napoje`, `/pivo`, `/domu`, `/obed`, `/co-jist`, `/pocasi`, `/novinky`):
+Aktuální stav (ověřeno pro verzi s `/ppv`, `/purkyne`, `/menzy`, `/restaurace`, `/mhd`, `/mhd-purkyne`, `/letaky`, `/maso`, `/napoje`, `/pivo`, `/domu`, `/obed`, `/na-pivo`, `/na-pivo-termin`, `/co-jist`, `/pocasi`, `/novinky`):
 
 - **Intenty:** `discord.Intents.default()`, žádné privilegované (Message Content, Server Members, Presence vypnuté).
 - **Oprávnění bota:** View Channels, Send Messages, Embed Links → číselně `19456`.
@@ -250,6 +252,20 @@ Tlačítka `cojist:<rozsah>:<r|s|c>:<limit 0/1>`, příznak limitu je volitelný
 
 **/obed** (`cogs/obed.py`): stav hlasování (kdo, kam, v kolik) je **jen v embedu zprávy** – tlačítka ho přečtou
 (`read_state`), upraví a přepíšou. Žádná databáze, přežije restart. Názvy polí musí odpovídat `SPOTS`.
+
+**/na-pivo, /na-pivo-termin** (`cogs/napivo.py`, `pubs/`): stejně jako /obed je stav **jen v embedu zprávy**.
+Datum založení je v `embed.timestamp` (z něj se dopočítá rok a 14 dní hlasování), den pozvánky v nadpisu.
+- Podniky a oblasti jsou v `pubs/venues.py` (`AREAS`, `PUBS`). Nový podnik = řádek v `PUBS`; klíč se nemění
+  (je hodnotou ve výběru), podnik se v embedu pozná podle názvu (`by_name`). Výběr „Kam“ má oblasti i podniky
+  dohromady a **unese max. 25 možností** (hlídá test). Při překročení je potřeba dvoustupňový výběr (oblast → podnik).
+- Mapa = Google Maps vyhledávání z názvu a adresy, `query` ho upřesní, `map_url` (odkaz ze „Sdílet“) má přednost.
+  Adresy u Zach klubu, Mystiky, Utopie a Starověké krčmy nejsou ověřené (mapa je jen hledání podle názvu).
+- /na-pivo: `napivo:cas` a `napivo:kam` jsou výběry (DynamicItem[Select]), `napivo:a:<jdu|jindy|nejdu>` odpovědi,
+  `napivo:mapa` = 🗺️ Kde co je (ephemeral), `napivo:termin` = založí hledání termínu se stejným místem.
+- /na-pivo-termin: den = tlačítko `pivokdy:d:<RRRRMMDD>` → okno (Modal se Select v Label) „od kolika“
+  (❌ nemůžu / kdykoliv / od HH:00). Odeslání okna upraví původní zprávu (`response.edit_message` u modal submitu).
+  Nejlepší den = nejvíc lidí, čas = nejpozdější „od“ (`pubs.planning.best_day`). `pivokdy:svolat` pošle pozvánku
+  /na-pivo na nejlepší den a v textu zprávy označí (pingne) ty, kdo ten den můžou.
 
 Obecně: na weby chodíme s cache (`lunch/fetcher.py`) a slušným User-Agentem, žádné agresivní dotazování.
 

@@ -29,6 +29,8 @@ v embedech s tlačítky na přepínání.
 | `/pivo` | Pivo v akci (lahve, plechovky, multipacky), ceny za půllitr nebo za kus |
 | `/napoje` | Energetické nápoje a limonády bez cukru v akci |
 | `/obed` | Hlasování „Kdo jde na oběd?“: kam a v kolik |
+| `/na-pivo` | Pozvánka na dnešní pivo: v kolik, kam (s mapou) a kdo jde / nejde / šel by jindy |
+| `/na-pivo-termin` | Hledání společného dne na pivo v příštích dvou týdnech, nejlepší termín jde rovnou svolat |
 | `/co-jist` | Náhodné jídlo z dnešních menz a restaurací, volitelně do 150 Kč |
 | `/pocasi` | Počasí u FITu: teď, dalších 18 h, dnes a zítra, rady k oblečení a k oknu přes noc |
 | `/novinky` | Co je nového (z [CHANGELOG.md](CHANGELOG.md)) |
@@ -104,6 +106,7 @@ hned. Kdo smí které commandy používat, se nastavuje v **Nastavení serveru �
   🐒 Bot pro VUT Monkes – obědy, MHD, slevy a počasí.
 
   🍽️ /ppv · /purkyne · /menzy · /restaurace · /co-jist · /obed
+  🍺 /na-pivo · /na-pivo-termin
   🚏 /mhd · /mhd-purkyne · /domu
   🛒 /letaky · /maso · /pivo · /napoje
   ☀️ /pocasi · 📰 /novinky
@@ -163,6 +166,7 @@ lunch/           # menzy a restaurace (stahování, parsování, emoji k jídlů
 transit/         # MHD: jízdní řád GTFS, výluky, zastávky
 shops/           # slevy a letáky z Kupi.cz
 weather/         # počasí z Open-Meteo
+pubs/            # hospody pro /na-pivo a hledání termínu
 utils/           # vykreslování embedů, changelog, načítání na pozadí
 tests/           # testy
 ```
@@ -170,7 +174,8 @@ tests/           # testy
 **Nová restaurace z menicka.cz:** ID z URL (`menicka.cz/1234-nazev.html`) a řádek v `RESTAURANTS`
 v `lunch/service.py`. **Nová menza nebo skupina:** `MENZY` / `GROUPS` v `lunch/kam.py`, tlačítko v `GROUP_BUTTONS`
 v `cogs/menza.py`. **Obchody a pobočky:** `STORES` v `shops/service.py`. **Zastávky MHD:** `BOARDS` a `AREAS`
-v `transit/service.py`.
+v `transit/service.py`. **Nová hospoda pro /na-pivo:** řádek v `PUBS` v `pubs/venues.py` (název, oblast, adresa),
+odkaz na mapu se složí sám.
 
 ## Licence
 
