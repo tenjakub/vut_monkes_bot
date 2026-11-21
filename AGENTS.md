@@ -260,6 +260,9 @@ Datum založení je v `embed.timestamp` (z něj se dopočítá rok a 14 dní hla
   sloupců přes celou šířku. Nový podnik = řádek v `PUBS`; klíč se nemění
   (je hodnotou ve výběru), podnik se v embedu pozná podle názvu (`by_name`). Výběr „Kam“ má oblasti i podniky
   dohromady a **unese max. 25 možností** (hlídá test). Při překročení je potřeba dvoustupňový výběr (oblast → podnik).
+- Ceny točeného (`Pub.beer = Beer(cena za 0,5 l, "Plzeň 12°", checked="11/2026")`, u víc druhů `Beer(70, many=True)`
+  = „víc druhů, kolem 70 Kč“) se zadávají ručně. Zatím nejsou vyplněné a jsou vypnuté přes `SHOW_BEER_PRICES = False`
+  (po vyplnění zapnout a přidat do CHANGELOG). Ukazují se v „Kde co je“ a u vybraného podniku v pozvánce.
 - Mapa = Google Maps vyhledávání z názvu a adresy, `query` ho upřesní, `map_url` (odkaz ze „Sdílet“) má přednost.
   Seznam podniků i odkazy na mapu potvrdil uživatel (u Mystiky a Utopie mapa schválně hledá jen název). Pivní burza jen Jánská,
   U Dřevěného orla schválně ne (je hned vedle vlka a kluci znají vlka).

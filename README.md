@@ -175,7 +175,7 @@ tests/           # testy
 v `lunch/service.py`. **Nová menza nebo skupina:** `MENZY` / `GROUPS` v `lunch/kam.py`, tlačítko v `GROUP_BUTTONS`
 v `cogs/menza.py`. **Obchody a pobočky:** `STORES` v `shops/service.py`. **Zastávky MHD:** `BOARDS` a `AREAS`
 v `transit/service.py`. **Nová hospoda pro /na-pivo:** řádek v `PUBS` v `pubs/venues.py` (název, oblast, adresa),
-odkaz na mapu se složí sám.
+odkaz na mapu se složí sám. Volitelně i cena točeného (`beer`), zobrazí se po zapnutí `SHOW_BEER_PRICES`.
 
 ## Licence
 

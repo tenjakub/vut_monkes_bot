@@ -4,6 +4,9 @@ Nový podnik = jeden řádek v PUBS. Klíč (`key`) se nesmí měnit, jinak by s
 (podnik se pozná podle názvu v embedu a hodnoty ve výběru). Odkaz na mapu se skládá sám z názvu a adresy;
 když Google podnik nenajde správně, dej do `map_url` odkaz z „Sdílet“ v Google Mapách.
 
+Ceny točeného piva (`Pub.beer`) se zadávají ručně a ukazují se, jen když je zapnuté SHOW_BEER_PRICES.
+Kde mají hodně druhů, stačí `Beer(70, many=True)` = „víc druhů, kolem 70 Kč“.
+
 Ve výběru „Kam“ jsou nahoře oblasti a pod nimi podniky. Dohromady jich Discord ve výběru unese nejvýš 25.
 """
 
@@ -22,6 +25,29 @@ class Area:
     note: str = "kam přesně, se domluví"  # v pozvánce za názvem
 
 
+# Ceny piva zatím nejsou vyplněné. Po vyplnění `beer` u podniků přepnout na True.
+SHOW_BEER_PRICES = False
+
+
+@dataclass(frozen=True)
+class Beer:
+    """Točené pivo, cena za 0,5 l v Kč (zadává se ručně)."""
+
+    price: int  # u `many` orientační („kolem“)
+    name: str = ""  # jedno pivo: "Plzeň 12°"
+    many: bool = False  # víc druhů -> „víc druhů, kolem XX Kč“
+    checked: str = ""  # kdy zjištěno, např. "11/2026"
+
+    @property
+    def text(self) -> str:
+        """'🍻 víc druhů, kolem 70 Kč' / '🍺 Plzeň 12° · 65 Kč' (cena vždy za půllitr)."""
+        if self.many:
+            text = f"🍻 víc druhů, kolem {self.price} Kč"
+        else:
+            text = "🍺 " + " · ".join(p for p in (self.name, f"{self.price} Kč") if p)
+        return text + (f" ({self.checked})" if self.checked else "")
+
+
 @dataclass(frozen=True)
 class Pub:
     key: str
@@ -31,6 +57,12 @@ class Pub:
     emoji: str = "🍺"
     query: str = ""  # co hledat v mapě, když název + adresa nestačí
     map_url: str = ""  # vlastní odkaz na mapu (třeba z „Sdílet“ v Google Mapách), má přednost
+    beer: Beer | None = None  # cena točeného, např. Beer(65, "Plzeň 12°", checked="11/2026")
+
+    @property
+    def beer_text(self) -> str:
+        """Cena piva k zobrazení, nebo "" (nevyplněná nebo vypnutá přes SHOW_BEER_PRICES)."""
+        return self.beer.text if SHOW_BEER_PRICES and self.beer else ""
 
     @property
     def map(self) -> str:

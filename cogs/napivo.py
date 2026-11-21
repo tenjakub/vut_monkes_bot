@@ -68,7 +68,10 @@ def place_lines(key: str | None) -> list[str]:
     if key in venues.PUBS:
         pub = venues.PUBS[key]
         parts = [f"{pub.emoji} **{pub.name}**", pub.address, f"[🗺️ mapa]({pub.map})"]
-        return ["📍 **Kam:** " + " · ".join(p for p in parts if p)]
+        lines = ["📍 **Kam:** " + " · ".join(p for p in parts if p)]
+        if pub.beer_text:
+            lines.append(f"-# {pub.beer_text}")
+        return lines
     if key in venues.AREAS:
         area = venues.AREAS[key]
         lines = [f"📍 **Kam:** {area.emoji} **{area.label}** – {area.note}"]
@@ -105,6 +108,12 @@ def place_options(current: str | None) -> list[discord.SelectOption]:
 MAP_SMALL_AREA = 3  # oblast s víc podniky se v „Kde co je“ rozloží do tří sloupců přes celou šířku
 
 
+def _map_line(p: venues.Pub) -> str:
+    """Podnik v „Kde co je“: odkaz na mapu, pod ním nevýrazně adresa a (když je zapnutá) cena piva."""
+    small = [x for x in (p.address, p.beer_text) if x]
+    return f"{p.emoji} [{p.name}]({p.map})" + "".join(f"\n-# {x}" for x in small)
+
+
 def map_embed() -> discord.Embed:
     """🗺️ Kde co je: všechny podniky po oblastech s odkazem na mapu.
 
@@ -117,7 +126,7 @@ def map_embed() -> discord.Embed:
     areas = [(a, pubs) for a, pubs in areas if pubs]
     # malé oblasti napřed, ať se poskládají do společné řady
     for area, pubs in sorted(areas, key=lambda ap: len(ap[1]) > MAP_SMALL_AREA):
-        lines = [f"{p.emoji} [{p.name}]({p.map})" + (f"\n-# {p.address}" if p.address else "") for p in pubs]
+        lines = [_map_line(p) for p in pubs]
         if len(pubs) <= MAP_SMALL_AREA:
             fields.append(render.Field(f"{area.emoji} {area.label}", "\n".join(lines)))
             continue
