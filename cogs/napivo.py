@@ -71,8 +71,10 @@ def place_lines(key: str | None) -> list[str]:
         return ["📍 **Kam:** " + " · ".join(p for p in parts if p)]
     if key in venues.AREAS:
         area = venues.AREAS[key]
-        pubs = " · ".join(f"[{p.name}]({p.map})" for p in venues.pubs_in(key))
-        return [f"📍 **Kam:** {area.emoji} **{area.label}** – kam přesně, se domluví", f"-# {pubs}"]
+        lines = [f"📍 **Kam:** {area.emoji} **{area.label}** – {area.note}"]
+        if pubs := venues.pubs_in(key):
+            lines.append("-# " + " · ".join(f"[{p.name}]({p.map})" for p in pubs))
+        return lines
     return ["📍 **Kam:** _ještě se neví – vyber níž_"]
 
 
@@ -82,15 +84,17 @@ def read_place(embed: discord.Embed) -> str | None:
 
 
 def place_options(current: str | None) -> list[discord.SelectOption]:
-    """Oblasti a pod každou její podniky. Discord unese ve výběru nejvýš 25 možností."""
+    """Nahoře pohromadě obecné možnosti (kamkoliv, oblasti), pod nimi podniky seřazené po oblastech.
+    Discord unese ve výběru nejvýš 25 možností."""
     options = []
     for area in venues.AREAS.values():
-        pubs = venues.pubs_in(area.key)
+        names = ", ".join(p.name for p in venues.pubs_in(area.key))
         options.append(discord.SelectOption(
-            label=f"{area.label} – ještě nevíme kde", value=area.key, emoji=area.emoji,
-            description=", ".join(p.name for p in pubs)[:100] or None, default=current == area.key,
+            label=f"{area.label} – {area.hint}", value=area.key, emoji=area.emoji,
+            description=names[:100] or None, default=current == area.key,
         ))
-        for pub in pubs:
+    for area in venues.AREAS.values():
+        for pub in venues.pubs_in(area.key):
             options.append(discord.SelectOption(
                 label=pub.name, value=pub.key, emoji=pub.emoji,
                 description=" · ".join(p for p in (area.label, pub.address) if p)[:100], default=current == pub.key,
@@ -98,16 +102,35 @@ def place_options(current: str | None) -> list[discord.SelectOption]:
     return options[:25]
 
 
+MAP_SMALL_AREA = 3  # oblast s víc podniky se v „Kde co je“ rozloží do tří sloupců přes celou šířku
+
+
 def map_embed() -> discord.Embed:
-    """🗺️ Kde co je: všechny podniky po oblastech s odkazem na mapu."""
+    """🗺️ Kde co je: všechny podniky po oblastech s odkazem na mapu.
+
+    Malé oblasti jsou kartičky vedle sebe, velká (centrum) má vlastní řadu rozdělenou do tří sloupců
+    (nadpis jen nad prvním), aby využila šířku. Na mobilu jdou sloupce pod sebe, proto se plní shora dolů.
+    """
     embed = discord.Embed(title="🗺️ Kde co je", color=COLOR)
-    fields = []
-    for area in venues.AREAS.values():
-        lines = [
-            f"{p.emoji} [{p.name}]({p.map})" + (f"\n-# {p.address}" if p.address else "")
-            for p in venues.pubs_in(area.key)
-        ]
-        fields.append(render.Field(f"{area.emoji} {area.label}", "\n".join(lines) or "–"))
+    fields: list[render.Field] = []
+    areas = [(a, venues.pubs_in(a.key)) for a in venues.AREAS.values()]
+    areas = [(a, pubs) for a, pubs in areas if pubs]
+    # malé oblasti napřed, ať se poskládají do společné řady
+    for area, pubs in sorted(areas, key=lambda ap: len(ap[1]) > MAP_SMALL_AREA):
+        lines = [f"{p.emoji} [{p.name}]({p.map})" + (f"\n-# {p.address}" if p.address else "") for p in pubs]
+        if len(pubs) <= MAP_SMALL_AREA:
+            fields.append(render.Field(f"{area.emoji} {area.label}", "\n".join(lines)))
+            continue
+        while len(fields) % render.GRID_COLUMNS:  # velká oblast začíná na novém řádku
+            fields.append(render.Field(render.BLANK, render.BLANK))
+        cols = render.GRID_COLUMNS
+        size, extra = divmod(len(lines), cols)
+        start = 0
+        for i in range(cols):
+            end = start + size + (i < extra)
+            name = f"{area.emoji} {area.label}" if i == 0 else render.BLANK
+            fields.append(render.Field(name, "\n".join(lines[start:end]) or render.BLANK))
+            start = end
     render.add_fields(embed, fields, 5000)
     return embed
 

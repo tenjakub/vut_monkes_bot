@@ -1,10 +1,10 @@
-"""Hospody a kluby pro /na-pivo: oblasti (u PPV, u Purkyní, u FITu, v centru) a podniky v nich.
+"""Hospody a kluby pro /na-pivo: oblasti (kamkoliv, u PPV, u Purkyní, u FITu, v centru) a podniky v nich.
 
 Nový podnik = jeden řádek v PUBS. Klíč (`key`) se nesmí měnit, jinak by staré zprávy podnik nepoznaly
 (podnik se pozná podle názvu v embedu a hodnoty ve výběru). Odkaz na mapu se skládá sám z názvu a adresy;
 když Google podnik nenajde správně, dej do `map_url` odkaz z „Sdílet“ v Google Mapách.
 
-Ve výběru „Kam“ jsou oblasti i podniky dohromady a Discord jich ve výběru unese nejvýš 25.
+Ve výběru „Kam“ jsou nahoře oblasti a pod nimi podniky. Dohromady jich Discord ve výběru unese nejvýš 25.
 """
 
 from __future__ import annotations
@@ -18,6 +18,8 @@ class Area:
     key: str
     label: str  # "U FITu" – do výběru a nadpisů
     emoji: str
+    hint: str = "ještě nevíme kde"  # ve výběru za názvem
+    note: str = "kam přesně, se domluví"  # v pozvánce za názvem
 
 
 @dataclass(frozen=True)
@@ -41,6 +43,7 @@ class Pub:
 AREAS: dict[str, Area] = {
     a.key: a
     for a in [
+        Area("kamkoliv", "Kamkoliv", "🎲", "je mi to jedno", "je to jedno, kam se půjde"),
         Area("ppv", "U PPV", "🏘️"),
         Area("purkyne", "U Purkyní", "🏢"),
         Area("fit", "U FITu", "💻"),
@@ -54,10 +57,10 @@ PUBS: dict[str, Pub] = {
         Pub("yacht", "Yacht klub", "ppv", "Kolejní 2 (koleje PPV)", "⛵", query="Kolejní 2, Brno"),
         Pub("purkynka", "Na Purkyňce", "purkyne", "Purkyňova 80"),
         Pub("kachnicka", "U Kachničky", "fit", "Božetěchova 2 (FIT)", "🦆", query="Božetěchova 2, Brno"),
-        Pub("mystika", "Mystika", "fit"),
+        Pub("mystika", "Mystika", "fit", "Palackého tř. 721", query="Mystika, Brno"),
         Pub("burza", "Pivní burza", "centrum", "Jánská 16"),
         Pub("vlk", "U Dřevěného vlka", "centrum", "Zelný trh", "🐺"),
-        Pub("utopie", "Utopie", "centrum"),
+        Pub("utopie", "Utopie", "centrum", "Divadelní 603", query="Utopie, Brno"),
         Pub("palac", "Pivní palác", "centrum", "Běhounská 18", query="Pivní palác U Vodičků, Brno"),
         Pub("narohu", "Na Rohu", "centrum", "roh Divadelní a Orlí", query="Pivnice Na Rohu, Divadelní, Brno"),
         Pub("krcma", "Rytířská krčma", "centrum", "Lidická 9", "⚔️", query="Rytířská krčma, Brno"),

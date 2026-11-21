@@ -255,11 +255,13 @@ Tlačítka `cojist:<rozsah>:<r|s|c>:<limit 0/1>`, příznak limitu je volitelný
 
 **/na-pivo, /na-pivo-termin** (`cogs/napivo.py`, `pubs/`): stejně jako /obed je stav **jen v embedu zprávy**.
 Datum založení je v `embed.timestamp` (z něj se dopočítá rok a 14 dní hlasování), den pozvánky v nadpisu.
-- Podniky a oblasti jsou v `pubs/venues.py` (`AREAS`, `PUBS`). Nový podnik = řádek v `PUBS`; klíč se nemění
+- Podniky a oblasti jsou v `pubs/venues.py` (`AREAS`, `PUBS`). „Kamkoliv“ je oblast bez podniků. Ve výběru jsou
+  nahoře pohromadě oblasti, pod nimi podniky. V „Kde co je“ se oblast s víc než 3 podniky (centrum) rozloží do tří
+  sloupců přes celou šířku. Nový podnik = řádek v `PUBS`; klíč se nemění
   (je hodnotou ve výběru), podnik se v embedu pozná podle názvu (`by_name`). Výběr „Kam“ má oblasti i podniky
   dohromady a **unese max. 25 možností** (hlídá test). Při překročení je potřeba dvoustupňový výběr (oblast → podnik).
 - Mapa = Google Maps vyhledávání z názvu a adresy, `query` ho upřesní, `map_url` (odkaz ze „Sdílet“) má přednost.
-  Seznam podniků potvrdil uživatel. U Mystiky a Utopie chybí adresa (mapa hledá jen podle názvu). Pivní burza jen Jánská,
+  Seznam podniků i odkazy na mapu potvrdil uživatel (u Mystiky a Utopie mapa schválně hledá jen název). Pivní burza jen Jánská,
   U Dřevěného orla schválně ne (je hned vedle vlka a kluci znají vlka).
 - /na-pivo: `napivo:cas` a `napivo:kam` jsou výběry (DynamicItem[Select]), `napivo:a:<jdu|jindy|nejdu>` odpovědi,
   `napivo:mapa` = 🗺️ Kde co je (ephemeral), `napivo:termin` = založí hledání termínu se stejným místem.

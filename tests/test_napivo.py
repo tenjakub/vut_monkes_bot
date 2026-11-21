@@ -40,9 +40,10 @@ def test_venues_fit_into_one_select():
     assert len(venues.AREAS) + len(venues.PUBS) == len(options) <= 25, "víc než 25 možností se do výběru nevejde"
     assert len({o.value for o in options}) == len(options)
     assert all(len(o.label) <= 100 and len(o.description or "") <= 100 for o in options)
-    # oblast je ve výběru vždy těsně před svými podniky
+    # nahoře pohromadě obecné možnosti (kamkoliv a oblasti), pod nimi podniky po oblastech
     values = [o.value for o in options]
-    assert values.index("centrum") < values.index("burza") and values.index("fit") + 1 == values.index("kachnicka")
+    assert values[: len(venues.AREAS)] == list(venues.AREAS) and values[0] == "kamkoliv"
+    assert values[len(venues.AREAS):] == [p.key for a in venues.AREAS for p in venues.pubs_in(a)]
 
 
 def test_map_links():
@@ -53,8 +54,14 @@ def test_map_links():
     assert all(p.map in text for p in venues.PUBS.values())
 
 
+def test_map_embed_spreads_big_area_over_full_width():
+    names = [f.name for f in napivo.map_embed().fields]
+    # řada malých oblastí, pak centrum přes tři sloupce (nadpis jen nad prvním); "Kamkoliv" tu není
+    assert names == ["🏘️ U PPV", "🏢 U Purkyní", "💻 U FITu", "🏙️ V centru", render.BLANK, render.BLANK]
+
+
 def test_place_roundtrip_for_pub_area_and_none():
-    for place in ("burza", "centrum", "kachnicka", None):
+    for place in ("burza", "centrum", "kachnicka", "kamkoliv", None):
         m = napivo.Meetup(TODAY, CREATED, "42", place=place)
         assert napivo.read_meetup(via_discord(napivo.meetup_embed(m))).place == place
 
