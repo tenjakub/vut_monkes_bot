@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Týdenní Menu</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f4f4f5; padding: 16px; line-height: 1.5; }
+.wrap { max-width: 820px; margin: 0 auto; }
+.header { background: #1e293b; color: #fff; border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 16px; }
+.header h1 { font-size: 24px; font-weight: 700; letter-spacing: .5px; }
+.header .dates { font-size: 14px; color: #94a3b8; margin-top: 4px; }
+.section { background: #fff; border-radius: 10px; padding: 20px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+.section h2 { font-size: 15px; font-weight: 700; color: #1e293b; text-transform: uppercase; letter-spacing: .3px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 10px; }
+.items { display: flex; flex-direction: column; gap: 2px; }
+.item { display: flex; align-items: baseline; gap: 6px; padding: 5px 0; border-bottom: 1px dotted #e2e8f0; }
+.item:last-child { border-bottom: none; }
+.num { font-weight: 700; color: #0369a1; min-width: 24px; font-size: 14px; }
+.text { flex: 1; font-size: 14px; color: #334155; }
+.price { font-size: 14px; font-weight: 600; color: #0f172a; white-space: nowrap; }
+.aperitivo { background: #1e293b; color: #fff; border-radius: 10px; padding: 16px 20px; margin-bottom: 12px; }
+.aperitivo h2 { font-size: 13px; color: #fbbf24; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; border: none; }
+.aperitovo .item { border-color: #334155; }
+.aperitivo .text { color: #cbd5e1; }
+.aperitivo .price { color: #fbbf24; }
+.aperitivo .item { padding: 4px 0; }
+.footer { text-align: center; padding: 16px; font-size: 12px; color: #94a3b8; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <h1>Týdenní Menu</h1>
+    <div class="dates">16.11.2026 – 22.11.2026</div>
+  </div>
+  
+    <div class="section">
+      <h2>Pondělí 16.11.2026</h2>
+      <div class="items"><div class="item"><span class="text">houbová polevka</span><span class="price">50 Kč</span></div><div class="item"><span class="text">Boršč</span><span class="price">70 Kč</span></div><div class="item"><span class="num">1.</span> <span class="text">Ledový salát, rajče, mozzarella, kukuřice, rukola</span><span class="price">175 Kč</span></div><div class="item"><span class="num">2.</span> <span class="text">Penne se smetanou a šunkou</span><span class="price">185 Kč</span></div><div class="item"><span class="num">3.</span> <span class="text">FITNESS TALÍŘ: kuřecí maso, bramborová kaše nebo salát</span><span class="price">195 Kč</span></div><div class="item"><span class="num">4.</span> <span class="text">Vepřová panenka s bramborovou kaší</span><span class="price">235 Kč</span></div><div class="item"><span class="num">5.</span> <span class="text">Lasagne Bolognese</span><span class="price">225 Kč</span></div><div class="item"><span class="num">6.</span> <span class="text">Špagety s boloňskou omáčkou (ragú)</span><span class="price">210 Kč</span></div><div class="item"><span class="num">7.</span> <span class="text">Pizza chef</span><span class="price">199 Kč</span></div><div class="item"><span class="num">8.</span> <span class="text">Pizza šunka</span><span class="price">229 Kč</span></div><div class="item"><span class="num">9.</span> <span class="text">Pizza diavola</span><span class="price">249 Kč</span></div><div class="item"><span class="num">10.</span> <span class="text">Gurmánská pizza se špekem a mascarpone</span><span class="price">259 Kč</span></div></div>
+    </div>
+    <div class="section">
+      <h2>Úterý 17.11.2026 – Středa 18.11.2026</h2>
+      <div class="items"><div class="item"><span class="text">houbová polevka</span><span class="price">50 Kč</span></div><div class="item"><span class="text">Boršč</span><span class="price">70 Kč</span></div><div class="item"><span class="num">1.</span> <span class="text">Ledový salát, rajče, mozzarella, kukuřice, rukola</span><span class="price">175 Kč</span></div><div class="item"><span class="num">2.</span> <span class="text">Penne se smetanou a šunkou</span><span class="price">185 Kč</span></div><div class="item"><span class="num">3.</span> <span class="text">FITNESS TALÍŘ: kuřecí maso, bramborová kaše nebo salát</span><span class="price">195 Kč</span></div><div class="item"><span class="num">4.</span> <span class="text">Vepřová panenka s bramborovou kaší</span><span class="price">235 Kč</span></div><div class="item"><span class="num">5.</span> <span class="text">Lasagne Bolognese</span><span class="price">225 Kč</span></div><div class="item"><span class="num">6.</span> <span class="text">Špagety s boloňskou omáčkou (ragú)</span><span class="price">210 Kč</span></div><div class="item"><span class="num">7.</span> <span class="text">Pizza chef</span><span class="price">199 Kč</span></div><div class="item"><span class="num">8.</span> <span class="text">Pizza šunka</span><span class="price">229 Kč</span></div><div class="item"><span class="num">9.</span> <span class="text">Pizza diavola</span><span class="price">249 Kč</span></div><div class="item"><span class="num">10.</span> <span class="text">Gurmánská pizza se špekem a mascarpone</span><span class="price">259 Kč</span></div></div>
+    </div>
+    <div class="section">
+      <h2>Čtvrtek 19.11.2026 – Pátek 20.11.2026</h2>
+      <div class="items"><div class="item"><span class="text">Rajská polévka</span><span class="price">50 Kč</span></div><div class="item"><span class="text">Boršč</span><span class="price">70 Kč</span></div><div class="item"><span class="num">1.</span> <span class="text">Salát z rukoly, cherry rajčat, parmské šunky a parmazánu</span><span class="price">175 Kč</span></div><div class="item"><span class="num">2.</span> <span class="text">Špagety s pepřovým pestem</span><span class="price">185 Kč</span></div><div class="item"><span class="num">3.</span> <span class="text">FITNESS TALÍŘ: kuřecí maso, bramborová kaše nebo salát</span><span class="price">195 Kč</span></div><div class="item"><span class="num">4.</span> <span class="text">Gnocchi carbonara</span><span class="price">235 Kč</span></div><div class="item"><span class="num">5.</span> <span class="text">Lasagne Bolognese</span><span class="price">225 Kč</span></div><div class="item"><span class="num">6.</span> <span class="text">Špagety s boloňskou omáčkou</span><span class="price">210 Kč</span></div><div class="item"><span class="num">7.</span> <span class="text">Pizza chef</span><span class="price">199 Kč</span></div><div class="item"><span class="num">8.</span> <span class="text">Pizza šunka</span><span class="price">229 Kč</span></div><div class="item"><span class="num">9.</span> <span class="text">Pizza diavola</span><span class="price">249 Kč</span></div><div class="item"><span class="num">10.</span> <span class="text">Gurmánská pizza se špekem a mascarpone</span><span class="price">245 Kč</span></div></div>
+    </div>
+    <div class="section">
+      <h2>Sobota 21.11.2026 – Neděle 22.11.2026</h2>
+      <div class="items"><div class="item"><span class="text">Rajská polévka</span><span class="price">50 Kč</span></div><div class="item"><span class="text">Boršč</span><span class="price">70 Kč</span></div><div class="item"><span class="num">a.</span> <span class="text">Salát z rukoly, cherry rajčat, parmské šunky a parmazánu</span><span class="price">175 Kč</span></div><div class="item"><span class="num">b.</span> <span class="text">Gnocchi se 4 sýry a klobásou</span><span class="price">250 Kč</span></div><div class="item"><span class="num">c.</span> <span class="text">Tuňákový steak v sicilském stylu s olivami a kapary</span><span class="price">279 Kč</span></div><div class="item"><span class="num">d.</span> <span class="text">Těstoviny s tuňákem, cherry rajčátky, cuketou a citronem</span><span class="price">269 Kč</span></div><div class="item"><span class="num">5.</span> <span class="text">Lasagne Bolognese</span><span class="price">225 Kč</span></div><div class="item"><span class="num">6.</span> <span class="text">Špagety s boloňskou omáčkou</span><span class="price">210 Kč</span></div><div class="item"><span class="num">7.</span> <span class="text">Pizza šunka</span><span class="price">229 Kč</span></div><div class="item"><span class="num">8.</span> <span class="text">Pizza diavola</span><span class="price">249 Kč</span></div></div>
+    </div>
+  <div class="aperitivo">
+    <h2>Čtvrtek 19.11.2026 - 17:00 - 21:00 APERITIVO ITALIANO</h2>
+    <div class="items"><div class="item"><span class="text">1 drink (vino/aperol/prosecco) + Free Italian buffet</span><span class="price">350 Kč</span></div></div>
+  </div>
+  <div class="footer">SESAMO · Daily Menu</div>
+</div>
+</body>
+</html>

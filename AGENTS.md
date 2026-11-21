@@ -181,6 +181,10 @@ Postup, když jsou nová oprávnění potřeba:
 - U Karla má vlastní web (`ukarla.py`, `https://ukarlabrno.cz/menu/pages/poledni-menu`), protože na menicka.cz (6695)
   chybí víkendy. Jeden blok `div[class*=WysiwygContent_root]`: `<strong>Sobota 21.11. Polévka: …</strong>` a pod ním
   odstavce `1) název … 194` (cena bez Kč). Otevírací doba menu na webu není, proto se u U Karla nezobrazuje.
+- Sesamo (`sesamo.py`): menu je v iframu `https://sesamobrno.cz/menu_cz.html` (do embedu odkaz `/#menu`). Týden jako
+  `.section` s nadpisem dne nebo rozsahu („Sobota 21.11.2026 – Neděle 22.11.2026“), `.item` = `.num` + `.text` +
+  `.price`; bez čísla = polévka. `.aperitivo` (večerní akce) se přeskakuje. Vaří i o víkendu.
+- Odkazy na restaurace v `/restaurace` jsou tlačítka po pěti v řadě, Obnovit a Svolat oběd v řadě pod nimi.
 
 **Slevy a letáky – Kupi.cz** (`shops/`):
 - Jen veřejné HTML stránky, které povoluje `robots.txt`: kategorie `/slevy/<kategorie>?page=N` a stránky poboček

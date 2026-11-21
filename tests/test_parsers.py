@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from lunch import kam, lastrada, menicka, service, ukarla
+from lunch import kam, lastrada, menicka, service, sesamo, ukarla
 from lunch.models import Category
 
 FIX = Path(__file__).parent / "fixtures"
@@ -191,3 +191,19 @@ def test_restaurants_share_no_menu_text():
     assert menicka.parse(read("menicka_u3opic.html"), place("u3opic"), date(2026, 11, 22)).note == NO_MENU
     assert lastrada.parse(read("lastrada.html"), place("lastrada"), date(2026, 11, 22)).note == NO_MENU
     assert ukarla.parse(read("ukarla.html"), place("ukarla"), date(2026, 12, 5)).note == NO_MENU
+
+
+def test_sesamo():
+    """Sesamo (menu_cz.html stažené 21. 11. 2026): dny jako rozsahy, polévky bez čísla, víkendové menu."""
+    weekend = sesamo.parse(read("sesamo.html"), place("sesamo"), date(2026, 11, 22))
+    assert [(d.name, d.price) for d in weekend.soups] == [("Rajská polévka", "50 Kč"), ("Boršč", "70 Kč")]
+    assert [d.label for d in weekend.mains] == ["a", "b", "c", "d", "5", "6", "7", "8"]
+    assert weekend.mains[1].name == "Gnocchi se 4 sýry a klobásou" and weekend.mains[1].price == "250 Kč"
+    tuesday = sesamo.parse(read("sesamo.html"), place("sesamo"), date(2026, 11, 17))
+    assert len(tuesday.mains) == 10 and tuesday.soups[0].name == "Houbová polevka"
+    # aperitivo (večerní akce ve čtvrtek) se mezi jídla nepočítá
+    thursday = sesamo.parse(read("sesamo.html"), place("sesamo"), date(2026, 11, 19))
+    assert not any("drink" in d.name for d in thursday.dishes)
+    from lunch.models import NO_MENU
+
+    assert sesamo.parse(read("sesamo.html"), place("sesamo"), date(2026, 11, 23)).note == NO_MENU

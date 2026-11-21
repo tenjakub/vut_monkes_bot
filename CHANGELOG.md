@@ -11,6 +11,10 @@ Formát (bot ho čte, viz utils/changelog.py):
 Nejnovější verze je vždy nahoře.
 -->
 
+## 1.11 · 2026-11-21 · Sesamo 🥐
+
+- 🥐 `/restaurace` ukazuje i denní menu **Sesamo** (italská pekárna a pizzerie na Purkyňově 97c) – těstoviny, pizzu, saláty a polévky, a to i o víkendu. Sesamo jde vybrat i v `/obed` a losuje z něj `/co-jist`.
+
 ## 1.10 · 2026-11-21 · Počasí na pivo ☀️
 
 - ☀️ V `/na-pivo-termin` má každý den na tlačítku ikonku počasí na večer a u nejlepšího termínu je předpověď na čas, od kdy můžou všichni. Pozvánka `/na-pivo` ukazuje počasí na vybraný čas.

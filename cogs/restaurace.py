@@ -37,14 +37,14 @@ async def build_message(
 
 
 class RefreshButton(discord.ui.DynamicItem[discord.ui.Button], template=r"restaurace:refresh"):
-    def __init__(self) -> None:
+    def __init__(self, row: int | None = None) -> None:
         super().__init__(
             discord.ui.Button(
                 custom_id="restaurace:refresh",
                 label="Obnovit",
                 emoji="🔄",
                 style=discord.ButtonStyle.secondary,
-                row=1,
+                row=row,
             )
         )
 
@@ -61,11 +61,13 @@ class RefreshButton(discord.ui.DynamicItem[discord.ui.Button], template=r"restau
 
 
 def build_view() -> discord.ui.View:
+    """Nahoře odkazy na weby restaurací (po pěti v řadě), pod nimi Obnovit a Svolat oběd."""
     view = discord.ui.View(timeout=None)
-    view.add_item(RefreshButton())
-    view.add_item(ObedNewButton(row=1))  # rovnou svolat, kdo jde na oběd
-    for r in service.RESTAURANTS:
-        view.add_item(discord.ui.Button(label=r.place.name, emoji=r.place.emoji, url=r.place.url, row=0))
+    for i, r in enumerate(service.RESTAURANTS):
+        view.add_item(discord.ui.Button(label=r.place.name, emoji=r.place.emoji, url=r.place.url, row=i // 5))
+    actions = (len(service.RESTAURANTS) + 4) // 5  # první řada pod odkazy
+    view.add_item(RefreshButton(row=actions))
+    view.add_item(ObedNewButton(row=actions))  # rovnou svolat, kdo jde na oběd
     return view
 
 
@@ -95,7 +97,7 @@ class Restaurace(commands.Cog):
 
     @app_commands.command(
         name="restaurace",
-        description="Polední menu restaurací (U 3 opic, Padagali, La Strada, U Karla, Portoriko)",
+        description="Polední menu restaurací (U 3 opic, Padagali, La Strada, U Karla, Portoriko, Sesamo)",
     )
     async def restaurace(self, interaction: discord.Interaction) -> None:
         await interaction.response.defer(thinking=True)

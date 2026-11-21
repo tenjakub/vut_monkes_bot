@@ -9,7 +9,7 @@ from dataclasses import dataclass, replace
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
-from . import kam, lastrada, menicka, ukarla
+from . import kam, lastrada, menicka, sesamo, ukarla
 from .fetcher import Fetcher
 from .models import Menu, Place
 
@@ -76,6 +76,11 @@ RESTAURANTS: list[Restaurant] = [
         Place("portoriko", "Portoriko", "https://www.menicka.cz/8467.html", "🌴", 0x0CA678),
         menicka.URL.format(id=8467),
         menicka.parse,
+    ),
+    Restaurant(
+        Place("sesamo", "Sesamo", sesamo.PAGE_URL, "🥐", 0xE8590C),
+        sesamo.URL,  # vlastní web (Purkyňova), menu i o víkendu
+        sesamo.parse,
     ),
 ]
 
