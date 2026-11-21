@@ -11,6 +11,11 @@ Formát (bot ho čte, viz utils/changelog.py):
 Nejnovější verze je vždy nahoře.
 -->
 
+## 1.10 · 2026-11-21 · Počasí na pivo ☀️
+
+- ☀️ V `/na-pivo-termin` má každý den na tlačítku ikonku počasí na večer a u nejlepšího termínu je předpověď na čas, od kdy můžou všichni. Pozvánka `/na-pivo` ukazuje počasí na vybraný čas.
+- 🎂 `/pocasi` ukáže, kdo má dnes svátek.
+
 ## 1.9 · 2026-11-21 · Na pivo 🍺
 
 - 🍺 Nový command `/na-pivo` svolá dnešní pivo. Ve výběrech pod zprávou se nastaví, v kolik a kam se jde (kdokoliv to může změnit), a každý klikne **✅ Jdu**, **📅 Jindy** nebo **❌ Nejdu**. U vybrané hospody je adresa a odkaz na mapu.

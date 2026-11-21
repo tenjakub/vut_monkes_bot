@@ -189,3 +189,45 @@ def test_beer_prices_hidden_until_switched_on(monkeypatch):
     # řádek s cenou nesmí rozbít čtení místa z embedu
     m = napivo.Meetup(TODAY, CREATED, "42", place="vlk")
     assert napivo.read_meetup(via_discord(napivo.meetup_embed(m))).place == "vlk"
+
+
+# --- počasí u dnů (z uložené předpovědi Open-Meteo, 20. 11. 2026 večer) ---------------------------
+
+
+def _weather():
+    from pathlib import Path
+
+    from weather import openmeteo
+
+    return openmeteo.parse((Path(__file__).parent / "fixtures" / "openmeteo.json").read_text(encoding="utf-8"))
+
+
+def test_plan_shows_evening_weather_on_days():
+    from types import SimpleNamespace
+
+    from weather import openmeteo
+
+    weather = _weather()
+    created = datetime(2026, 11, 20, 20, 50, tzinfo=TZ)
+    p = napivo.Plan(created, "42")
+    p.vote(1, date(2026, 11, 21), "19:00")
+    view = napivo.plan_view(p, created.date(), weather)
+    emojis = {i.item.custom_id: i.item.emoji for i in view.children if i.item.custom_id.startswith("pivokdy:d:")}
+    expected = openmeteo.outlook(weather, date(2026, 11, 21)).icon
+    assert str(emojis["pivokdy:d:20261121"]) == expected
+    assert emojis["pivokdy:d:20261125"] is None  # tak daleko předpověď v uložených datech není
+    embed = napivo.plan_embed(p, created.date(), weather)
+    assert "(od 19:00)" in embed.description and embed.footer.text.endswith("Open-Meteo.com")
+    # bez předpovědi v cache se počasí jen neukáže
+    client = SimpleNamespace(fetcher=SimpleNamespace(peek=lambda url: None))
+    msg = napivo.plan_message(p, client)
+    assert msg["embed"].footer.text == "Založeno"
+    assert napivo.read_plan(via_discord(embed)).votes == p.votes  # řádek s počasím nevadí čtení stavu
+
+
+def test_meetup_weather_at_chosen_time():
+    weather = _weather()
+    m = napivo.Meetup(date(2026, 11, 21), datetime(2026, 11, 20, 21, 0, tzinfo=TZ), "42", "20:00", "vlk")
+    embed = napivo.meetup_embed(m, weather)
+    assert "(od 20:00)" in embed.description
+    assert napivo.read_meetup(via_discord(embed)) == m

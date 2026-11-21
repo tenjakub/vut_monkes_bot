@@ -19,7 +19,7 @@ URL = "https://api.open-meteo.com/v1/forecast?" + urlencode(
         "hourly": "temperature_2m,precipitation_probability,weather_code,is_day,wind_speed_10m",
         "daily": "temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset,weather_code",
         "timezone": "Europe/Prague",
-        "forecast_days": 2,
+        "forecast_days": 16,  # /pocasi ukazuje dnes a zítra, /na-pivo-termin počasí na dva týdny
     }
 )
 SOURCE_URL = "https://open-meteo.com/"
@@ -96,7 +96,7 @@ class Forecast:
     code: int
     is_day: bool
     hours: list[Hour]  # od aktuální hodiny dál
-    days: list[Day]  # dnes, zítra
+    days: list[Day]  # dnes, zítra, … (16 dní)
 
 
 def parse(text: str) -> Forecast:
@@ -138,6 +138,39 @@ def parse(text: str) -> Forecast:
         hours=hours,
         days=days,
     )
+
+
+@dataclass(frozen=True)
+class Outlook:
+    """Počasí na pár hodin (třeba na večer v hospodě)."""
+
+    icon: str
+    text: str
+    temperature: float  # průměr
+    rain_chance: int  # max %
+
+    def line(self) -> str:
+        """'🌧️ déšť · 6 °C · 💧 60 %'"""
+        rain = f" · 💧 {self.rain_chance} %" if self.rain_chance else ""
+        return f"{self.icon} {self.text} · {round(self.temperature)} °C".replace("-", "−") + rain
+
+
+EVENING_HOUR = 18  # „večer“ = od 18:00 na OUTLOOK_HOURS hodin
+
+
+def _severity(code: int) -> int:
+    return 3 if code in (45, 48) else code  # mlha není horší než déšť; jinak vyšší WMO kód = horší počasí
+
+
+def outlook(f: Forecast, day: date, start_hour: int = EVENING_HOUR, hours: int = 4) -> Outlook | None:
+    """Počasí v daný den od `start_hour` na `hours` hodin: nejhorší počasí, průměrná teplota, max šance na déšť.
+    None, když předpověď na ty hodiny není (moc daleko, nebo už uplynuly)."""
+    window = [h for h in f.hours if h.time.date() == day and start_hour <= h.time.hour < start_hour + hours]
+    if not window:
+        return None
+    worst = max(window, key=lambda h: _severity(h.code))
+    icon, text = describe(worst.code, worst.is_day)
+    return Outlook(icon, text, sum(h.temperature for h in window) / len(window), max(h.rain_chance for h in window))
 
 
 def advice(f: Forecast, horizon: int = 12) -> list[str]:

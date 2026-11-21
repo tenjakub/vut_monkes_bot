@@ -238,6 +238,11 @@ Postup, když jsou nová oprávnění potřeba:
 **Počasí – Open-Meteo** (`weather/openmeteo.py`): zdarma bez klíče, data CC BY 4.0 → v embedu musí zůstat
 uvedený zdroj („Data: Open-Meteo.com“). Souřadnice FITu, obnova na pozadí každých 15 min. Po 21:00 (do 4:00)
 `window_advice` radí s otevřeným oknem podle předpovědi do 7:00 (mráz, déšť, chladno, vítr).
+Předpověď se stahuje na 16 dní (`forecast_days`), /pocasi z ní ukazuje dnes a zítra. `/na-pivo` a `/na-pivo-termin`
+berou počasí jen z cache (`Fetcher.peek`, nic nestahují) přes `openmeteo.outlook` (večer = od 18:00 na 4 h,
+nejhorší počasí, průměrná teplota). Bez předpovědi v cache se počasí jen nezobrazí. Kde se počasí ukáže, je
+v patičce „počasí: Open-Meteo.com“ (CC BY). `/pocasi` v hlavičce ukazuje svátek (`utils/namedays.py`, hlavní jméno
+dne z občanského kalendáře, ve dnech státních svátků jejich název).
 
 **/domu** (`cogs/mhd.py`, `Timetable.connections`): spoje z `HOME_ORIGINS` (Česká, Hlavní nádraží – z Malinovského
 nám. se nejezdí) do `HOMES` (PPV, Purkyně), jen tramvaje (`HOME_ROUTE_TYPES`) a noční `HOME_NIGHT_LINES` (N99). Loader drží `trip_visits` = průjezdy sledovanými zastávkami včetně konečné.

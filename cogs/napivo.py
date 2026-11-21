@@ -24,6 +24,7 @@ from discord.ext import commands
 from lunch import service
 from pubs import planning, venues
 from utils import render
+from weather import openmeteo
 
 COLOR = 0xE8A317  # barva piva
 TIMES = [f"{h}:{m:02d}" for h in range(14, 23) for m in (0, 30)][:-1]  # 14:00 … 22:00 pro /na-pivo
@@ -45,6 +46,29 @@ _PLACE_RE = re.compile(r"📍 \*\*Kam:\*\* \S+ \*\*(.+?)\*\*")
 _DATE_RE = re.compile(r"(\d{1,2})\. (\d{1,2})\.$")
 _VOTE_RE = re.compile(r"<@(\d+)> · (?:od (\d{1,2}:\d{2})|kdykoliv)")
 _locks: dict[int, asyncio.Lock] = defaultdict(asyncio.Lock)  # zpráva -> zámek (dvě kliknutí naráz)
+
+
+def forecast(client) -> openmeteo.Forecast | None:
+    """Předpověď z cache, kterou na pozadí obnovuje /pocasi. Nic se kvůli ní nestahuje; bez ní se počasí jen neukáže."""
+    fetcher = getattr(client, "fetcher", None)
+    text = fetcher.peek(openmeteo.URL) if fetcher else None
+    try:
+        return openmeteo.parse(text) if text else None
+    except (ValueError, KeyError, TypeError):
+        return None
+
+
+def _weather_line(weather: openmeteo.Forecast | None, day: date, time: str | None) -> str | None:
+    """'-# 🌧️ déšť · 6 °C · 💧 60 % (od 19:00)' – počasí v den a čas piva (bez času večer od 18:00)."""
+    if weather is None:
+        return None
+    hour = int(time.split(":")[0]) if time else openmeteo.EVENING_HOUR
+    o = openmeteo.outlook(weather, day, hour)
+    return f"-# {o.line()} (od {hour}:00)" if o else None
+
+
+def _footer(embed: discord.Embed, text: str, weather_shown: bool) -> None:
+    embed.set_footer(text=text + (" · počasí: Open-Meteo.com" if weather_shown else ""))
 
 
 def _now() -> datetime:
@@ -168,16 +192,18 @@ class Meetup:
         return sum(a == answer for a in self.answers.values())
 
 
-def meetup_embed(m: Meetup) -> discord.Embed:
+def meetup_embed(m: Meetup, weather: openmeteo.Forecast | None = None) -> discord.Embed:
     lines = [f"Svolává <@{m.creator}>"] if m.creator else []
     lines.append(f"🕐 **Kdy:** {m.time}" if m.time else "🕐 **Kdy:** _ještě se neví – vyber níž_")
+    if w := _weather_line(weather, m.day, m.time):
+        lines.append(w)
     lines += place_lines(m.place)
     lines.append("-# Klikni, jestli jdeš. Kdy a kam může upravit kdokoliv ve výběru pod zprávou.")
     embed = discord.Embed(
         title=f"🍺 Na pivo – {render.czech_date(m.day)}", description="\n".join(lines),
         color=COLOR, timestamp=m.created,
     )
-    embed.set_footer(text="Svoláno")
+    _footer(embed, "Svoláno", w is not None)
     fields = []
     for key, (icon, title, _, _) in ANSWERS.items():
         people = [f"<@{u}>" for u, a in m.answers.items() if a == key]
@@ -245,7 +271,7 @@ def _vote_text(time: str | None) -> str:
     return f"od {time}" if time else "kdykoliv"
 
 
-def plan_embed(p: Plan, today: date) -> discord.Embed:
+def plan_embed(p: Plan, today: date, weather: openmeteo.Forecast | None = None) -> discord.Embed:
     days = p.days
     best = planning.best_day(p.votes, today)
     lines = [f"Svolává <@{p.creator}>"] if p.creator else []
@@ -254,14 +280,17 @@ def plan_embed(p: Plan, today: date) -> discord.Embed:
         people = "člověk" if len(best.users) == 1 else ("lidi" if len(best.users) < 5 else "lidí")
         lines.append(f"🏆 **Zatím nejlíp:** {render.czech_date(best.day)} {_vote_text(best.time)} · "
                      f"{len(best.users)} {people}")
+        if w := _weather_line(weather, best.day, best.time):
+            lines.append(w)
     else:
         lines.append("\n_Zatím nikdo…_ 🦗")
-    lines.append("-# Klikni na každý den, kdy můžeš, a vyber, od kolika. Stejným tlačítkem den změníš nebo zrušíš.")
+    lines.append("-# Klikni na každý den, kdy můžeš, a vyber, od kolika. Stejným tlačítkem den změníš nebo zrušíš."
+                 + (" Ikonka u dne = počasí večer." if weather else ""))
     embed = discord.Embed(
         title=f"🗓️ Kdy na pivo? {days[0].day}. {days[0].month}. – {days[-1].day}. {days[-1].month}.",
         description="\n".join(lines), color=COLOR, timestamp=p.created,
     )
-    embed.set_footer(text="Založeno")
+    _footer(embed, "Založeno", weather is not None)
     fields = []
     for d, people in planning.by_day(p.votes).items():
         order = sorted(people.items(), key=lambda kv: (kv[1] or "00:00").zfill(5))
@@ -286,7 +315,7 @@ def read_plan(embed: discord.Embed | None) -> Plan | None:
     return plan
 
 
-def plan_view(p: Plan, today: date) -> discord.ui.View:
+def plan_view(p: Plan, today: date, weather: openmeteo.Forecast | None = None) -> discord.ui.View:
     view = discord.ui.View(timeout=None)
     best = planning.best_day(p.votes, today)
     counts = {d: len(people) for d, people in planning.by_day(p.votes).items()}
@@ -299,12 +328,23 @@ def plan_view(p: Plan, today: date) -> discord.ui.View:
             style = discord.ButtonStyle.primary
         else:
             style = discord.ButtonStyle.secondary
-        view.add_item(DayButton(d, label=label, style=style, disabled=d < today, row=i // 5))
+        o = openmeteo.outlook(weather, d) if weather and d >= today else None
+        view.add_item(DayButton(d, label=label, style=style, disabled=d < today, row=i // 5,
+                                emoji=o.icon if o else None))
     view.add_item(PlaceSelect("pivokdy", p.place, row=3))
     view.add_item(CallButton(disabled=best is None, row=4))
     view.add_item(MapButton(row=4))
     view.add_item(ClearButton(row=4))
     return view
+
+
+def plan_message(p: Plan, client) -> dict:
+    today, weather = service.today(), forecast(client)
+    return {"embed": plan_embed(p, today, weather), "view": plan_view(p, today, weather)}
+
+
+def meetup_message(m: Meetup, client) -> dict:
+    return {"embed": meetup_embed(m, forecast(client)), "view": meetup_view(m)}
 
 
 # --- tlačítka a výběry -----------------------------------------------------------------------------
@@ -315,7 +355,6 @@ async def _edit(interaction: discord.Interaction, change) -> None:
     message = interaction.message
     async with _locks[message.id]:
         embed = message.embeds[0] if message.embeds else None
-        today = service.today()
         state = read_plan(embed) or read_meetup(embed)
         if state is None:
             await interaction.response.send_message(STALE, ephemeral=True)
@@ -324,9 +363,9 @@ async def _edit(interaction: discord.Interaction, change) -> None:
         if error:
             await interaction.response.send_message(error, ephemeral=True)
         elif isinstance(state, Plan):
-            await interaction.response.edit_message(embed=plan_embed(state, today), view=plan_view(state, today))
+            await interaction.response.edit_message(**plan_message(state, interaction.client))
         else:
-            await interaction.response.edit_message(embed=meetup_embed(state), view=meetup_view(state))
+            await interaction.response.edit_message(**meetup_message(state, interaction.client))
 
 
 class AnswerButton(discord.ui.DynamicItem[discord.ui.Button], template=r"napivo:a:(?P<answer>[a-z]+)"):
@@ -425,8 +464,7 @@ class PlanNewButton(discord.ui.DynamicItem[discord.ui.Button], template=r"napivo
         embed = interaction.message.embeds[0] if interaction.message and interaction.message.embeds else None
         place = read_place(embed) if embed else None
         plan = Plan(_now(), str(interaction.user.id), place)
-        today = service.today()
-        await interaction.response.send_message(embed=plan_embed(plan, today), view=plan_view(plan, today))
+        await interaction.response.send_message(**plan_message(plan, interaction.client))
 
 
 class DayModal(discord.ui.Modal):
@@ -502,7 +540,7 @@ class CallButton(discord.ui.DynamicItem[discord.ui.Button], template=r"pivokdy:s
         meetup = Meetup(best.day, _now(), str(interaction.user.id), best.time, plan.place)
         when = render.czech_date(best.day) + (f" od {best.time}" if best.time else "")
         content = f"🍺 Jde se na pivo – {when}! " + " ".join(f"<@{u}>" for u in best.users)
-        await interaction.response.send_message(content=content, embed=meetup_embed(meetup), view=meetup_view(meetup))
+        await interaction.response.send_message(content=content, **meetup_message(meetup, interaction.client))
 
 
 class ClearButton(discord.ui.DynamicItem[discord.ui.Button], template=r"pivokdy:x"):
@@ -539,13 +577,12 @@ class NaPivo(commands.Cog):
     @app_commands.command(name="na-pivo", description="🍺 Kdo jde dneska na pivo? Kdy, kam a kdo jde")
     async def na_pivo(self, interaction: discord.Interaction) -> None:
         meetup = Meetup(service.today(), _now(), str(interaction.user.id))
-        await interaction.response.send_message(embed=meetup_embed(meetup), view=meetup_view(meetup))
+        await interaction.response.send_message(**meetup_message(meetup, self.bot))
 
     @app_commands.command(name="na-pivo-termin", description="🗓️ Najděte společný den na pivo v příštích dvou týdnech")
     async def na_pivo_termin(self, interaction: discord.Interaction) -> None:
         plan = Plan(_now(), str(interaction.user.id))
-        today = service.today()
-        await interaction.response.send_message(embed=plan_embed(plan, today), view=plan_view(plan, today))
+        await interaction.response.send_message(**plan_message(plan, interaction.client))
 
 
 async def setup(bot: commands.Bot) -> None:

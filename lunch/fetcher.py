@@ -69,6 +69,11 @@ class Fetcher:
         entry = await self._cached(url, ttl, force)
         return entry.raw.decode(entry.charset, errors="replace"), entry.wall
 
+    def peek(self, url: str) -> str | None:
+        """Text z cache bez stahování (i starší než TTL), nebo None. Pro doplňková data, na která se nečeká."""
+        entry = self._cache.get(url)
+        return entry.raw.decode(entry.charset, errors="replace") if entry else None
+
     async def get_bytes(self, url: str, ttl: float, force: bool = False) -> tuple[bytes, float]:
         """Vrátí (data, unix čas stažení) – pro binární formáty (protobuf apod.)."""
         entry = await self._cached(url, ttl, force)

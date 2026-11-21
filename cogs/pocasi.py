@@ -11,7 +11,7 @@ from discord import app_commands
 from discord.ext import commands, tasks
 
 from lunch.service import today
-from utils import loading, render
+from utils import loading, namedays, render
 from weather import openmeteo
 
 log = logging.getLogger(__name__)
@@ -67,10 +67,9 @@ def weather_embed(f: openmeteo.Forecast) -> discord.Embed:
 async def build_message(fetcher, force: bool = False) -> tuple[str, list[discord.Embed], discord.ui.View]:
     text, fetched = await fetcher.get(openmeteo.URL, ttl=TTL, force=force)
     forecast = openmeteo.parse(text)
-    content = (
-        f"### ☀️ Počasí v Brně – {render.czech_date(today())}\n"
-        f"-# aktualizováno <t:{int(fetched)}:R>"
-    )
+    day = today()
+    info = [namedays.today_text(day), f"aktualizováno <t:{int(fetched)}:R>"]
+    content = f"### ☀️ Počasí v Brně – {render.czech_date(day)}\n-# " + " · ".join(i for i in info if i)
     return content, [weather_embed(forecast)], build_view()
 
 

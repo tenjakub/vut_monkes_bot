@@ -30,9 +30,9 @@ v embedech s tlačítky na přepínání.
 | `/napoje` | Energetické nápoje a limonády bez cukru v akci |
 | `/obed` | Hlasování „Kdo jde na oběd?“: kam a v kolik |
 | `/na-pivo` | Pozvánka na dnešní pivo: v kolik, kam (s mapou) a kdo jde / nejde / šel by jindy |
-| `/na-pivo-termin` | Hledání společného dne na pivo v příštích dvou týdnech, nejlepší termín jde rovnou svolat |
+| `/na-pivo-termin` | Hledání společného dne na pivo v příštích dvou týdnech i s počasím, nejlepší termín jde rovnou svolat |
 | `/co-jist` | Náhodné jídlo z dnešních menz a restaurací, volitelně do 150 Kč |
-| `/pocasi` | Počasí u FITu: teď, dalších 18 h, dnes a zítra, rady k oblečení a k oknu přes noc |
+| `/pocasi` | Počasí u FITu: teď, dalších 18 h, dnes a zítra, rady k oblečení a k oknu přes noc, kdo má svátek |
 | `/novinky` | Co je nového (z [CHANGELOG.md](CHANGELOG.md)) |
 
 Menzové commandy mají parametr `vse: True`: místo Economy ukážou polévky a všechna hlavní jídla.

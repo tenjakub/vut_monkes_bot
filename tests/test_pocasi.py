@@ -59,3 +59,26 @@ def test_window_advice_only_in_the_evening():
     assert openmeteo.window_advice(night(temperature=12, rain_chance=0, wind=50)).endswith("fouká až 50 km/h")
     embed = pocasi.weather_embed(night(temperature=12, rain_chance=0))
     assert "🪟 **Okno přes noc:** ✅" in embed.description
+
+
+def test_outlook():
+    from datetime import date
+
+    f = forecast()
+    o = openmeteo.outlook(f, date(2026, 11, 21), 18)
+    window = [h for h in f.hours if h.time.date() == date(2026, 11, 21) and 18 <= h.time.hour < 22]
+    assert o.rain_chance == max(h.rain_chance for h in window)
+    assert "°C" in o.line()
+    assert openmeteo.outlook(f, date(2026, 11, 30)) is None
+
+
+def test_namedays():
+    from datetime import date, timedelta
+
+    from utils import namedays
+
+    assert namedays.today_text(date(2026, 11, 21)) == "🎂 Svátek má **Albert**"
+    assert namedays.today_text(date(2026, 6, 29)) == "🎂 Svátek mají **Petr a Pavel**"
+    assert namedays.today_text(date(2027, 1, 1)) == "🇨🇿 Nový rok"
+    # každý den v roce (i 29. 2.) má jméno nebo svátek
+    assert all(namedays.today_text(date(2024, 1, 1) + timedelta(days=i)) for i in range(366))
