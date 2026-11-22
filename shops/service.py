@@ -365,5 +365,3 @@ class Shops:
         await self.meat_deals(force=True)
         await self.drink_deals(force=True)
         await self.beer_deals(force=True)
-
-    warm_up = refresh_all  # starší název

@@ -29,6 +29,7 @@ from transit.service import (
     area_of,
 )
 from utils import loading, render
+from utils.interactions import STALE, reported
 
 log = logging.getLogger(__name__)
 
@@ -381,6 +382,7 @@ class DomuButton(discord.ui.DynamicItem[discord.ui.Button], template=r"domu:r"):
     ) -> DomuButton:
         return cls()
 
+    @reported
     async def callback(self, interaction: discord.Interaction) -> None:
         await interaction.response.defer()
         content, embeds, view = await build_home_message(_transit(interaction.client))
@@ -413,9 +415,10 @@ class MhdButton(discord.ui.DynamicItem[discord.ui.Button], template=r"mhd:(?P<gr
     ) -> MhdButton:
         return cls(match["group"], match["slot"])
 
+    @reported
     async def callback(self, interaction: discord.Interaction) -> None:
         if self.group not in GROUPS:
-            await interaction.response.send_message("Tohle tlačítko už je zastaralé.", ephemeral=True)
+            await interaction.response.send_message(STALE, ephemeral=True)
             return
         await interaction.response.defer()
         content, embeds, view = await build_message(

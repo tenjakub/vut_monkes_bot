@@ -12,7 +12,8 @@ import aiohttp
 
 log = logging.getLogger(__name__)
 
-USER_AGENT = "Mozilla/5.0 (compatible; obed-discord-bot/1.0)"
+# Slušný User-Agent: kdo jsme a kde nás najít (správce webu se tak může ozvat)
+USER_AGENT = "Mozilla/5.0 (compatible; vut-monkes-bot/1.0; +https://github.com/tenjakub/vut_monkes_bot)"
 # Ruční "Obnovit" stáhne stránku znovu jen pokud je cache starší než tohle.
 FORCE_MIN_AGE = 60.0
 
@@ -23,6 +24,14 @@ class _Entry:
     charset: str
     fetched: float  # time.monotonic()
     wall: float  # time.time(), pro zobrazení
+    _text: str | None = None
+
+    @property
+    def text(self) -> str:
+        """Dekódovaný text – jen jednou, ne při každém commandu."""
+        if self._text is None:
+            self._text = self.raw.decode(self.charset, errors="replace")
+        return self._text
 
 
 class Fetcher:
@@ -67,12 +76,12 @@ class Fetcher:
     async def get(self, url: str, ttl: float, force: bool = False) -> tuple[str, float]:
         """Vrátí (text, unix čas stažení)."""
         entry = await self._cached(url, ttl, force)
-        return entry.raw.decode(entry.charset, errors="replace"), entry.wall
+        return entry.text, entry.wall
 
     def peek(self, url: str) -> str | None:
         """Text z cache bez stahování (i starší než TTL), nebo None. Pro doplňková data, na která se nečeká."""
         entry = self._cache.get(url)
-        return entry.raw.decode(entry.charset, errors="replace") if entry else None
+        return entry.text if entry else None
 
     async def get_bytes(self, url: str, ttl: float, force: bool = False) -> tuple[bytes, float]:
         """Vrátí (data, unix čas stažení) – pro binární formáty (protobuf apod.)."""

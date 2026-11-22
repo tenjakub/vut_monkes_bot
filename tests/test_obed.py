@@ -50,3 +50,47 @@ def test_buttons():
     rows = [i.item.row for i in view.children]
     assert all(rows.count(r) <= 5 for r in set(rows))
     assert "obed:p:stary_pivovar" in ids and "obed:t:1130" in ids and "obed:now" in ids
+
+
+class _Message:
+    def __init__(self, embed, created):
+        self.id = 7
+        self.embeds = [embed]
+        self.created_at = created
+
+
+class _Response:
+    def __init__(self, message):
+        self.message = message
+
+    async def edit_message(self, embed, view):
+        self.message.embeds = [embed]
+
+    async def send_message(self, *a, **k):
+        raise AssertionError(a)
+
+
+class _Interaction:
+    def __init__(self, message, user):
+        self.message = message
+        self.user = type("U", (), {"id": user})()
+        self.response = _Response(message)
+
+
+def _click(message, user, spot):
+    import asyncio
+
+    button = obed.ObedButton("p", spot)
+    asyncio.run(button.callback(_Interaction(message, user)))
+
+
+def test_click_keeps_poll_date_and_sees_previous_click():
+    yesterday = datetime(2026, 11, 19, 10, 0, tzinfo=TZ)
+    first = obed.build_embed({}, "42", yesterday.date())
+    msg = _Message(first, yesterday)
+    stale = _Message(first, yesterday)  # druhé kliknutí ze snímku zprávy před prvním
+    _click(msg, 1, "kolejni")
+    _click(stale, 2, "lastrada")
+    final = stale.embeds[0]
+    assert final.title.endswith("čtvrtek 19. 11.")  # ne dnešní datum
+    assert obed.read_state(final) == {1: ("kolejni", None), 2: ("lastrada", None)}

@@ -14,6 +14,7 @@ from discord.ext import commands
 from lunch import emoji, service
 from lunch.models import Dish, Menu
 from utils import render
+from utils.interactions import STALE, reported
 
 log = logging.getLogger(__name__)
 
@@ -118,9 +119,10 @@ class CojistButton(
     ) -> CojistButton:
         return cls(match["scope"], match["slot"], match["cheap"] == "1")
 
+    @reported
     async def callback(self, interaction: discord.Interaction) -> None:
         if self.scope not in SCOPES:
-            await interaction.response.send_message("Tohle tlačítko už je zastaralé.", ephemeral=True)
+            await interaction.response.send_message(STALE, ephemeral=True)
             return
         await interaction.response.defer()
         content, embeds, view = await build_message(interaction.client, self.scope, self.cheap)

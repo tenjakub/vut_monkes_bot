@@ -35,6 +35,7 @@ from shops.service import (
     sugar_free,
 )
 from utils import loading, render
+from utils.interactions import STALE, reported
 
 log = logging.getLogger(__name__)
 
@@ -406,10 +407,11 @@ class SlevyButton(
     ) -> SlevyButton:
         return cls(match["view"], match["filter"], match["only"] == "1", match["slot"])
 
+    @reported
     async def callback(self, interaction: discord.Interaction) -> None:
         valid_filters = {ALL, *(DEAL_VIEWS[self.view_name].filters if self.view_name in DEAL_VIEWS else ())}
         if self.view_name not in VIEWS or self.flt not in valid_filters:
-            await interaction.response.send_message("Tohle tlačítko už je zastaralé.", ephemeral=True)
+            await interaction.response.send_message(STALE, ephemeral=True)
             return
         await interaction.response.defer()
         cog = interaction.client.get_cog("Slevy")  # type: ignore[attr-defined]

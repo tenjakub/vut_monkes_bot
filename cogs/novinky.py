@@ -9,6 +9,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from utils import changelog, render
+from utils.interactions import reported
 
 PER_PAGE = 3
 COLOR_NEWEST = 0x2F9E44
@@ -64,6 +65,7 @@ class NovinkyButton(discord.ui.DynamicItem[discord.ui.Button], template=r"novink
     ) -> NovinkyButton:
         return cls(int(match["page"]), match["slot"])
 
+    @reported
     async def callback(self, interaction: discord.Interaction) -> None:
         content, embeds, view = build_message(self.page)
         await interaction.response.edit_message(content=content, embeds=embeds, view=view)

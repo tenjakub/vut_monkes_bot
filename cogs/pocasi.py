@@ -12,6 +12,7 @@ from discord.ext import commands, tasks
 
 from lunch.service import today
 from utils import loading, namedays, render
+from utils.interactions import reported
 from weather import openmeteo
 
 log = logging.getLogger(__name__)
@@ -85,6 +86,7 @@ class PocasiButton(discord.ui.DynamicItem[discord.ui.Button], template=r"pocasi:
     ) -> PocasiButton:
         return cls()
 
+    @reported
     async def callback(self, interaction: discord.Interaction) -> None:
         await interaction.response.defer()
         content, embeds, view = await build_message(interaction.client.fetcher, force=True)

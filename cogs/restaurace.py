@@ -13,6 +13,7 @@ from lunch import service
 from lunch.models import NO_MENU, Menu
 from cogs.obed import ObedNewButton
 from utils import loading, render
+from utils.interactions import reported
 
 
 log = logging.getLogger(__name__)
@@ -60,6 +61,7 @@ class RefreshButton(discord.ui.DynamicItem[discord.ui.Button], template=r"restau
     ) -> RefreshButton:
         return cls()
 
+    @reported
     async def callback(self, interaction: discord.Interaction) -> None:
         await interaction.response.defer()
         content, embeds, view = await build_message(interaction.client, force=True)

@@ -12,6 +12,7 @@ from discord.ext import commands, tasks
 import config
 from lunch.fetcher import Fetcher
 from utils import changelog
+from utils.interactions import send_error
 from utils.loading import LoadingTracker
 
 log = logging.getLogger("bot")
@@ -105,14 +106,7 @@ class ObedBot(commands.Bot):
         self, interaction: discord.Interaction, error: app_commands.AppCommandError
     ) -> None:
         log.exception("Chyba v commandu", exc_info=error)
-        msg = (
-            "Něco se pokazilo 😵 Zkus to prosím za chvíli znovu.\n"
-            f"-# Když to nepřestane, nahlas to prosím na {config.ISSUES_URL} (verze {config.BOT_VERSION})"
-        )
-        if interaction.response.is_done():
-            await interaction.followup.send(msg, ephemeral=True)
-        else:
-            await interaction.response.send_message(msg, ephemeral=True)
+        await send_error(interaction)
 
     async def close(self) -> None:
         self.heartbeat.cancel()

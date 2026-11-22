@@ -11,9 +11,7 @@ Datum založení je v `embed.timestamp`, z něj se dopočítá rok a dny hlasov�
 
 from __future__ import annotations
 
-import asyncio
 import re
-from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import date, datetime
 
@@ -24,12 +22,12 @@ from discord.ext import commands
 from lunch import service
 from pubs import planning, venues
 from utils import render
+from utils.interactions import STALE, MessageState, reported
 from weather import openmeteo
 
 COLOR = 0xE8A317  # barva piva
 TIMES = [f"{h}:{m:02d}" for h in range(14, 23) for m in (0, 30)][:-1]  # 14:00 … 22:00 pro /na-pivo
 FROM_TIMES = [f"{h}:00" for h in range(14, 22)]  # "můžu od" pro /na-pivo-termin
-STALE = "Tohle tlačítko už je zastaralé."
 
 # odpověď -> (emoji, nadpis kartičky, popisek tlačítka, styl tlačítka)
 ANSWERS: dict[str, tuple[str, str, str, discord.ButtonStyle]] = {
@@ -45,7 +43,7 @@ _TIME_RE = re.compile(r"🕐 \*\*Kdy:\*\* (\d{1,2}:\d{2})")
 _PLACE_RE = re.compile(r"📍 \*\*Kam:\*\* \S+ \*\*(.+?)\*\*")
 _DATE_RE = re.compile(r"(\d{1,2})\. (\d{1,2})\.$")
 _VOTE_RE = re.compile(r"<@(\d+)> · (?:od (\d{1,2}:\d{2})|kdykoliv)")
-_locks: dict[int, asyncio.Lock] = defaultdict(asyncio.Lock)  # zpráva -> zámek (dvě kliknutí naráz)
+_state = MessageState()  # zámek na zprávu + poslední zapsaný embed (dvě kliknutí naráz)
 
 
 def forecast(client) -> openmeteo.Forecast | None:
@@ -353,8 +351,8 @@ def meetup_message(m: Meetup, client) -> dict:
 async def _edit(interaction: discord.Interaction, change) -> None:
     """Přečte stav ze zprávy, `change(stav)` ho upraví (vrací chybovou hlášku nebo None) a zprávu přepíše."""
     message = interaction.message
-    async with _locks[message.id]:
-        embed = message.embeds[0] if message.embeds else None
+    async with _state.lock(message.id):
+        embed = _state.embed(message)
         state = read_plan(embed) or read_meetup(embed)
         if state is None:
             await interaction.response.send_message(STALE, ephemeral=True)
@@ -362,10 +360,11 @@ async def _edit(interaction: discord.Interaction, change) -> None:
         error = change(state)
         if error:
             await interaction.response.send_message(error, ephemeral=True)
-        elif isinstance(state, Plan):
-            await interaction.response.edit_message(**plan_message(state, interaction.client))
-        else:
-            await interaction.response.edit_message(**meetup_message(state, interaction.client))
+            return
+        build = plan_message if isinstance(state, Plan) else meetup_message
+        payload = build(state, interaction.client)
+        await interaction.response.edit_message(**payload)
+        _state.remember(message.id, payload["embed"])
 
 
 class AnswerButton(discord.ui.DynamicItem[discord.ui.Button], template=r"napivo:a:(?P<answer>[a-z]+)"):
@@ -377,6 +376,7 @@ class AnswerButton(discord.ui.DynamicItem[discord.ui.Button], template=r"napivo:
     async def from_custom_id(cls, interaction, item, match: re.Match[str], /) -> AnswerButton:
         return cls(match["answer"])
 
+    @reported
     async def callback(self, interaction: discord.Interaction) -> None:
         if self.answer not in ANSWERS:
             await interaction.response.send_message(STALE, ephemeral=True)
@@ -399,6 +399,7 @@ class TimeSelect(discord.ui.DynamicItem[discord.ui.Select], template=r"napivo:ca
     async def from_custom_id(cls, interaction, item, match: re.Match[str], /) -> TimeSelect:
         return cls()
 
+    @reported
     async def callback(self, interaction: discord.Interaction) -> None:
         time = self.item.values[0] if self.item.values else None
 
@@ -422,6 +423,7 @@ class PlaceSelect(discord.ui.DynamicItem[discord.ui.Select], template=r"(?P<kind
     async def from_custom_id(cls, interaction, item, match: re.Match[str], /) -> PlaceSelect:
         return cls(match["kind"])
 
+    @reported
     async def callback(self, interaction: discord.Interaction) -> None:
         place = self.item.values[0] if self.item.values else None
         if place not in venues.PUBS and place not in venues.AREAS:
@@ -445,6 +447,7 @@ class MapButton(discord.ui.DynamicItem[discord.ui.Button], template=r"napivo:map
     async def from_custom_id(cls, interaction, item, match: re.Match[str], /) -> MapButton:
         return cls()
 
+    @reported
     async def callback(self, interaction: discord.Interaction) -> None:
         await interaction.response.send_message(embed=map_embed(), ephemeral=True)
 
@@ -460,6 +463,7 @@ class PlanNewButton(discord.ui.DynamicItem[discord.ui.Button], template=r"napivo
     async def from_custom_id(cls, interaction, item, match: re.Match[str], /) -> PlanNewButton:
         return cls()
 
+    @reported
     async def callback(self, interaction: discord.Interaction) -> None:
         embed = interaction.message.embeds[0] if interaction.message and interaction.message.embeds else None
         place = read_place(embed) if embed else None
@@ -485,6 +489,7 @@ class DayModal(discord.ui.Modal):
             text="Od kolika ten den můžeš?", description="Když nemůžeš, vyber ❌ Nemůžu.", component=self.choice,
         ))
 
+    @reported
     async def on_submit(self, interaction: discord.Interaction) -> None:
         choice = self.choice.values[0] if self.choice.values else "x"
 
@@ -505,6 +510,7 @@ class DayButton(discord.ui.DynamicItem[discord.ui.Button], template=r"pivokdy:d:
     async def from_custom_id(cls, interaction, item, match: re.Match[str], /) -> DayButton:
         return cls(datetime.strptime(match["day"], "%Y%m%d").date())
 
+    @reported
     async def callback(self, interaction: discord.Interaction) -> None:
         plan = read_plan(interaction.message.embeds[0] if interaction.message.embeds else None)
         if plan is None or self.day not in plan.days:
@@ -528,6 +534,7 @@ class CallButton(discord.ui.DynamicItem[discord.ui.Button], template=r"pivokdy:s
     async def from_custom_id(cls, interaction, item, match: re.Match[str], /) -> CallButton:
         return cls()
 
+    @reported
     async def callback(self, interaction: discord.Interaction) -> None:
         plan = read_plan(interaction.message.embeds[0] if interaction.message.embeds else None)
         if plan is None:
@@ -552,6 +559,7 @@ class ClearButton(discord.ui.DynamicItem[discord.ui.Button], template=r"pivokdy:
     async def from_custom_id(cls, interaction, item, match: re.Match[str], /) -> ClearButton:
         return cls()
 
+    @reported
     async def callback(self, interaction: discord.Interaction) -> None:
         def change(p):
             if not isinstance(p, Plan):

@@ -116,6 +116,12 @@ Pravidla:
   Fungují i po restartu bota na starých zprávách. Při změně šablony custom_id mysli na staré zprávy:
   neznámý stav ošetři hláškou „Tohle tlačítko už je zastaralé.“, nepadej.
 - Odpovědi: slash command → `defer(thinking=True)` → `followup.send`. Tlačítko → `defer()` → `edit_original_response`.
+- Každý `callback` tlačítka/výběru a `on_submit` okna má `@reported` (`utils/interactions.py`): když spadne, uživatel
+  dostane stejnou hlášku jako u commandu (discord.py by chybu jen zalogoval a tlačítko by „nic neudělalo“).
+  Hláška o zastaralém tlačítku je `interactions.STALE`.
+- Hlasovací zprávy (stav v embedu: /obed, /na-pivo) čtou a zapisují stav přes `MessageState`: zámek na zprávu
+  a poslední embed, který bot zapsal. `interaction.message` je snímek z okamžiku kliknutí, takže bez toho by druhé
+  ze dvou rychlých kliknutí přepsalo první.
 - Chyby jednoho zdroje nesmí shodit celý výpis: `Menu(error=...)` → embed s ⚠️, ostatní zdroje se zobrazí.
 
 ### Discord – limity a záludnosti
@@ -270,6 +276,7 @@ Tlačítka `cojist:<rozsah>:<r|s|c>:<limit 0/1>`, příznak limitu je volitelný
 
 **/obed** (`cogs/obed.py`): stav hlasování (kdo, kam, v kolik) je **jen v embedu zprávy** – tlačítka ho přečtou
 (`read_state`), upraví a přepíšou. Žádná databáze, přežije restart. Názvy polí musí odpovídat `SPOTS`.
+Datum v nadpisu je den vzniku zprávy (`message.created_at`), ne den kliknutí.
 
 **/na-pivo, /na-pivo-termin** (`cogs/napivo.py`, `pubs/`): stejně jako /obed je stav **jen v embedu zprávy**.
 Datum založení je v `embed.timestamp` (z něj se dopočítá rok a 14 dní hlasování), den pozvánky v nadpisu.

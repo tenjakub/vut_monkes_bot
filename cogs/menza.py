@@ -13,6 +13,7 @@ from lunch import kam, service
 from lunch.models import Menu
 from cogs.obed import ObedNewButton
 from utils import loading, render
+from utils.interactions import STALE, reported
 
 log = logging.getLogger(__name__)
 
@@ -72,9 +73,10 @@ class MenzaButton(
     ) -> MenzaButton:
         return cls(match["group"], match["mode"], match["slot"])
 
+    @reported
     async def callback(self, interaction: discord.Interaction) -> None:
         if self.group not in kam.GROUPS:
-            await interaction.response.send_message("Tohle tlačítko už je zastaralé.", ephemeral=True)
+            await interaction.response.send_message(STALE, ephemeral=True)
             return
         await interaction.response.defer()
         content, embeds, view = await build_message(

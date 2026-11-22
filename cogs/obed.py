@@ -6,11 +6,10 @@ Tlačítka ho při kliknutí přečtou, upraví a zprávu přepíšou. Funguje t
 
 from __future__ import annotations
 
-import asyncio
 import re
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 
 import discord
 from discord import app_commands
@@ -18,6 +17,7 @@ from discord.ext import commands
 
 from lunch import kam, service
 from utils import render
+from utils.interactions import STALE, MessageState, reported
 
 
 @dataclass(frozen=True)
@@ -43,7 +43,7 @@ COLOR = 0xF08C00
 
 _FIELD_NAME_RE = re.compile(r"\(\d+\)$")
 _ENTRY_RE = re.compile(r"<@(\d+)>(?: · (.+))?")
-_locks: dict[int, asyncio.Lock] = defaultdict(asyncio.Lock)  # zpráva -> zámek (dvě kliknutí naráz)
+_state = MessageState()  # zámek na zprávu + poslední zapsaný embed (dvě kliknutí naráz)
 
 
 # --- stav: {user_id: (spot_key, čas | None)} ------------------------------------------------------
@@ -71,7 +71,8 @@ def creator_of(embed: discord.Embed | None) -> str:
     return m.group(1) if m else ""
 
 
-def build_embed(state: dict[int, tuple[str, str | None]], creator: str) -> discord.Embed:
+def build_embed(state: dict[int, tuple[str, str | None]], creator: str, day: date | None = None) -> discord.Embed:
+    """`day` = den hlasování (podle vzniku zprávy), ať se nadpis nezmění, když někdo klikne až další den."""
     lines = []
     if creator:
         lines.append(f"Svolává <@{creator}>")
@@ -79,7 +80,7 @@ def build_embed(state: dict[int, tuple[str, str | None]], creator: str) -> disco
     if not state:
         lines.append("\n_Zatím nikdo…_ 🦗")
     embed = discord.Embed(
-        title=f"🍽️ Kdo jde na oběd? – {render.czech_date(service.today())}",
+        title=f"🍽️ Kdo jde na oběd? – {render.czech_date(day or service.today())}",
         description="\n".join(lines),
         color=COLOR,
     )
@@ -132,19 +133,23 @@ class ObedButton(discord.ui.DynamicItem[discord.ui.Button], template=r"obed:(?P<
     ) -> ObedButton:
         return cls(match["action"], match["arg"] or "")
 
+    @reported
     async def callback(self, interaction: discord.Interaction) -> None:
         if self.action == "p" and self.arg not in SPOTS:
-            await interaction.response.send_message("Tohle tlačítko už je zastaralé.", ephemeral=True)
+            await interaction.response.send_message(STALE, ephemeral=True)
             return
         message = interaction.message
-        async with _locks[message.id]:
-            embed = message.embeds[0] if message.embeds else None
+        async with _state.lock(message.id):
+            embed = _state.embed(message)
             state = read_state(embed)
             error = apply(state, interaction.user.id, self.action, self.arg, datetime.now(service.TZ))
             if error:
                 await interaction.response.send_message(error, ephemeral=True)
                 return
-            await interaction.response.edit_message(embed=build_embed(state, creator_of(embed)), view=build_view())
+            day = message.created_at.astimezone(service.TZ).date()
+            new = build_embed(state, creator_of(embed), day)
+            await interaction.response.edit_message(embed=new, view=build_view())
+            _state.remember(message.id, new)
 
 
 class ObedNewButton(discord.ui.DynamicItem[discord.ui.Button], template=r"obed:new"):
@@ -162,6 +167,7 @@ class ObedNewButton(discord.ui.DynamicItem[discord.ui.Button], template=r"obed:n
     ) -> ObedNewButton:
         return cls()
 
+    @reported
     async def callback(self, interaction: discord.Interaction) -> None:
         await interaction.response.send_message(embed=build_embed({}, str(interaction.user.id)), view=build_view())
 

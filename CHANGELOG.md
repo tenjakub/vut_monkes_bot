@@ -11,6 +11,12 @@ Formát (bot ho čte, viz utils/changelog.py):
 Nejnovější verze je vždy nahoře.
 -->
 
+## 1.11.1 · 2026-11-22 · Spolehlivější tlačítka
+
+- 🛠️ Když se po kliknutí na tlačítko něco pokazí, bot to napíše (jen tobě) i s odkazem, kam chybu nahlásit. Dřív se prostě nic nestalo.
+- 🍽️ Když v `/obed` nebo `/na-pivo` klikne víc lidí skoro naráz, započítají se všichni. Dřív mohlo jedno kliknutí přepsat druhé.
+- 📅 Hlasování `/obed` si drží datum, kdy bylo svolané, i když na něj někdo klikne až další den.
+
 ## 1.11 · 2026-11-21 · Sesamo 🥐
 
 - 🥐 `/restaurace` ukazuje i denní menu **Sesamo** (italská pekárna a pizzerie na Purkyňově 97c), a to i o víkendu. Saláty a hlavní jídla jsou v mřížce, těstoviny a pizzy pod nimi a u pizz jsou i přísady z jejich velkého menu. Sesamo jde vybrat i v `/obed` a losuje z něj `/co-jist`.
