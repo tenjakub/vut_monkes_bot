@@ -20,6 +20,7 @@ from lunch import kam, service
 from shops import kupi
 from shops.service import STORES, Shops
 from utils import holidays, opening, render
+from utils.interactions import reported
 from utils.opening import Interval, State
 
 log = logging.getLogger(__name__)
@@ -163,6 +164,7 @@ class OtevrenoButton(discord.ui.DynamicItem[discord.ui.Button], template=r"otevr
     async def from_custom_id(cls, interaction, item, match: re.Match[str], /) -> OtevrenoButton:
         return cls()
 
+    @reported
     async def callback(self, interaction: discord.Interaction) -> None:
         await interaction.response.defer()
         content, embeds, view = await build_message(interaction.client.fetcher, _shops(interaction.client))
