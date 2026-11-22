@@ -11,6 +11,10 @@ Formát (bot ho čte, viz utils/changelog.py):
 Nejnovější verze je vždy nahoře.
 -->
 
+## 1.15 · 2026-11-22 · Statistiky 📊
+
+- 📊 Nový command `/statistiky` ukáže, které commandy bota se používají nejvíc, za posledních 7 nebo 30 dní i od začátku. Počítá se jen kolikrát se který command použil, ne kdo ho použil.
+
 ## 1.14 · 2026-11-22 · Událost na pivo 📅
 
 - 📅 Když na pozvánku `/na-pivo` klikne **✅ Jdu** aspoň 3 lidi a je vybraný čas, bot založí na serveru událost s místem a časem. Odkaz na ni je v pozvánce a když se změní čas nebo místo, událost se sama upraví.

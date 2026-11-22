@@ -6,6 +6,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+from storage import DEFAULT_PATH as _DEFAULT_DB_PATH
+
 load_dotenv()
 
 DISCORD_TOKEN = os.environ.get("DISCORD_TOKEN", "")
@@ -41,6 +43,9 @@ ISSUES_URL = f"{REPO_URL}/issues"
 
 # Soubor, který bot pravidelně "dotýká", dokud je připojený – kontroluje ho healthcheck.py
 HEALTH_FILE = os.environ.get("HEALTH_FILE", "/tmp/vut_monkes_bot.heartbeat")
+
+# SQLite databáze. Lokálně i v Dockeru data/bot.db (v Dockeru je data/ volume bot_data).
+DB_PATH = os.environ.get("DB_PATH") or str(_DEFAULT_DB_PATH)
 
 # Obnova dat na pozadí (menzy, restaurace, výluky, slevy). V testech se vypíná (BACKGROUND_REFRESH=0).
 BACKGROUND_REFRESH = os.environ.get("BACKGROUND_REFRESH", "1") != "0"

@@ -13,7 +13,7 @@ services:
       DISCORD_TOKEN: ${DISCORD_TOKEN:?Chybí DISCORD_TOKEN}
       GUILD_IDS: ${GUILD_IDS:-}
     volumes:
-      - bot_data:/app/data # stažený jízdní řád MHD (přežije update i restart)
+      - bot_data:/app/data # jízdní řád MHD, databáze bot.db a její zálohy (přežije update i restart)
     labels:
       com.centurylinklabs.watchtower.enable: "true"
       com.centurylinklabs.watchtower.scope: vut-monkes-bot

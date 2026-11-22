@@ -35,6 +35,7 @@ v embedech s tlačítky na přepínání.
 | `/co-jist` | Náhodné jídlo z dnešních menz a restaurací, volitelně do 150 Kč |
 | `/pocasi` | Počasí u FITu: teď, dalších 18 h, dnes a zítra, rady k oblečení a k oknu přes noc, kdo má svátek |
 | `/otevreno` | Co má teď otevřeno: menzy, pizzerie, kavárny a bufety VUT a okolní obchody (i se svátky) |
+| `/statistiky` | Které commandy se používají nejvíc (za 7 dní, 30 dní, od začátku) |
 | `/novinky` | Co je nového (z [CHANGELOG.md](CHANGELOG.md)) |
 
 Menzové commandy mají parametr `vse: True`: místo Economy ukážou polévky a všechna hlavní jídla.
@@ -116,7 +117,7 @@ hned. Kdo smí které commandy používat, se nastavuje v **Nastavení serveru �
   🍺 /na-pivo · /na-pivo-termin
   🚏 /mhd · /mhd-purkyne · /domu · 🚲 /kola
   🛒 /letaky · /maso · /pivo · /napoje
-  ☀️ /pocasi · 🕐 /otevreno · 📰 /novinky
+  ☀️ /pocasi · 🕐 /otevreno · 📊 /statistiky · 📰 /novinky
 
   🐛 Něco nefunguje nebo máš nápad? https://github.com/tenjakub/vut_monkes_bot/issues
   ```
@@ -138,9 +139,27 @@ volitelně `BOT_TAG` a `WATCHTOWER_POLL_INTERVAL` (viz [.env.example](.env.examp
   ([seznam](https://github.com/tenjakub/vut_monkes_bot/pkgs/container/vut_monkes_bot)), a redeployni.
   Pro návrat k automatice dej zpět `latest`.
 - **Logy:** `docker logs -f vut-monkes-bot`. Healthcheck „healthy“ znamená, že je bot opravdu připojený k Discordu.
-- **AlmaLinux (SELinux):** bot má named volume `bot_data` (jízdní řád MHD), Watchtower kvůli `docker.sock`
+- **AlmaLinux (SELinux):** bot má named volume `bot_data` (jízdní řád MHD a databáze), Watchtower kvůli `docker.sock`
   `security_opt: label=disable`.
 - **Lokální build image:** `docker compose -f docker-compose.yml -f docker-compose.build.yml up --build bot`
+
+### Databáze (SQLite)
+
+Bot si data ukládá do jednoho souboru **`data/bot.db`** (SQLite). Žádný další kontejner ani databázový server:
+v Dockeru je `data/` volume `bot_data`, takže databáze přežije aktualizaci i restart. **V Portaineru se nic
+nastavuje**, stack zůstává stejný. Bot si databázi při startu sám vytvoří a doplní do ní nové tabulky (migrace).
+
+- **Zálohy:** bot jednou denně uloží kopii do `data/backups/bot-RRRR-MM-DD.db` a nechává posledních 7.
+  Jsou ve stejném volume, takže chrání před chybou v botovi, ne před odchodem disku. Kopie mimo server:
+  `docker cp vut-monkes-bot:/app/data/backups ./zalohy-bota`.
+- **Nahlédnutí:** v Portaineru **Containers → vut-monkes-bot → Console → Connect** (`/bin/sh`) a pak
+  `python -m storage` (tabulky a počty řádků) nebo `python -m storage "SELECT * FROM command_usage LIMIT 20"`.
+  Databáze se tím otevře jen pro čtení. Na hezčí prohlížení stáhni soubor (`docker cp vut-monkes-bot:/app/data/bot.db .`)
+  a otevři ho v [DB Browser for SQLite](https://sqlitebrowser.org/).
+- **Obnova ze zálohy:** zastav stack, zálohu nakopíruj do volume jako `bot.db` (a smaž `bot.db-wal` a `bot.db-shm`,
+  jestli tam jsou), spusť stack. Volume je na serveru v `/var/lib/docker/volumes/<název stacku>_bot_data/_data/`.
+- **Návrat ke starší verzi** (`BOT_TAG`) s databází funguje: změny schématu jsou jen přidávací, starší bot
+  nové tabulky prostě nepoužívá.
 
 ## Vývoj
 
@@ -155,6 +174,10 @@ cp .env.example .env
 ```
 
 Do `.env` vyplň `DISCORD_TOKEN` a `GUILD_IDS` vývojového bota.
+
+Lokální bot má vlastní databázi `data/bot.db` (vytvoří se sama a do gitu nejde), produkční data tak nikdy
+nepřepíše. Smazáním souboru začneš s prázdnou databází. Jinou cestu jde nastavit přes `DB_PATH` v `.env`.
+Testy používají databázi v paměti.
 
 ```bash
 .venv/bin/python bot.py

@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
+import signal
 from pathlib import Path
 
 import discord
@@ -11,13 +13,15 @@ from discord.ext import commands, tasks
 
 import config
 from lunch.fetcher import Fetcher
+from lunch.service import today
+from storage import Database
 from utils import changelog
 from utils.interactions import send_error
 from utils.loading import LoadingTracker
 
 log = logging.getLogger("bot")
 
-EXTENSIONS = ["cogs.menza", "cogs.restaurace", "cogs.mhd", "cogs.kola", "cogs.slevy", "cogs.cojist", "cogs.obed", "cogs.napivo", "cogs.pocasi", "cogs.otevreno", "cogs.novinky"]
+EXTENSIONS = ["cogs.menza", "cogs.restaurace", "cogs.mhd", "cogs.kola", "cogs.slevy", "cogs.cojist", "cogs.obed", "cogs.napivo", "cogs.pocasi", "cogs.otevreno", "cogs.statistiky", "cogs.novinky"]
 
 
 LOADING_SUFFIX = " · ⏳"
@@ -42,6 +46,7 @@ class ObedBot(commands.Bot):
             activity=discord.CustomActivity(name=status_text(loading=config.BACKGROUND_REFRESH)),
         )
         self.fetcher = Fetcher()
+        self.db = Database(config.DB_PATH)
         self.background_refresh = config.BACKGROUND_REFRESH  # obnova dat na pozadí (v testech vypnutá)
         self.loading = LoadingTracker(self.update_presence)  # log "načteno" a ⏳ ve statusu
 
@@ -52,7 +57,14 @@ class ObedBot(commands.Bot):
 
     async def setup_hook(self) -> None:
         log.info("Startuje VUT Monkes bot, %s", status_text())
+        self._handle_sigterm()
         self.heartbeat.start()
+        try:
+            await self.db.open()
+        except Exception:  # bez databáze běží všechno ostatní, jen funkce s databází hlásí, že nejde
+            log.exception("Databázi %s se nepodařilo otevřít", config.DB_PATH)
+        if self.db.is_open and self.background_refresh:
+            self.backup.start()
         for ext in EXTENSIONS:
             await self.load_extension(ext)
         self.loading.seal()  # všechny zdroje se zaregistrovaly -> souhrn "vše načteno" může přijít
@@ -90,6 +102,27 @@ class ObedBot(commands.Bot):
             synced = await tree.sync()
             log.info("Synchronizováno %d globálních commandů (servery + DM)", len(synced))
 
+    def _handle_sigterm(self) -> None:
+        """`docker stop` (a Watchtower při aktualizaci) posílá SIGTERM: bot se pak ukončí slušně,
+        zavře databázi i spojení. Bez toho by ho Python ukončil okamžitě."""
+        def stop() -> None:
+            self._stopping = asyncio.create_task(self.close())  # reference, ať task nesežere garbage collector
+
+        try:
+            asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, stop)
+        except (NotImplementedError, RuntimeError):  # Windows
+            pass
+
+    @tasks.loop(hours=24)
+    async def backup(self) -> None:
+        """Denní záloha databáze do data/backups (posledních 7 dní). Po startu hned, pokud dnešní chybí."""
+        try:
+            path = await self.db.backup(Path(config.DB_PATH).parent / "backups", today())
+            if path:
+                log.info("🗄️ Záloha databáze: %s", path)
+        except Exception:
+            log.exception("Záloha databáze selhala")
+
     @tasks.loop(seconds=30)
     async def heartbeat(self) -> None:
         """Pro Docker healthcheck: soubor se obnovuje, jen když je bot připojený k Discordu."""
@@ -110,7 +143,9 @@ class ObedBot(commands.Bot):
 
     async def close(self) -> None:
         self.heartbeat.cancel()
+        self.backup.cancel()
         await self.fetcher.close()
+        await self.db.close()
         await super().close()
 
 

@@ -8,7 +8,7 @@ Tenhle soubor je pro AI, která na projektu pracuje. Lidský návod je v [README
 - Commandy: `/ppv`, `/purkyne`, `/menzy` (menzy VUT), `/restaurace` (polední menu), `/mhd`, `/mhd-purkyne` (odjezdy MHD Brno),
   `/letaky`, `/maso`, `/napoje`, `/pivo` (letáky a slevy supermarketů), `/domu` (spoje z centra na koleje), `/kola` (nextbike),
   `/obed` (kdo jde na oběd), `/na-pivo`, `/na-pivo-termin` (domluva na pivo), `/co-jist` (náhodné jídlo), `/pocasi`,
-  `/otevreno` (co má teď otevřeno), `/novinky` (changelog).
+  `/otevreno` (co má teď otevřeno), `/statistiky` (nejpoužívanější commandy), `/novinky` (changelog).
 - Repo je veřejné, kód je pod licencí MIT ([LICENSE](LICENSE)). Data ze zdrojů patří jim (viz README → Licence).
 - **Celý kód píše AI.** Majitel repa zadává požadavky, testuje na Discordu a rozhoduje. Kód nepíše, ale čte ho.
 - **Jazyk:** komunikace s uživatelem, texty v botovi, komentáře, docstringy i commit zprávy jsou **česky**.
@@ -108,6 +108,7 @@ weather/          počasí z Open-Meteo, BEZ závislosti na discord.py
 pubs/             hospody a hledání termínu pro /na-pivo, BEZ závislosti na discord.py
 transit/          MHD (GTFS), BEZ závislosti na discord.py
 bikes/            sdílená kola nextbike (GBFS), BEZ závislosti na discord.py
+storage/          SQLite databáze (data/bot.db): spojení, migrace, zálohy, dotazy po tématech, BEZ discord.py
 utils/render.py   Field (kartička), mřížka, limity embedů, header s časem
 utils/opening.py  je teď otevřeno? (intervaly od–do -> stav), utils/holidays.py státní svátky a zavřené obchody
 ```
@@ -142,7 +143,7 @@ Pravidla:
 
 ## Oprávnění a intenty – kontrola při každé změně
 
-Aktuální stav (ověřeno pro verzi s `/ppv`, `/purkyne`, `/menzy`, `/restaurace`, `/mhd`, `/mhd-purkyne`, `/kola`, `/letaky`, `/maso`, `/napoje`, `/pivo`, `/domu`, `/obed`, `/na-pivo`, `/na-pivo-termin`, `/co-jist`, `/pocasi`, `/otevreno`, `/novinky`):
+Aktuální stav (ověřeno pro verzi s `/ppv`, `/purkyne`, `/menzy`, `/restaurace`, `/mhd`, `/mhd-purkyne`, `/kola`, `/letaky`, `/maso`, `/napoje`, `/pivo`, `/domu`, `/obed`, `/na-pivo`, `/na-pivo-termin`, `/co-jist`, `/pocasi`, `/otevreno`, `/statistiky`, `/novinky`):
 
 - **Intenty:** `discord.Intents.default()`, žádné privilegované (Message Content, Server Members, Presence vypnuté).
 - **Oprávnění bota:** View Channels, Send Messages, Embed Links, Create Events → číselně `17592186063872`
@@ -169,6 +170,28 @@ Postup, když jsou nová oprávnění potřeba:
 2. **Výslovně řekni uživateli**, že musí v Developer Portalu zapnout intent nebo bota přidat se novým odkazem
    (případně přidat oprávnění roli bota na serveru). Platí to pro **oba boty, vývojového i produkčního**.
    Už pozvaní boti nová oprávnění sami nedostanou.
+
+## Databáze (SQLite, `storage/`)
+
+- Jeden soubor `config.DB_PATH` (výchozí `data/bot.db`; v Dockeru volume `bot_data`), jedno spojení přes
+  `aiosqlite` (vlastní vlákno, nezasekne bota). Žádný další kontejner. Vývojový a produkční bot mají každý svou
+  databázi. Bot ji otevře v `setup_hook` (`bot.db`) a zavře v `close()`, na `SIGTERM` (docker stop, Watchtower)
+  se ukončí slušně. Když se otevřít nepovede, bot běží dál a funkce s databází dostanou `DatabaseUnavailable`
+  (uživateli hláška, nepadat).
+- Režim WAL + `synchronous=NORMAL`, `foreign_keys=ON`. Jednotlivé příkazy se ukládají hned (`db.execute`), víc
+  souvisejících najednou v `async with db.transaction() as tx:`. Dotazy vždy s parametry (`?`), nikdy f-stringem.
+- **Migrace** (`storage/migrations.py`): seznam SQL, verze = `PRAGMA user_version`. Jen přidávat na konec, už
+  vydanou migraci nikdy neměnit. Jen přidávací změny (tabulky, sloupce, indexy), nic nemazat ani nepřejmenovávat,
+  aby šlo vrátit starší image (`BOT_TAG`). Každá migrace běží v jedné transakci.
+- Dotazy patří do modulu podle tématu (`storage/usage.py` = statistiky), cogy volají jeho funkce. SQL v cozích ne.
+- **Testy** používají `Database(":memory:")` (nebo soubor v `tmp_path`), nikdy `data/bot.db`.
+- **Soukromí:** ukládat jen to, co funkce opravdu potřebuje. ID uživatelů jen u funkcí, které je nutně potřebují
+  (např. „hlídej mi…“), a pak s možností je smazat. Statistiky commandů jsou jen počty, bez ID.
+- Zálohy: `bot.backup` jednou denně `VACUUM INTO` do `data/backups/bot-RRRR-MM-DD.db`, posledních `BACKUP_KEEP` (7).
+- Nahlédnutí jen pro čtení: `python -m storage` (tabulky, verze) a `python -m storage "SELECT …"`, funguje i
+  v konzoli kontejneru v Portaineru.
+- **/statistiky** (`cogs/statistiky.py`): `on_app_command_completion` přičte +1 k (den, command) v `command_usage`.
+  Tlačítka `statistiky:<7|30|vse>`.
 
 ## Zdroje dat a jejich záludnosti
 
