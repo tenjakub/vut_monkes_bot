@@ -60,3 +60,25 @@ def test_message_state_is_bounded_and_remembers():
     old = type("M", (), {"id": 0, "embeds": [discord.Embed(title="ze zprávy")]})()
     assert state.embed(old).title == "ze zprávy"
     assert state.lock(9) is state.lock(9)
+
+
+def test_every_button_reports_errors(monkeypatch):
+    """Každé tlačítko, výběr a okno v cogs/ má @reported (jinak by chyba skončila jen v logu)."""
+    import importlib
+    import inspect
+    import pkgutil
+
+    import cogs
+
+    monkeypatch.setenv("DISCORD_TOKEN", "x")
+    missing = []
+    for info in pkgutil.iter_modules(cogs.__path__):
+        module = importlib.import_module(f"cogs.{info.name}")
+        for name, cls in inspect.getmembers(module, inspect.isclass):
+            if cls.__module__ != module.__name__:
+                continue
+            if issubclass(cls, discord.ui.DynamicItem) and not hasattr(cls.callback, "__wrapped__"):
+                missing.append(f"{info.name}.{name}.callback")
+            if issubclass(cls, discord.ui.Modal) and not hasattr(cls.on_submit, "__wrapped__"):
+                missing.append(f"{info.name}.{name}.on_submit")
+    assert missing == []
