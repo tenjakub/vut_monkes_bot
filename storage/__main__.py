@@ -47,7 +47,8 @@ def main(argv: list[str]) -> None:
         return
     version = conn.execute("PRAGMA user_version").fetchone()[0]
     print(f"{path} · schéma v{version} · {path.stat().st_size / 1024:.0f} kB")
-    for (name,) in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name"):
+    tables = "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
+    for (name,) in conn.execute(tables):
         count = conn.execute(f'SELECT COUNT(*) FROM "{name}"').fetchone()[0]
         print(f"  {name}: {_rows(count)}")
 
