@@ -1,0 +1,307 @@
+{
+"last_updated": 1795345932,
+"ttl": 60,
+"data": {
+"stations": [
+{
+"station_id": "27719818",
+"name": "Srbská - Billa",
+"short_name": "46532",
+"lat": 49.229341,
+"lon": 16.585906,
+"region_id": "660",
+"rental_uris": {
+"android": "https://app.nextbike.net/station?id=27719818",
+"ios": "https://app.nextbike.net/station?id=27719818",
+"web": "https://nxtb.it/p/27719818"
+},
+"is_virtual_station": false
+},
+{
+"station_id": "28140921",
+"name": "Makovského náměstí - Billa",
+"short_name": "46570",
+"lat": 49.218371,
+"lon": 16.576191,
+"region_id": "660",
+"rental_uris": {
+"android": "https://app.nextbike.net/station?id=28140921",
+"ios": "https://app.nextbike.net/station?id=28140921",
+"web": "https://nxtb.it/p/28140921"
+},
+"is_virtual_station": false
+},
+{
+"station_id": "29618821",
+"name": "CEITEC VUT",
+"short_name": "46678",
+"lat": 49.233481,
+"lon": 16.575055,
+"region_id": "660",
+"rental_uris": {
+"android": "https://app.nextbike.net/station?id=29618821",
+"ios": "https://app.nextbike.net/station?id=29618821",
+"web": "https://nxtb.it/p/29618821"
+},
+"is_virtual_station": false
+},
+{
+"station_id": "42909611",
+"name": "Purkyňova - zast. Technologický park",
+"short_name": "46715",
+"lat": 49.23154,
+"lon": 16.57735,
+"region_id": "660",
+"rental_uris": {
+"android": "https://app.nextbike.net/station?id=42909611",
+"ios": "https://app.nextbike.net/station?id=42909611",
+"web": "https://nxtb.it/p/42909611"
+},
+"is_virtual_station": false
+},
+{
+"station_id": "42911999",
+"name": "Červinkova - zastávka MHD",
+"short_name": "46716",
+"lat": 49.22552,
+"lon": 16.58269,
+"region_id": "660",
+"rental_uris": {
+"android": "https://app.nextbike.net/station?id=42911999",
+"ios": "https://app.nextbike.net/station?id=42911999",
+"web": "https://nxtb.it/p/42911999"
+},
+"is_virtual_station": false
+},
+{
+"station_id": "172307876",
+"name": "Skácelova - MHD",
+"short_name": "48588",
+"lat": 49.22162,
+"lon": 16.58497,
+"region_id": "660",
+"rental_uris": {
+"android": "https://app.nextbike.net/station?id=172307876",
+"ios": "https://app.nextbike.net/station?id=172307876",
+"web": "https://nxtb.it/p/172307876"
+},
+"is_virtual_station": false
+},
+{
+"station_id": "174795136",
+"name": "G. Preissové",
+"short_name": "48595",
+"lat": 49.220271,
+"lon": 16.575939,
+"region_id": "660",
+"rental_uris": {
+"android": "https://app.nextbike.net/station?id=174795136",
+"ios": "https://app.nextbike.net/station?id=174795136",
+"web": "https://nxtb.it/p/174795136"
+},
+"is_virtual_station": false
+},
+{
+"station_id": "185791973",
+"name": "Podpěrova - Billa",
+"short_name": "48599",
+"lat": 49.238745,
+"lon": 16.584291,
+"region_id": "660",
+"rental_uris": {
+"android": "https://app.nextbike.net/station?id=185791973",
+"ios": "https://app.nextbike.net/station?id=185791973",
+"web": "https://nxtb.it/p/185791973"
+},
+"is_virtual_station": false
+},
+{
+"station_id": "364984422",
+"name": "Sportovní hala Vodova",
+"short_name": "46491",
+"lat": 49.22733,
+"lon": 16.58401,
+"region_id": "660",
+"rental_uris": {
+"android": "https://app.nextbike.net/station?id=364984422",
+"ios": "https://app.nextbike.net/station?id=364984422",
+"web": "https://nxtb.it/p/364984422"
+},
+"is_virtual_station": false,
+"capacity": 4
+},
+{
+"station_id": "364984724",
+"name": "Srbská, fotbalový stadion - parkovací stání",
+"short_name": "46492",
+"lat": 49.22806,
+"lon": 16.58717,
+"region_id": "660",
+"rental_uris": {
+"android": "https://app.nextbike.net/station?id=364984724",
+"ios": "https://app.nextbike.net/station?id=364984724",
+"web": "https://nxtb.it/p/364984724"
+},
+"is_virtual_station": false,
+"capacity": 4
+},
+{
+"station_id": "364991472",
+"name": "Technické muzeum v Brně",
+"short_name": "46486",
+"lat": 49.2283,
+"lon": 16.58202,
+"region_id": "660",
+"rental_uris": {
+"android": "https://app.nextbike.net/station?id=364991472",
+"ios": "https://app.nextbike.net/station?id=364991472",
+"web": "https://nxtb.it/p/364991472"
+},
+"is_virtual_station": false,
+"capacity": 4
+},
+{
+"station_id": "435674485",
+"name": "Technologický park - kačírek u schodiště",
+"short_name": "46531",
+"lat": 49.22562,
+"lon": 16.578,
+"region_id": "660",
+"rental_uris": {
+"android": "https://app.nextbike.net/station?id=435674485",
+"ios": "https://app.nextbike.net/station?id=435674485",
+"web": "https://nxtb.it/p/435674485"
+},
+"is_virtual_station": false
+},
+{
+"station_id": "519723186",
+"name": "Vychodilova, parkoviště",
+"short_name": "49700",
+"lat": 49.2202,
+"lon": 16.57195,
+"region_id": "660",
+"rental_uris": {
+"android": "https://app.nextbike.net/station?id=519723186",
+"ios": "https://app.nextbike.net/station?id=519723186",
+"web": "https://nxtb.it/p/519723186"
+},
+"is_virtual_station": false
+},
+{
+"station_id": "519723634",
+"name": "Olbrachtovo náměstí",
+"short_name": "49667",
+"lat": 49.22449,
+"lon": 16.558,
+"region_id": "660",
+"rental_uris": {
+"android": "https://app.nextbike.net/station?id=519723634",
+"ios": "https://app.nextbike.net/station?id=519723634",
+"web": "https://nxtb.it/p/519723634"
+},
+"is_virtual_station": false,
+"capacity": 4
+},
+{
+"station_id": "535562902",
+"name": "ScioŠkola Brno Medlánky",
+"short_name": "49712",
+"lat": 49.23408,
+"lon": 16.58359,
+"region_id": "660",
+"rental_uris": {
+"android": "https://app.nextbike.net/station?id=535562902",
+"ios": "https://app.nextbike.net/station?id=535562902",
+"web": "https://nxtb.it/p/535562902"
+},
+"is_virtual_station": false
+},
+{
+"station_id": "628722023",
+"name": "Jabloňová",
+"short_name": "46628",
+"lat": 49.2394,
+"lon": 16.57881,
+"region_id": "660",
+"rental_uris": {
+"android": "https://app.nextbike.net/station?id=628722023",
+"ios": "https://app.nextbike.net/station?id=628722023",
+"web": "https://nxtb.it/p/628722023"
+},
+"is_virtual_station": false
+},
+{
+"station_id": "642370109",
+"name": "VUT - Fakulta strojního inženýrství",
+"short_name": "495757",
+"lat": 49.224995,
+"lon": 16.576976,
+"region_id": "660",
+"rental_uris": {
+"android": "https://app.nextbike.net/station?id=642370109",
+"ios": "https://app.nextbike.net/station?id=642370109",
+"web": "https://nxtb.it/p/642370109"
+},
+"is_virtual_station": false
+},
+{
+"station_id": "642370345",
+"name": "VUT - Fakulta elektrotechniky a komunikačních technologií",
+"short_name": "495758",
+"lat": 49.227137,
+"lon": 16.574963,
+"region_id": "660",
+"rental_uris": {
+"android": "https://app.nextbike.net/station?id=642370345",
+"ios": "https://app.nextbike.net/station?id=642370345",
+"web": "https://nxtb.it/p/642370345"
+},
+"is_virtual_station": false
+},
+{
+"station_id": "642370496",
+"name": "VUT - Fakulta podnikatelská",
+"short_name": "495759",
+"lat": 49.230955,
+"lon": 16.572753,
+"region_id": "660",
+"rental_uris": {
+"android": "https://app.nextbike.net/station?id=642370496",
+"ios": "https://app.nextbike.net/station?id=642370496",
+"web": "https://nxtb.it/p/642370496"
+},
+"is_virtual_station": false
+},
+{
+"station_id": "642370607",
+"name": "VUT - Koleje a menzy (Pod Palackého vrchem)",
+"short_name": "495760",
+"lat": 49.230944,
+"lon": 16.570922,
+"region_id": "660",
+"rental_uris": {
+"android": "https://app.nextbike.net/station?id=642370607",
+"ios": "https://app.nextbike.net/station?id=642370607",
+"web": "https://nxtb.it/p/642370607"
+},
+"is_virtual_station": false
+},
+{
+"station_id": "28142364",
+"name": "Náměstí 28. dubna - ZOO",
+"short_name": "46577",
+"lat": 49.2276,
+"lon": 16.531237,
+"region_id": "660",
+"rental_uris": {
+"android": "https://app.nextbike.net/station?id=28142364",
+"ios": "https://app.nextbike.net/station?id=28142364",
+"web": "https://nxtb.it/p/28142364"
+},
+"is_virtual_station": false
+}
+]
+},
+"version": "2.3"
+}

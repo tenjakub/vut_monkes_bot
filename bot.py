@@ -17,7 +17,7 @@ from utils.loading import LoadingTracker
 
 log = logging.getLogger("bot")
 
-EXTENSIONS = ["cogs.menza", "cogs.restaurace", "cogs.mhd", "cogs.slevy", "cogs.cojist", "cogs.obed", "cogs.napivo", "cogs.pocasi", "cogs.otevreno", "cogs.novinky"]
+EXTENSIONS = ["cogs.menza", "cogs.restaurace", "cogs.mhd", "cogs.kola", "cogs.slevy", "cogs.cojist", "cogs.obed", "cogs.napivo", "cogs.pocasi", "cogs.otevreno", "cogs.novinky"]
 
 
 LOADING_SUFFIX = " · ⏳"

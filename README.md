@@ -23,6 +23,7 @@ v embedech s tlačítky na přepínání.
 | `/restaurace` | Polední menu: U 3 opic, Padagali, La Strada, U Karla, Portoriko, Sesamo |
 | `/mhd` | Odjezdy u kolejí PPV (Technologický park, Kolejní) + výluky |
 | `/mhd-purkyne` | Odjezdy u Purkyňových kolejí (Červinkova, Skácelova) + výluky |
+| `/kola` | Volná sdílená kola nextbike na stanicích u PPV (tlačítky i u Purkyní a FITu) |
 | `/domu` | Jak se dostat z centra (Česká, Hlavní nádraží) na koleje: tramvaje, poslední denní spoj, noční N99 |
 | `/letaky` | Akční letáky a otevírací doba okolních Lidlů, BILLY, Alberta a Globusu |
 | `/maso` | Slevy na čerstvé maso, nahoře 🏆 nejlevnější za kilo |
@@ -51,6 +52,7 @@ Tlačítko 🔄 Obnovit stáhne data hned (stejnou stránku nejvýš jednou za m
 | Restaurace | [menicka.cz](https://www.menicka.cz), La Strada, U Karla a Sesamo z vlastních webů ([La Strada](https://lastrada-brno.cz/poledni-menu/), [U Karla](https://ukarlabrno.cz/menu/pages/poledni-menu), [Sesamo](https://sesamobrno.cz/#menu)) | 30 min, 6–20 h |
 | MHD | otevřená data [KORDIS JMK](https://kordis-jmk.cz) (CC BY): jízdní řád GTFS a výluky z GTFS Realtime | jízdní řád po 12 h, výluky 5 min |
 | Slevy a letáky | [Kupi.cz](https://www.kupi.cz), jen veřejné stránky povolené v `robots.txt` | 1 h |
+| Kola | [nextbike Brno](https://nextbikeczech.com/mesto/brno/), otevřený GBFS feed (CC0) | 3 min |
 | Počasí | [Open-Meteo](https://open-meteo.com) (CC BY 4.0) | 15 min |
 
 Mimo 6–20 h platí jídelníčky stažené ten den až do půlnoci. MHD je **podle jízdního řádu, bez zpoždění**:
@@ -112,7 +114,7 @@ hned. Kdo smí které commandy používat, se nastavuje v **Nastavení serveru �
 
   🍽️ /ppv · /purkyne · /menzy · /restaurace · /co-jist · /obed
   🍺 /na-pivo · /na-pivo-termin
-  🚏 /mhd · /mhd-purkyne · /domu
+  🚏 /mhd · /mhd-purkyne · /domu · 🚲 /kola
   🛒 /letaky · /maso · /pivo · /napoje
   ☀️ /pocasi · 🕐 /otevreno · 📰 /novinky
 
@@ -185,4 +187,4 @@ odkaz na mapu se složí sám. Volitelně i cena točeného (`beer`), zobrazí s
 ## Licence
 
 Kód je pod licencí [MIT](LICENSE). Data, která bot zobrazuje, patří jejich zdrojům (KaM VUT, menicka.cz,
-restaurace, Kupi.cz). Jízdní řády KORDIS JMK a počasí z Open-Meteo jsou pod licencí CC BY, s uvedením zdroje.
+restaurace, Kupi.cz). Jízdní řády KORDIS JMK a počasí z Open-Meteo jsou pod licencí CC BY, s uvedením zdroje. Data o kolech nextbike jsou pod CC0.

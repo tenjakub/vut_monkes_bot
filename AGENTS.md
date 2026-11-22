@@ -6,7 +6,7 @@ Tenhle soubor je pro AI, která na projektu pracuje. Lidský návod je v [README
 
 - **VUT Monkes bot** – Discord bot pro kamarádský server studentů VUT (FIT). Python 3.14, discord.py 2.x.
 - Commandy: `/ppv`, `/purkyne`, `/menzy` (menzy VUT), `/restaurace` (polední menu), `/mhd`, `/mhd-purkyne` (odjezdy MHD Brno),
-  `/letaky`, `/maso`, `/napoje`, `/pivo` (letáky a slevy supermarketů), `/domu` (spoje z centra na koleje),
+  `/letaky`, `/maso`, `/napoje`, `/pivo` (letáky a slevy supermarketů), `/domu` (spoje z centra na koleje), `/kola` (nextbike),
   `/obed` (kdo jde na oběd), `/na-pivo`, `/na-pivo-termin` (domluva na pivo), `/co-jist` (náhodné jídlo), `/pocasi`,
   `/otevreno` (co má teď otevřeno), `/novinky` (changelog).
 - Repo je veřejné, kód je pod licencí MIT ([LICENSE](LICENSE)). Data ze zdrojů patří jim (viz README → Licence).
@@ -107,6 +107,7 @@ shops/            slevy a letáky z Kupi.cz, BEZ závislosti na discord.py
 weather/          počasí z Open-Meteo, BEZ závislosti na discord.py
 pubs/             hospody a hledání termínu pro /na-pivo, BEZ závislosti na discord.py
 transit/          MHD (GTFS), BEZ závislosti na discord.py
+bikes/            sdílená kola nextbike (GBFS), BEZ závislosti na discord.py
 utils/render.py   Field (kartička), mřížka, limity embedů, header s časem
 utils/opening.py  je teď otevřeno? (intervaly od–do -> stav), utils/holidays.py státní svátky a zavřené obchody
 ```
@@ -141,7 +142,7 @@ Pravidla:
 
 ## Oprávnění a intenty – kontrola při každé změně
 
-Aktuální stav (ověřeno pro verzi s `/ppv`, `/purkyne`, `/menzy`, `/restaurace`, `/mhd`, `/mhd-purkyne`, `/letaky`, `/maso`, `/napoje`, `/pivo`, `/domu`, `/obed`, `/na-pivo`, `/na-pivo-termin`, `/co-jist`, `/pocasi`, `/otevreno`, `/novinky`):
+Aktuální stav (ověřeno pro verzi s `/ppv`, `/purkyne`, `/menzy`, `/restaurace`, `/mhd`, `/mhd-purkyne`, `/kola`, `/letaky`, `/maso`, `/napoje`, `/pivo`, `/domu`, `/obed`, `/na-pivo`, `/na-pivo-termin`, `/co-jist`, `/pocasi`, `/otevreno`, `/novinky`):
 
 - **Intenty:** `discord.Intents.default()`, žádné privilegované (Message Content, Server Members, Presence vypnuté).
 - **Oprávnění bota:** View Channels, Send Messages, Embed Links, Create Events → číselně `17592186063872`
@@ -257,6 +258,15 @@ Postup, když jsou nová oprávnění potřeba:
 - **Nepoužívej API mapy `mapa.idsjmk.cz`** (vyžaduje `X-Access-Token` z webu, jde o neautorizovaný přístup)
   ani nedokumentované `/api/departures` na idsjmk.cz. Živá zpoždění až s oficiálním přístupem od KORDIS,
   o který chce uživatel požádat.
+
+**Kola – nextbike Brno** (`bikes/`), otevřený GBFS feed pod **CC0-1.0** (`nextbike_te`):
+- `station_information.json` (stanice, 12 h cache) + `station_status.json` (kola na stanicích, obnova na pozadí
+  každé 3 min, TTL 4 min). Kola mimo stanice (`free_bike_status`) se neberou, v Brně jich je jen pár.
+- Oblasti v `bikes/service.py` (`AREAS`: střed + poloměr). Klíče `ppv`, `purkyne`, `fit` jsou v custom_id
+  tlačítek (`kola:<oblast>:<g|r>`), nepřejmenovávat. U PPV je poloměr větší (stanice u kolejí, fakult, CEITEC
+  a Technoparku), max `MAX_STATIONS` nejbližších, prázdné stanice na kraji ustoupí těm s koly.
+- Odkaz u stanice (`rental_uris.web`, `nxtb.it/p/<id>`) otevře stanici v aplikaci nextbike.
+- Vzdálenost a 🚶 minuty jsou vzdušnou čarou (`WALK_SPEED`), takže spíš optimistické.
 
 **Počasí – Open-Meteo** (`weather/openmeteo.py`): zdarma bez klíče, data CC BY 4.0 → v embedu musí zůstat
 uvedený zdroj („Data: Open-Meteo.com“). Souřadnice FITu, obnova na pozadí každých 15 min. Po 21:00 (do 4:00)

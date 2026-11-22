@@ -15,6 +15,10 @@ Nejnovější verze je vždy nahoře.
 
 - 📅 Když na pozvánku `/na-pivo` klikne **✅ Jdu** aspoň 3 lidi a je vybraný čas, bot založí na serveru událost s místem a časem. Odkaz na ni je v pozvánce a když se změní čas nebo místo, událost se sama upraví.
 
+## 1.13 · 2026-11-22 · Kola 🚲
+
+- 🚲 Nový command `/kola` ukáže volná kola nextbike na stanicích kolem kolejí PPV, seřazené od nejbližší, i s tím, kolik minut je to pěšky. Kliknutím na stanici se otevře v aplikaci nextbike. Tlačítky se dá přepnout na stanice u Purkyní a u FITu. Když v okolí žádné kolo není, bot napíše, kde je nejbližší.
+
 ## 1.12 · 2026-11-22 · Co je otevřeno 🕐
 
 - 🕐 Nový command `/otevreno` ukáže, co má teď otevřeno: menzy, pizzerie, kavárny a bufety VUT a okolní Lidly, BILLA, Albert a Globus. U každého místa je, do kolika má otevřeno, kdy otevře, nebo jak má otevřeno zítra. Otevřená místa jsou nahoře. Bot ví i o svátcích, kdy mají velké obchody ze zákona zavřeno.
