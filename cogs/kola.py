@@ -14,11 +14,11 @@ from bikes import nextbike
 from bikes.service import AREAS, REFRESH_MINUTES, Bikes, Snapshot
 from lunch.service import TZ
 from utils import loading, render
+from utils.interactions import STALE, reported
 
 log = logging.getLogger(__name__)
 
 COLOR = 0x1C7ED6
-STALE = "Tohle tlačítko už je zastaralé."
 
 
 def bikes_text(n: int) -> str:
@@ -95,6 +95,7 @@ class KolaButton(discord.ui.DynamicItem[discord.ui.Button], template=r"kola:(?P<
     async def from_custom_id(cls, interaction, item, match: re.Match[str], /) -> KolaButton:
         return cls(match["area"], match["slot"])
 
+    @reported
     async def callback(self, interaction: discord.Interaction) -> None:
         if self.area not in AREAS:
             await interaction.response.send_message(STALE, ephemeral=True)
