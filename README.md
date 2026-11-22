@@ -33,6 +33,7 @@ v embedech s tlačítky na přepínání.
 | `/na-pivo-termin` | Hledání společného dne na pivo v příštích dvou týdnech i s počasím, nejlepší termín jde rovnou svolat |
 | `/co-jist` | Náhodné jídlo z dnešních menz a restaurací, volitelně do 150 Kč |
 | `/pocasi` | Počasí u FITu: teď, dalších 18 h, dnes a zítra, rady k oblečení a k oknu přes noc, kdo má svátek |
+| `/otevreno` | Co má teď otevřeno: menzy, pizzerie, kavárny a bufety VUT a okolní obchody (i se svátky) |
 | `/novinky` | Co je nového (z [CHANGELOG.md](CHANGELOG.md)) |
 
 Menzové commandy mají parametr `vse: True`: místo Economy ukážou polévky a všechna hlavní jídla.
@@ -113,7 +114,7 @@ hned. Kdo smí které commandy používat, se nastavuje v **Nastavení serveru �
   🍺 /na-pivo · /na-pivo-termin
   🚏 /mhd · /mhd-purkyne · /domu
   🛒 /letaky · /maso · /pivo · /napoje
-  ☀️ /pocasi · 📰 /novinky
+  ☀️ /pocasi · 🕐 /otevreno · 📰 /novinky
 
   🐛 Něco nefunguje nebo máš nápad? https://github.com/tenjakub/vut_monkes_bot/issues
   ```

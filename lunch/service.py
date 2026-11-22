@@ -118,13 +118,24 @@ async def _load(fetcher: Fetcher, place: Place, url: str, ttl: float, force: boo
 
 
 HOURS_TTL = 60 * 60
+_overview: tuple[tuple[float, int], list[kam.Provoz]] | None = None  # ((čas stažení, hash), přehled)
+
+
+async def kam_overview(fetcher: Fetcher, force: bool = False) -> list[kam.Provoz]:
+    """Přehled otevíracích dob všech provozů KaM (menzy, pizzerie, kavárny…). Parsuje se jen po novém stažení."""
+    global _overview
+    html, fetched = await fetcher.get(kam.OVERVIEW_URL, ttl=effective_ttl(HOURS_TTL), force=force)
+    key = (fetched, hash(html))
+    if _overview is None or _overview[0] != key:
+        _overview = (key, await asyncio.to_thread(kam.parse_overview, html))
+    return _overview[1]
 
 
 async def _menza_hours(fetcher: Fetcher, force: bool) -> dict[int, str]:
     """Otevírací doby menz pro dnešek; když se nepovede, prostě se nezobrazí."""
     try:
-        html, _ = await fetcher.get(kam.OVERVIEW_URL, ttl=effective_ttl(HOURS_TTL), force=force)
-        return await asyncio.to_thread(kam.parse_hours, html, today())
+        day = today()
+        return {p.provoz: p.hours_text(day) for p in await kam_overview(fetcher, force)}
     except Exception:
         log.exception("Načtení otevíracích dob menz selhalo")
         return {}

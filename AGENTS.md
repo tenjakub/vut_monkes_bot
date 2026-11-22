@@ -8,7 +8,7 @@ Tenhle soubor je pro AI, která na projektu pracuje. Lidský návod je v [README
 - Commandy: `/ppv`, `/purkyne`, `/menzy` (menzy VUT), `/restaurace` (polední menu), `/mhd`, `/mhd-purkyne` (odjezdy MHD Brno),
   `/letaky`, `/maso`, `/napoje`, `/pivo` (letáky a slevy supermarketů), `/domu` (spoje z centra na koleje),
   `/obed` (kdo jde na oběd), `/na-pivo`, `/na-pivo-termin` (domluva na pivo), `/co-jist` (náhodné jídlo), `/pocasi`,
-  `/novinky` (changelog).
+  `/otevreno` (co má teď otevřeno), `/novinky` (changelog).
 - Repo je veřejné, kód je pod licencí MIT ([LICENSE](LICENSE)). Data ze zdrojů patří jim (viz README → Licence).
 - **Celý kód píše AI.** Majitel repa zadává požadavky, testuje na Discordu a rozhoduje. Kód nepíše, ale čte ho.
 - **Jazyk:** komunikace s uživatelem, texty v botovi, komentáře, docstringy i commit zprávy jsou **česky**.
@@ -108,6 +108,7 @@ weather/          počasí z Open-Meteo, BEZ závislosti na discord.py
 pubs/             hospody a hledání termínu pro /na-pivo, BEZ závislosti na discord.py
 transit/          MHD (GTFS), BEZ závislosti na discord.py
 utils/render.py   Field (kartička), mřížka, limity embedů, header s časem
+utils/opening.py  je teď otevřeno? (intervaly od–do -> stav), utils/holidays.py státní svátky a zavřené obchody
 ```
 
 Pravidla:
@@ -140,7 +141,7 @@ Pravidla:
 
 ## Oprávnění a intenty – kontrola při každé změně
 
-Aktuální stav (ověřeno pro verzi s `/ppv`, `/purkyne`, `/menzy`, `/restaurace`, `/mhd`, `/mhd-purkyne`, `/letaky`, `/maso`, `/napoje`, `/pivo`, `/domu`, `/obed`, `/na-pivo`, `/na-pivo-termin`, `/co-jist`, `/pocasi`, `/novinky`):
+Aktuální stav (ověřeno pro verzi s `/ppv`, `/purkyne`, `/menzy`, `/restaurace`, `/mhd`, `/mhd-purkyne`, `/letaky`, `/maso`, `/napoje`, `/pivo`, `/domu`, `/obed`, `/na-pivo`, `/na-pivo-termin`, `/co-jist`, `/pocasi`, `/otevreno`, `/novinky`):
 
 - **Intenty:** `discord.Intents.default()`, žádné privilegované (Message Content, Server Members, Presence vypnuté).
 - **Oprávnění bota:** View Channels, Send Messages, Embed Links, Create Events → číselně `17592186063872`
@@ -276,6 +277,13 @@ jednou nahoře (`origin_offsets` = nejčastější rozdíl z JŘ, u 12 je 6 min,
 
 **/co-jist** (`cogs/cojist.py`): přepínač „Do 150 Kč“ (`MAX_PRICE`) je ve výchozím stavu vypnutý, jídlo bez ceny se nevyřazuje.
 Tlačítka `cojist:<rozsah>:<r|s|c>:<limit 0/1>`, příznak limitu je volitelný kvůli tlačítkům ze starších zpráv (= vypnuto).
+
+**/otevreno** (`cogs/otevreno.py`): nic nestahuje navíc. Menzy, pizzerie, kavárny a bufety bere z přehledu KaM
+(`service.kam_overview` → `kam.parse_overview`, provozy jen pro zaměstnance a bez otevírací doby se vynechají),
+obchody z otevírací doby poboček na Kupi.cz (`Shops.store_pages` z cogu Slevy). Kupi.cz nezná svátky, proto
+`utils.holidays`: ve dny podle zákona 223/2016 Sb. (1. 1., Velikonoční pondělí, 8. 5., 28. 9., 28. 10., 25. a 26. 12.)
+mají obchody zavřeno, na Štědrý den do 12:00. Kartičky jsou seřazené podle stavu (otevřeno → ještě otevře → zavřeno).
+Restaurace otevírací dobu ve zdrojích nemají, proto v /otevreno nejsou.
 
 **/obed** (`cogs/obed.py`): stav hlasování (kdo, kam, v kolik) je **jen v embedu zprávy** – tlačítka ho přečtou
 (`read_state`), upraví a přepíšou. Žádná databáze, přežije restart. Názvy polí musí odpovídat `SPOTS`.

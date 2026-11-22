@@ -8,6 +8,8 @@ from datetime import date, timedelta
 
 from bs4 import BeautifulSoup
 
+from utils.holidays import cz_holidays
+
 from .models import Category, Dish, Menu, Place, norm
 
 MENU_URL = "https://www.kam.vut.cz/?p=menu&provoz={provoz}"
@@ -142,26 +144,6 @@ _PROVOZ_RE = re.compile(r"provoz=(\d+)")
 _STATE_NOTES = {"x": "dočasně přerušen provoz", "a": "pro veřejnost zavřeno (akce)"}
 
 
-def _easter(year: int) -> date:
-    """Velikonoční neděle (anonymní gregoriánský algoritmus)."""
-    a, b, c = year % 19, year // 100, year % 100
-    d, e = b // 4, b % 4
-    g = (8 * b + 13) // 25
-    h = (19 * a + b - d - g + 15) % 30
-    i, k = c // 4, c % 4
-    l = (32 + 2 * e + 2 * i - h - k) % 7
-    m = (a + 11 * h + 19 * l) // 433
-    month = (h + l - 7 * m + 90) // 25
-    day = (h + l - 7 * m + 33 * month + 19) % 32
-    return date(year, month, day)
-
-
-def cz_holidays(year: int) -> set[date]:
-    fixed = [(1, 1), (5, 1), (5, 8), (7, 5), (7, 6), (9, 28), (10, 28), (11, 17), (12, 24), (12, 25), (12, 26)]
-    easter = _easter(year)
-    return {date(year, m, d) for m, d in fixed} | {easter - timedelta(days=2), easter + timedelta(days=1)}
-
-
 def _hours_column(day: date) -> int:
     """Index sloupce s časy (0 = PO–ČT, 1 = PÁ, 2 = SO+NE) pro daný den."""
     holidays = cz_holidays(day.year) | cz_holidays(day.year + 1)
@@ -172,24 +154,51 @@ def _hours_column(day: date) -> int:
     return 0
 
 
-def parse_hours(html: str, day: date) -> dict[int, str]:
-    """{provoz: "11:00–14:30" | "11:00–14:30, 17:00–20:00" | "zavřeno" | "zavřeno (důvod)"} pro daný den."""
+@dataclass(frozen=True)
+class Provoz:
+    """Jeden řádek přehledu otevíracích dob: menza, pizzerie, kavárna, bufet…"""
+
+    provoz: int
+    name: str  # "Menza Kolejní"
+    address: str  # "Kolejní 2, Brno-Královo Pole"
+    columns: tuple[tuple[tuple[str, str], ...], ...]  # intervaly (od, do) pro PO–ČT / PÁ / SO+NE
+    closed_note: str | None = None  # aktuální stav x / a – platí jen pro dnešek
+
+    def intervals(self, day: date) -> list[tuple[str, str]]:
+        return list(self.columns[_hours_column(day)])
+
+    def hours_text(self, day: date, today: bool = True) -> str:
+        """"11:00–14:30" | "11:00–14:30, 17:00–20:00" | "zavřeno" | "zavřeno (důvod)"."""
+        if today and self.closed_note:
+            return f"zavřeno ({self.closed_note})"
+        return ", ".join(f"{a}–{b}" for a, b in self.intervals(day)) or "zavřeno"
+
+
+def parse_overview(html: str) -> list[Provoz]:
+    """Všechny provozy z přehledu otevíracích dob, v pořadí jako na webu."""
     soup = BeautifulSoup(html, "html.parser")
     table = soup.find("table", class_="ntab")
     if table is None:
-        return {}
-    column = _hours_column(day)
-    result: dict[int, str] = {}
+        return []
+    result: list[Provoz] = []
     for tr in table.find_all("tr"):
         link = tr.find("a", href=_PROVOZ_RE)
         cells = tr.find_all("td", recursive=False)
         if link is None or len(cells) < 5:
             continue
-        provoz = int(_PROVOZ_RE.search(link["href"]).group(1))
+        name_el, address_el = link.find("b"), link.find("small")
+        name = norm(name_el.get_text() if name_el else link.get_text(" ")).rstrip("*").strip()
         state = norm(cells[1].get_text()).lower()
-        intervals = [f"{a}–{b}" for a, b in _INTERVAL_RE.findall(cells[2 + column].get_text(" "))]
-        hours = ", ".join(intervals) if intervals else "zavřeno"
-        if state in _STATE_NOTES:
-            hours = f"zavřeno ({_STATE_NOTES[state]})"
-        result[provoz] = hours
+        result.append(Provoz(
+            provoz=int(_PROVOZ_RE.search(link["href"]).group(1)),
+            name=name,
+            address=norm(address_el.get_text()) if address_el else "",
+            columns=tuple(tuple(_INTERVAL_RE.findall(c.get_text(" "))) for c in cells[2:5]),
+            closed_note=_STATE_NOTES.get(state),
+        ))
     return result
+
+
+def parse_hours(html: str, day: date) -> dict[int, str]:
+    """{provoz: "11:00–14:30" | "11:00–14:30, 17:00–20:00" | "zavřeno" | "zavřeno (důvod)"} pro daný den."""
+    return {p.provoz: p.hours_text(day) for p in parse_overview(html)}
