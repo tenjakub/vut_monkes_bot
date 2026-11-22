@@ -8,6 +8,7 @@ from cogs import napivo
 from lunch.service import TZ
 from pubs import planning, venues
 from utils import render
+from utils.interactions import MessageState
 
 CREATED = datetime(2026, 11, 21, 14, 5, tzinfo=TZ)  # sobota
 TODAY = CREATED.date()
@@ -231,3 +232,165 @@ def test_meetup_weather_at_chosen_time():
     embed = napivo.meetup_embed(m, weather)
     assert "(od 20:00)" in embed.description
     assert napivo.read_meetup(via_discord(embed)) == m
+
+
+# --- událost na serveru --------------------------------------------------------------------------
+
+EVENT_URL = "https://discord.com/events/111/222"
+
+
+def test_event_link_roundtrip():
+    m = napivo.Meetup(TODAY, CREATED, "42", "19:00", "vlk", {1: "jdu"}, event=EVENT_URL)
+    back = napivo.read_meetup(via_discord(napivo.meetup_embed(m)))
+    assert back.event == EVENT_URL and back.event_id == 222
+    assert "📅 [Událost na serveru]" in napivo.meetup_embed(m).description
+    without = napivo.meetup_embed(napivo.Meetup(TODAY, CREATED, "42"))
+    assert "bot založí na serveru událost" in without.description
+
+
+def test_wants_event():
+    now = CREATED.replace(hour=15)
+    m = napivo.Meetup(TODAY, CREATED, "42", "19:00", "vlk", {1: "jdu", 2: "jdu", 3: "jindy"})
+    assert not m.wants_event(now)  # jdou jen 2
+    m.apply(3, "jdu")
+    assert m.wants_event(now)
+    assert not m.wants_event(CREATED.replace(hour=19, minute=30))  # už začalo
+    assert not napivo.Meetup(TODAY, CREATED, "42", None, None, dict(m.answers)).wants_event(now)  # bez času
+    assert not napivo.Meetup(TODAY, CREATED, "42", "19:00", None, dict(m.answers), event=EVENT_URL).wants_event(now)
+
+
+def test_event_name_and_location():
+    pub = napivo.Meetup(TODAY, CREATED, "42", "19:00", "burza")
+    assert napivo.event_name(pub) == "🍺 Na pivo – Pivní burza"
+    assert napivo.event_location(pub).startswith("Pivní burza, ")
+    area = napivo.Meetup(TODAY, CREATED, "42", "19:00", "centrum")
+    assert napivo.event_name(area) == "🍺 Na pivo – v centru"
+    assert napivo.event_name(napivo.Meetup(TODAY, CREATED, "42", "19:00", "kamkoliv")) == "🍺 Na pivo"
+    fields = napivo._event_fields(pub)
+    assert fields["start_time"] == CREATED.replace(hour=19, minute=0)
+    assert fields["end_time"] - fields["start_time"] == napivo.timedelta(hours=napivo.EVENT_HOURS)
+
+
+class _Event:
+    def __init__(self, id_):
+        self.id = id_
+        self.url = f"https://discord.com/events/111/{id_}"
+        self.edits = []
+
+    async def edit(self, **kwargs):
+        self.edits.append(kwargs)
+
+
+class _Guild:
+    id = 111
+
+    def __init__(self):
+        self.created: list[dict] = []
+        self.events: dict[int, _Event] = {}
+
+    async def create_scheduled_event(self, **kwargs):
+        self.created.append(kwargs)
+        event = _Event(200 + len(self.created))
+        self.events[event.id] = event
+        return event
+
+    async def fetch_scheduled_event(self, id_):
+        return self.events[id_]
+
+
+class _Response:
+    def __init__(self, inter):
+        self.inter = inter
+
+    async def edit_message(self, embed, view):
+        self.inter.message.embeds = [via_discord(embed)]
+
+    async def send_message(self, *a, **k):
+        raise AssertionError(a)
+
+
+class _Interaction:
+    """Kliknutí: `message` je snímek zprávy v okamžiku kliknutí (jako u Discordu)."""
+
+    def __init__(self, message, guild, user_id, can_create=True):
+        self.message = message
+        self.guild = guild
+        self.user = type("U", (), {"id": user_id})()
+        self.client = object()
+        self.app_permissions = discord.Permissions(create_events=can_create)
+        self.response = _Response(self)
+
+    async def edit_original_response(self, embed, view):
+        self.message.embeds = [via_discord(embed)]
+
+
+class _Message:
+    def __init__(self, id_, embed):
+        self.id = id_
+        self.embeds = [via_discord(embed)]
+        self.jump_url = "https://discord.com/channels/111/5/6"
+
+    def snapshot(self):
+        copy = _Message(self.id, self.embeds[0])
+        copy.embeds = list(self.embeds)
+        return copy
+
+
+def _click(message, guild, user, answer="jdu", can_create=True):
+    import asyncio
+
+    inter = _Interaction(message, guild, user, can_create)
+
+    def change(m):
+        m.apply(user, answer)
+
+    asyncio.run(napivo._edit(inter, change))
+    return inter.message
+
+
+def test_third_going_creates_event_once(monkeypatch):
+    monkeypatch.setattr(napivo, "_now", lambda: CREATED.replace(hour=15))
+    monkeypatch.setattr(napivo, "_state", MessageState())
+    guild = _Guild()
+    msg = _Message(1, napivo.meetup_embed(napivo.Meetup(TODAY, CREATED, "42", "19:00", "vlk")))
+    stale = msg.snapshot()  # někdo kliknul dřív, než se zpráva u něj obnovila
+    msg = _click(msg, guild, 1)
+    msg = _click(msg, guild, 2)
+    assert guild.created == []
+    msg = _click(msg, guild, 3)
+    assert len(guild.created) == 1 and guild.created[0]["name"] == "🍺 Na pivo – U Dřevěného vlka"
+    assert guild.created[0]["description"].endswith(msg.jump_url)
+    assert "📅 [Událost na serveru](https://discord.com/events/111/201)" in msg.embeds[0].description
+    # čtvrté kliknutí ze starého snímku zprávy: stav se vezme z posledního zápisu, druhá událost nevznikne
+    _click(stale, guild, 4)
+    assert len(guild.created) == 1
+    back = napivo.read_meetup(napivo._state._embeds[1])
+    assert set(back.answers) == {1, 2, 3, 4} and back.event_id == 201
+
+
+def test_time_change_moves_event(monkeypatch):
+    import asyncio
+
+    monkeypatch.setattr(napivo, "_now", lambda: CREATED.replace(hour=15))
+    monkeypatch.setattr(napivo, "_state", MessageState())
+    guild = _Guild()
+    event = _Event(222)
+    guild.events[222] = event
+    m = napivo.Meetup(TODAY, CREATED, "42", "19:00", "vlk", {1: "jdu", 2: "jdu", 3: "jdu"}, event=EVENT_URL)
+    inter = _Interaction(_Message(2, napivo.meetup_embed(m)), guild, 1)
+
+    def change(state):
+        state.time = "20:30"
+
+    asyncio.run(napivo._edit(inter, change))
+    assert guild.created == [] and len(event.edits) == 1
+    assert event.edits[0]["start_time"] == CREATED.replace(hour=20, minute=30)
+
+
+def test_no_event_without_permission(monkeypatch):
+    monkeypatch.setattr(napivo, "_now", lambda: CREATED.replace(hour=15))
+    monkeypatch.setattr(napivo, "_state", MessageState())
+    guild = _Guild()
+    m = napivo.Meetup(TODAY, CREATED, "42", "19:00", "vlk", {1: "jdu", 2: "jdu"})
+    msg = _click(_Message(3, napivo.meetup_embed(m)), guild, 3, can_create=False)
+    assert guild.created == [] and "Událost na serveru" not in msg.embeds[0].description

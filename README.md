@@ -81,14 +81,18 @@ Na <https://discord.com/developers/applications> → **New Application**:
 
 ### 2. Oprávnění
 
-**View Channels**, **Send Messages** a **Embed Links**, číselně `19456`. Nic dalšího nedávej.
+**View Channels**, **Send Messages**, **Embed Links** a **Create Events**, číselně `17592186063872`. Nic dalšího nedávej.
+
+Create Events (Vytvářet události) potřebuje `/na-pivo`: když jdou aspoň 3 lidi, bot založí na serveru událost
+a při změně času nebo místa ji upraví. Bez tohoto oprávnění funguje všechno ostatní, jen se událost nezaloží.
+Už pozvanému botovi ho stačí přidat v **Nastavení serveru → Role → role bota**, nebo bota pozvat znovu odkazem níž.
 
 ### 3. Pozvání na server
 
 Do odkazu dosaď **Application ID** (záložka **General Information**) a otevři ho v prohlížeči:
 
 ```
-https://discord.com/oauth2/authorize?client_id=APP_ID&scope=bot+applications.commands&permissions=19456&integration_type=0
+https://discord.com/oauth2/authorize?client_id=APP_ID&scope=bot+applications.commands&permissions=17592186063872&integration_type=0
 ```
 
 Vyber server (potřebuješ na něm oprávnění **Spravovat server**). Jeho ID (pravý klik na server → **Kopírovat ID

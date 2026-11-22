@@ -7,13 +7,18 @@
 
 Jako u /obed je celý stav jen v embedu zprávy (kdo, kdy, kam), takže přežije restart bota.
 Datum založení je v `embed.timestamp`, z něj se dopočítá rok a dny hlasování.
+
+Když na pozvánku /na-pivo kliknou aspoň EVENT_MIN_PEOPLE lidí „Jdu“ a je známý čas, bot založí na serveru
+událost (Discord Scheduled Event). Odkaz na ni je v embedu, při změně času nebo místa ji bot upraví.
+Potřebuje oprávnění Create Events (bez něj se událost prostě nezaloží).
 """
 
 from __future__ import annotations
 
+import logging
 import re
-from dataclasses import dataclass, field
-from datetime import date, datetime
+from dataclasses import dataclass, field, replace
+from datetime import date, datetime, timedelta
 
 import discord
 from discord import app_commands
@@ -25,9 +30,13 @@ from utils import render
 from utils.interactions import STALE, MessageState, reported
 from weather import openmeteo
 
+log = logging.getLogger(__name__)
+
 COLOR = 0xE8A317  # barva piva
 TIMES = [f"{h}:{m:02d}" for h in range(14, 23) for m in (0, 30)][:-1]  # 14:00 … 22:00 pro /na-pivo
 FROM_TIMES = [f"{h}:00" for h in range(14, 22)]  # "můžu od" pro /na-pivo-termin
+EVENT_MIN_PEOPLE = 3  # kolik lidí musí jít, aby bot založil událost na serveru
+EVENT_HOURS = 3  # jak dlouho událost trvá (Discord u externích událostí chce konec)
 
 # odpověď -> (emoji, nadpis kartičky, popisek tlačítka, styl tlačítka)
 ANSWERS: dict[str, tuple[str, str, str, discord.ButtonStyle]] = {
@@ -44,6 +53,7 @@ _PLACE_RE = re.compile(r"📍 \*\*Kam:\*\* \S+ \*\*(.+?)\*\*")
 _DATE_RE = re.compile(r"(\d{1,2})\. (\d{1,2})\.$")
 _VOTE_RE = re.compile(r"<@(\d+)> · (?:od (\d{1,2}:\d{2})|kdykoliv)")
 _state = MessageState()  # zámek na zprávu + poslední zapsaný embed (dvě kliknutí naráz)
+_EVENT_RE = re.compile(r"https://discord\.com/events/\d+/(\d+)")
 
 
 def forecast(client) -> openmeteo.Forecast | None:
@@ -177,6 +187,7 @@ class Meetup:
     time: str | None = None  # "19:00"
     place: str | None = None  # klíč oblasti nebo podniku
     answers: dict[int, str] = field(default_factory=dict)  # user -> klíč z ANSWERS
+    event: str | None = None  # odkaz na událost na serveru (https://discord.com/events/<server>/<id>)
 
     def apply(self, user: int, answer: str) -> None:
         """Druhé kliknutí na stejnou odpověď tě odhlásí."""
@@ -189,6 +200,23 @@ class Meetup:
     def count(self, answer: str) -> int:
         return sum(a == answer for a in self.answers.values())
 
+    @property
+    def start(self) -> datetime | None:
+        if not self.time:
+            return None
+        h, m = map(int, self.time.split(":"))
+        return datetime(self.day.year, self.day.month, self.day.day, h, m, tzinfo=service.TZ)
+
+    @property
+    def event_id(self) -> int | None:
+        m = _EVENT_RE.search(self.event) if self.event else None
+        return int(m.group(1)) if m else None
+
+    def wants_event(self, now: datetime) -> bool:
+        """Založit událost? Jdou aspoň EVENT_MIN_PEOPLE, je známý čas a ještě nezačala."""
+        return (self.event is None and self.count("jdu") >= EVENT_MIN_PEOPLE
+                and self.start is not None and self.start > now)
+
 
 def meetup_embed(m: Meetup, weather: openmeteo.Forecast | None = None) -> discord.Embed:
     lines = [f"Svolává <@{m.creator}>"] if m.creator else []
@@ -196,7 +224,12 @@ def meetup_embed(m: Meetup, weather: openmeteo.Forecast | None = None) -> discor
     if w := _weather_line(weather, m.day, m.time):
         lines.append(w)
     lines += place_lines(m.place)
-    lines.append("-# Klikni, jestli jdeš. Kdy a kam může upravit kdokoliv ve výběru pod zprávou.")
+    if m.event:
+        lines.append(f"📅 [Událost na serveru]({m.event})")
+    hint = "-# Klikni, jestli jdeš. Kdy a kam může upravit kdokoliv ve výběru pod zprávou."
+    if not m.event:
+        hint += f" Když půjdou aspoň {EVENT_MIN_PEOPLE}, bot založí na serveru událost."
+    lines.append(hint)
     embed = discord.Embed(
         title=f"🍺 Na pivo – {render.czech_date(m.day)}", description="\n".join(lines),
         color=COLOR, timestamp=m.created,
@@ -218,7 +251,9 @@ def read_meetup(embed: discord.Embed | None) -> Meetup | None:
     if day is None:
         return None
     time = _TIME_RE.search(embed.description or "")
-    meetup = Meetup(day, created, _creator(embed), time.group(1) if time else None, read_place(embed))
+    event = _EVENT_RE.search(embed.description or "")
+    meetup = Meetup(day, created, _creator(embed), time.group(1) if time else None, read_place(embed),
+                    event=event.group(0) if event else None)
     by_title = {f"{icon} {title}": key for key, (icon, title, _, _) in ANSWERS.items()}
     for f in embed.fields:
         answer = by_title.get(_COUNT_RE.sub("", f.name or ""))
@@ -348,6 +383,10 @@ def meetup_message(m: Meetup, client) -> dict:
 # --- tlačítka a výběry -----------------------------------------------------------------------------
 
 
+def _message_for(state: Meetup | Plan, client) -> dict:
+    return plan_message(state, client) if isinstance(state, Plan) else meetup_message(state, client)
+
+
 async def _edit(interaction: discord.Interaction, change) -> None:
     """Přečte stav ze zprávy, `change(stav)` ho upraví (vrací chybovou hlášku nebo None) a zprávu přepíše."""
     message = interaction.message
@@ -357,14 +396,81 @@ async def _edit(interaction: discord.Interaction, change) -> None:
         if state is None:
             await interaction.response.send_message(STALE, ephemeral=True)
             return
+        before = replace(state) if isinstance(state, Meetup) else None
         error = change(state)
         if error:
             await interaction.response.send_message(error, ephemeral=True)
             return
-        build = plan_message if isinstance(state, Plan) else meetup_message
-        payload = build(state, interaction.client)
+        payload = _message_for(state, interaction.client)
         await interaction.response.edit_message(**payload)
         _state.remember(message.id, payload["embed"])
+        # událost se zakládá až po odpovědi (Discord na odpověď čeká jen 3 s)
+        if isinstance(state, Meetup) and await sync_event(interaction, before, state):
+            payload = _message_for(state, interaction.client)
+            await interaction.edit_original_response(**payload)
+            _state.remember(message.id, payload["embed"])
+
+
+# --- událost na serveru ----------------------------------------------------------------------------
+
+
+def event_name(m: Meetup) -> str:
+    if m.place in venues.PUBS:
+        return f"🍺 Na pivo – {venues.PUBS[m.place].name}"
+    if m.place in venues.AREAS and m.place != "kamkoliv":
+        return f"🍺 Na pivo – {venues.AREAS[m.place].label.lower()}"
+    return "🍺 Na pivo"
+
+
+def event_location(m: Meetup) -> str:
+    if m.place in venues.PUBS:
+        pub = venues.PUBS[m.place]
+        return ", ".join(p for p in (pub.name, pub.address, "Brno") if p)[:100]
+    if m.place in venues.AREAS and m.place != "kamkoliv":
+        return f"{venues.AREAS[m.place].label}, Brno – kam přesně, se domluví"[:100]
+    return "Brno – kam, se ještě domluví"
+
+
+def _event_fields(m: Meetup) -> dict:
+    return {
+        "name": event_name(m)[:100],
+        "start_time": m.start,
+        "end_time": m.start + timedelta(hours=EVENT_HOURS),
+        "entity_type": discord.EntityType.external,
+        "privacy_level": discord.PrivacyLevel.guild_only,
+        "location": event_location(m),
+    }
+
+
+async def sync_event(interaction: discord.Interaction, before: Meetup | None, m: Meetup) -> bool:
+    """Založí nebo upraví událost na serveru podle pozvánky. Vrací True, když přibyl odkaz (zprávu je
+    potřeba přepsat). Chyby jen loguje: pozvánka funguje i bez události."""
+    guild, now = interaction.guild, _now()
+    if guild is None:  # DM s botem
+        return False
+    creating = m.wants_event(now)
+    moved = m.event_id is not None and before is not None and (before.time, before.place) != (m.time, m.place)
+    if not (creating or (moved and m.start and m.start > now)):
+        return False
+    perms = interaction.app_permissions
+    if not (perms.create_events or perms.manage_events):
+        log.warning("Na serveru %s chybí oprávnění Create Events, událost /na-pivo se nezaloží", guild.id)
+        return False
+    try:
+        if creating:
+            description = f"Kdo jde, se hlásí v pozvánce: {interaction.message.jump_url}"
+            event = await guild.create_scheduled_event(
+                **_event_fields(m), description=description, reason=f"/na-pivo: jdou aspoň {EVENT_MIN_PEOPLE}"
+            )
+            m.event = event.url
+            return True
+        event = await guild.fetch_scheduled_event(m.event_id)
+        await event.edit(**_event_fields(m), reason="/na-pivo: změna času nebo místa")
+    except discord.NotFound:
+        log.info("Událost %s už neexistuje (někdo ji smazal)", m.event_id)
+    except discord.HTTPException:
+        log.exception("Založení/úprava události /na-pivo selhala")
+    return False
 
 
 class AnswerButton(discord.ui.DynamicItem[discord.ui.Button], template=r"napivo:a:(?P<answer>[a-z]+)"):

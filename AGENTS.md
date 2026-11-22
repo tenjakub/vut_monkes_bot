@@ -143,8 +143,10 @@ Pravidla:
 Aktuální stav (ověřeno pro verzi s `/ppv`, `/purkyne`, `/menzy`, `/restaurace`, `/mhd`, `/mhd-purkyne`, `/letaky`, `/maso`, `/napoje`, `/pivo`, `/domu`, `/obed`, `/na-pivo`, `/na-pivo-termin`, `/co-jist`, `/pocasi`, `/novinky`):
 
 - **Intenty:** `discord.Intents.default()`, žádné privilegované (Message Content, Server Members, Presence vypnuté).
-- **Oprávnění bota:** View Channels, Send Messages, Embed Links → číselně `19456`.
+- **Oprávnění bota:** View Channels, Send Messages, Embed Links, Create Events → číselně `17592186063872`
+  (Create Events = `1 << 44` pro události z `/na-pivo`: zakládá události a upravuje jen ty vlastní).
   Bot dnes komunikuje **jen přes odpovědi na interakce** (slash commandy, tlačítka) a sám do kanálů nic neposílá.
+  Jediná akce mimo odpovědi je událost na serveru z `/na-pivo` (`cogs/napivo.sync_event`).
 - **Scopes:** `bot` + `applications.commands`, Integration Type *Guild Install*.
 
 Když změna přidává něco z tohoto seznamu, je potřeba upravit oprávnění/intenty:
@@ -158,6 +160,7 @@ Když změna přidává něco z tohoto seznamu, je potřeba upravit oprávnění
 | vlákna | **Send Messages in Threads**, případně **Create Public Threads** |
 | role, přezdívky, moderace | konkrétní Manage oprávnění + nejspíš intent **Server Members** |
 | vlastní emoji ze serveru | **Use External Emojis** |
+| události na serveru (Scheduled Events) | **Create Events** (už máme), cizí události by chtěly **Manage Events** |
 
 Postup, když jsou nová oprávnění potřeba:
 1. Uprav sekci „Oprávnění“ a číslo `permissions=` v pozvánce v [README.md](README.md) a tuhle sekci.
@@ -293,6 +296,11 @@ Datum založení je v `embed.timestamp` (z něj se dopočítá rok a 14 dní hla
   U Dřevěného orla schválně ne (je hned vedle vlka a kluci znají vlka).
 - /na-pivo: `napivo:cas` a `napivo:kam` jsou výběry (DynamicItem[Select]), `napivo:a:<jdu|jindy|nejdu>` odpovědi,
   `napivo:mapa` = 🗺️ Kde co je (ephemeral), `napivo:termin` = založí hledání termínu se stejným místem.
+- Událost na serveru: když na pozvánku klikne „Jdu“ aspoň `EVENT_MIN_PEOPLE` (3) lidí a je zadaný čas, `sync_event`
+  po odpovědi na kliknutí založí externí událost (místo = podnik/oblast, konec za `EVENT_HOURS`) a odkaz
+  `📅 [Událost na serveru](https://discord.com/events/…)` přidá do embedu (z něj se pozná, že už existuje).
+  Změna času nebo místa událost upraví, odhlášení lidí ji nemaže. Bez oprávnění Create Events nebo v DM se nic nezaloží.
+  Druhou událost při dvou rychlých kliknutích hlídá `MessageState` (stav z naposledy zapsaného embedu).
 - /na-pivo-termin: den = tlačítko `pivokdy:d:<RRRRMMDD>` → okno (Modal se Select v Label) „od kolika“
   (❌ nemůžu / kdykoliv / od HH:00). Odeslání okna upraví původní zprávu (`response.edit_message` u modal submitu).
   Nejlepší den = nejvíc lidí, čas = nejpozdější „od“ (`pubs.planning.best_day`). `pivokdy:svolat` pošle pozvánku
