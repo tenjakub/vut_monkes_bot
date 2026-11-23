@@ -10,6 +10,7 @@ from lunch.models import Category, Dish, Menu
 from storage import Database, ratings
 from storage import menus as stored_menus
 from tests.fakes import Interaction, memory_db, with_values
+from utils import interactions
 
 NOW = datetime(2026, 11, 23, 11, 30, tzinfo=service.TZ)
 
@@ -111,4 +112,4 @@ def test_stale_and_missing_database(monkeypatch):
 
     stale, unknown, offline = run(go())
     assert stale["content"] == hodnoceni.STALE and unknown["content"] == hodnoceni.STALE
-    assert offline["content"] == hodnoceni.UNAVAILABLE
+    assert offline["content"] == interactions.UNAVAILABLE

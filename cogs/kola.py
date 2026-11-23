@@ -16,6 +16,7 @@ from lunch.service import TZ
 from storage import prefs
 from utils import loading, render
 from utils.interactions import STALE, reported
+from utils.text import plural
 
 log = logging.getLogger(__name__)
 
@@ -24,9 +25,7 @@ COLOR = 0x1C7ED6
 
 def bikes_text(n: int) -> str:
     """0 kol, 1 kolo, 2 kola, 5 kol."""
-    if n == 1:
-        return "1 kolo"
-    return f"{n} kola" if 2 <= n <= 4 else f"{n} kol"
+    return plural(n, "kolo", "kola", "kol")
 
 
 def _distance_text(meters: float) -> str:

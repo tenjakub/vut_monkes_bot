@@ -8,7 +8,6 @@ from datetime import datetime
 from enum import Enum
 
 _WS_RE = re.compile(r"\s+")
-_PRICE_RE = re.compile(r"\d+(?:[.,]\d+)?")
 
 
 def norm(text: str | None) -> str:
@@ -16,12 +15,6 @@ def norm(text: str | None) -> str:
     if not text:
         return ""
     return _WS_RE.sub(" ", text.replace("\xa0", " ")).strip()
-
-
-def price_value(price: str | None) -> float | None:
-    """'159 Kč' -> 159.0, '1 099,50 Kč' -> 1099.5; bez čísla None."""
-    m = _PRICE_RE.search((price or "").replace("\u00a0", "").replace(" ", ""))
-    return float(m.group().replace(",", ".")) if m else None
 
 
 class Category(Enum):

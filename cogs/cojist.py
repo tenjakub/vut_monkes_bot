@@ -12,9 +12,10 @@ from discord import app_commands
 from discord.ext import commands
 
 from lunch import emoji, service
-from lunch.models import Dish, Menu, price_value
+from lunch.models import Dish, Menu
 from utils import render
 from utils.interactions import STALE, reported
+from utils.text import price_value
 
 log = logging.getLogger(__name__)
 

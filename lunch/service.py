@@ -36,7 +36,7 @@ def today() -> date:
 
 def effective_ttl(ttl: float, now: datetime | None = None) -> float:
     """Mimo LUNCH_HOURS se jídelníčky nemění a obnova na pozadí neběží: co se dnes stáhlo, platí do půlnoci.
-    Večer tak commandy nestahují znovu všechny stránky (dřív to i /co-jist zdržovalo na několik sekund)."""
+    Večer tak commandy nestahují znovu všechny stránky."""
     now = now or datetime.now(TZ)
     if is_lunch_time(now):
         return ttl

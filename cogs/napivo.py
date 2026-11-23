@@ -8,7 +8,7 @@
 Jako u /obed je celý stav jen v embedu zprávy (kdo, kdy, kam), takže přežije restart bota.
 Datum založení je v `embed.timestamp`, z něj se dopočítá rok a dny hlasování.
 
-Když na pozvánku /na-pivo kliknou aspoň EVENT_MIN_PEOPLE lidí „Jdu“ (admin to může v /nastaveni změnit nebo
+Když na pozvánku /na-pivo kliknou aspoň 3 lidi „Jdu“ (admin to může v /nastaveni změnit nebo
 vypnout, storage/settings.py) a je známý čas, bot založí na serveru událost (Discord Scheduled Event). Odkaz na ni je v embedu, při změně času nebo místa ji bot upraví.
 Potřebuje oprávnění Create Events (bez něj se událost prostě nezaloží).
 """
@@ -24,12 +24,13 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from lunch import service
 from cogs import cenapiva
+from lunch import service
 from pubs import planning, venues
 from storage import settings
 from utils import render
 from utils.interactions import STALE, MessageState, reported
+from utils.text import plural
 from weather import openmeteo
 
 log = logging.getLogger(__name__)
@@ -37,7 +38,6 @@ log = logging.getLogger(__name__)
 COLOR = 0xE8A317  # barva piva
 TIMES = [f"{h}:{m:02d}" for h in range(14, 23) for m in (0, 30)][:-1]  # 14:00 … 22:00 pro /na-pivo
 FROM_TIMES = [f"{h}:00" for h in range(14, 22)]  # "můžu od" pro /na-pivo-termin
-EVENT_MIN_PEOPLE = settings.DEFAULT_EVENT_MIN_PEOPLE  # kolik lidí musí jít, aby bot založil událost (výchozí)
 EVENT_HOURS = 3  # jak dlouho událost trvá (Discord u externích událostí chce konec)
 
 # odpověď -> (emoji, nadpis kartičky, popisek tlačítka, styl tlačítka)
@@ -215,14 +215,14 @@ class Meetup:
         m = _EVENT_RE.search(self.event) if self.event else None
         return int(m.group(1)) if m else None
 
-    def wants_event(self, now: datetime, min_people: int | None = EVENT_MIN_PEOPLE) -> bool:
+    def wants_event(self, now: datetime, min_people: int | None = settings.DEFAULT_EVENT_MIN_PEOPLE) -> bool:
         """Založit událost? Jdou aspoň `min_people` (None = vypnuto), je známý čas a ještě nezačala."""
         return (min_people is not None and self.event is None and self.count("jdu") >= min_people
                 and self.start is not None and self.start > now)
 
 
 def meetup_embed(
-    m: Meetup, weather: openmeteo.Forecast | None = None, min_people: int | None = EVENT_MIN_PEOPLE
+    m: Meetup, weather: openmeteo.Forecast | None = None, min_people: int | None = settings.DEFAULT_EVENT_MIN_PEOPLE
 ) -> discord.Embed:
     """`min_people` = od kolika lidí se zakládá událost (nastavení serveru), None = nezakládá se (vypnuto, DM)."""
     lines = [f"Svolává <@{m.creator}>"] if m.creator else []
@@ -316,9 +316,8 @@ def plan_embed(p: Plan, today: date, weather: openmeteo.Forecast | None = None) 
     lines = [f"Svolává <@{p.creator}>"] if p.creator else []
     lines += place_lines(p.place)
     if best:
-        people = "člověk" if len(best.users) == 1 else ("lidi" if len(best.users) < 5 else "lidí")
         lines.append(f"🏆 **Zatím nejlíp:** {render.czech_date(best.day)} {_vote_text(best.time)} · "
-                     f"{len(best.users)} {people}")
+                     f"{plural(len(best.users), 'člověk', 'lidi', 'lidí')}")
         if w := _weather_line(weather, best.day, best.time):
             lines.append(w)
     else:

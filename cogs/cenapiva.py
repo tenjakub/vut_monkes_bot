@@ -21,13 +21,12 @@ from discord.ext import commands
 
 from lunch.service import TZ
 from pubs import beers, venues
-from storage import DatabaseUnavailable, beer
+from storage import beer, ready
 from utils.interactions import STALE, reported
 from utils.text import clean
 
 log = logging.getLogger(__name__)
 
-UNAVAILABLE = "Databáze teď není dostupná 😵 Ceny piva zkus prosím později."
 HISTORY_SHOWN = 8
 NAME_LIMIT = 40
 
@@ -103,9 +102,6 @@ async def _save(interaction: discord.Interaction, pub_key: str, edit=None, back:
     except beers.BeerError as exc:
         await interaction.response.send_message(str(exc), ephemeral=True)
         return
-    except DatabaseUnavailable:
-        await interaction.response.send_message(UNAVAILABLE, ephemeral=True)
-        return
     await interaction.response.edit_message(content=content, embed=None, view=view)
 
 
@@ -174,11 +170,7 @@ async def _current(interaction: discord.Interaction, pub_key: str) -> beers.PubB
     if pub_key not in venues.PUBS:
         await interaction.response.send_message(STALE, ephemeral=True)
         return None
-    try:
-        versions = await beer.history(interaction.client.db, pub_key, limit=1)
-    except DatabaseUnavailable:
-        await interaction.response.send_message(UNAVAILABLE, ephemeral=True)
-        return None
+    versions = await beer.history(interaction.client.db, pub_key, limit=1)
     return versions[0].state if versions else beers.PubBeers()
 
 
@@ -206,11 +198,7 @@ class PubSelect(discord.ui.DynamicItem[discord.ui.Select], template=r"pivocena:p
         if pub_key not in venues.PUBS:
             await interaction.response.send_message(STALE, ephemeral=True)
             return
-        try:
-            content, view = await card(interaction.client.db, pub_key)
-        except DatabaseUnavailable:
-            await interaction.response.send_message(UNAVAILABLE, ephemeral=True)
-            return
+        content, view = await card(interaction.client.db, pub_key)
         if self.mode == "e":
             await interaction.response.edit_message(content=content, embed=None, view=view)
         else:
@@ -319,11 +307,7 @@ class RevertSelect(discord.ui.DynamicItem[discord.ui.Select], template=r"pivocen
     @reported
     async def callback(self, interaction: discord.Interaction) -> None:
         value = self.item.values[0] if self.item.values else ""
-        try:
-            version = await beer.get(interaction.client.db, int(value)) if value.isdigit() else None
-        except DatabaseUnavailable:
-            await interaction.response.send_message(UNAVAILABLE, ephemeral=True)
-            return
+        version = await beer.get(interaction.client.db, int(value)) if value.isdigit() else None
         if version is None or version.pub != self.pub_key or self.pub_key not in venues.PUBS:
             await interaction.response.send_message(STALE, ephemeral=True)
             return
@@ -341,7 +325,7 @@ class CenaPiva(commands.Cog):
     async def cog_load(self) -> None:
         self.bot.add_dynamic_items(*ITEMS)
         db = getattr(self.bot, "db", None)
-        if db is not None and db.is_open:
+        if ready(db):
             try:
                 await reload(db)
             except Exception:
@@ -357,11 +341,7 @@ class CenaPiva(commands.Cog):
         if podnik is None or podnik.value not in venues.PUBS:
             await interaction.response.send_message(overview(), view=overview_view(), ephemeral=True)
             return
-        try:
-            content, view = await card(self.bot.db, podnik.value)
-        except DatabaseUnavailable:
-            await interaction.response.send_message(UNAVAILABLE, ephemeral=True)
-            return
+        content, view = await card(self.bot.db, podnik.value)
         await interaction.response.send_message(content, view=view, ephemeral=True)
 
 

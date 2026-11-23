@@ -1,13 +1,13 @@
 """Nastavení jednotlivých lidí (tabulka `user_setting`). Zatím jen výchozí koleje (/koleje).
 
-Bez uloženého nastavení se všechno chová jako dřív; „nerozhodnuto“ řádek smaže, takže se o člověku nic nedrží.
+Bez uloženého nastavení platí výchozí (PPV); „nerozhodnuto“ řádek smaže, takže se o člověku nic nedrží.
 """
 
 from __future__ import annotations
 
 import logging
 
-from .db import Database
+from .db import Database, ready
 
 log = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ async def put(db: Database, user_id: int, key: str, value: str | None) -> None:
 
 async def dorm(db: Database | None, user_id: int) -> str | None:
     """Výchozí koleje člověka („ppv“ / „purkyne“), nebo None (nerozhodnuto, nebo databáze neběží)."""
-    if db is None or not db.is_open:
+    if not ready(db):
         return None
     try:
         value = await get(db, user_id, DORM)

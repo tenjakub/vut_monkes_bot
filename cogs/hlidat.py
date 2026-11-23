@@ -19,13 +19,13 @@ from discord.ext import commands
 from cogs import slevy
 from lunch.service import TZ, today
 from shops import kupi, watching
-from storage import DatabaseUnavailable, watches
+from storage import ready, watches
+from utils import render
 from utils.interactions import STALE, reported
-from utils.text import clean
+from utils.text import clean, parse_price, plural
 
 log = logging.getLogger(__name__)
 
-UNAVAILABLE = "Databáze teď není dostupná 😵 Hlídání zkus prosím později."
 MAX_LINES = 5  # akcí na jedno hlídání (ve zprávě i po přidání)
 MESSAGE_LIMIT = 1900
 INTRO = (
@@ -40,10 +40,6 @@ def _number(value: float) -> str:
 
 def label(w: watches.Watch) -> str:
     return f"**{w.query}**" + (f" do {_number(w.max_price)} Kč" if w.max_price is not None else " v akci")
-
-
-def _akce(n: int) -> str:
-    return f"{n} akce" if 1 <= n <= 4 else f"{n} akcí"
 
 
 def _deals(client) -> tuple[list[kupi.Deal], dict[str, str]]:
@@ -62,17 +58,6 @@ def deal_lines(found: list[kupi.Deal], marks: dict[str, str]) -> list[str]:
     return lines
 
 
-def _fit(lines: list[str]) -> str:
-    out, used = [], 0
-    for line in lines:
-        if used + len(line) + 1 > MESSAGE_LIMIT:
-            out.append("…")
-            break
-        out.append(line)
-        used += len(line) + 1
-    return "\n".join(out)
-
-
 async def manager(client, user_id: int, notice: list[str] | None = None) -> tuple[str, discord.ui.View]:
     """Přehled hlídání člověka s tlačítky (vidí ho jen on)."""
     mine = await watches.of_user(client.db, user_id)
@@ -83,12 +68,12 @@ async def manager(client, user_id: int, notice: list[str] | None = None) -> tupl
         lines.append("_Zatím nic nehlídáš. Klikni na ➕ Přidat._")
     for w in mine:
         found = watching.matches(w.query, w.max_price, deals, day)
-        lines.append(f"🔔 {label(w)} — " + (f"teď {_akce(len(found))}" if found else "teď nic"))
+        lines.append(f"🔔 {label(w)} — " + (f"teď {plural(len(found), 'akce', 'akce', 'akcí')}" if found else "teď nic"))
     view = discord.ui.View(timeout=None)
     view.add_item(AddButton(disabled=len(mine) >= watches.MAX_PER_USER))
     if mine:
         view.add_item(RemoveSelect(mine))
-    return _fit(lines), view
+    return render.fit_lines(lines, MESSAGE_LIMIT), view
 
 
 class WatchModal(discord.ui.Modal):
@@ -105,7 +90,7 @@ class WatchModal(discord.ui.Modal):
     async def on_submit(self, interaction: discord.Interaction) -> None:
         query = clean(self.query.value)
         try:
-            max_price = watching.parse_price(self.price.value)
+            max_price = parse_price(self.price.value)
         except ValueError:
             await interaction.response.send_message(
                 f"Cenu „{self.price.value}“ nechápu 🤔 Napiš jen číslo, třeba `25` nebo `25,90`.", ephemeral=True
@@ -121,9 +106,6 @@ class WatchModal(discord.ui.Modal):
             await interaction.response.send_message(
                 f"Hlídat jde nejvýš {watches.MAX_PER_USER} věcí, nejdřív nějakou zruš.", ephemeral=True
             )
-            return
-        except DatabaseUnavailable:
-            await interaction.response.send_message(UNAVAILABLE, ephemeral=True)
             return
         deals, marks = _deals(interaction.client)
         found = watching.matches(w.query, w.max_price, deals, today())
@@ -168,17 +150,13 @@ class RemoveSelect(discord.ui.DynamicItem[discord.ui.Select], template=r"hlidat:
     @reported
     async def callback(self, interaction: discord.Interaction) -> None:
         value = self.item.values[0] if self.item.values else ""
-        try:
-            mine = {w.id: w for w in await watches.of_user(interaction.client.db, interaction.user.id)}
-            w = mine.get(int(value)) if value.isdigit() else None
-            if w is None:
-                await interaction.response.send_message(STALE, ephemeral=True)
-                return
-            await watches.remove(interaction.client.db, interaction.user.id, w.id)
-            content, view = await manager(interaction.client, interaction.user.id, [f"🗑️ Už nehlídám {label(w)}."])
-        except DatabaseUnavailable:
-            await interaction.response.send_message(UNAVAILABLE, ephemeral=True)
+        mine = {w.id: w for w in await watches.of_user(interaction.client.db, interaction.user.id)}
+        w = mine.get(int(value)) if value.isdigit() else None
+        if w is None:
+            await interaction.response.send_message(STALE, ephemeral=True)
             return
+        await watches.remove(interaction.client.db, interaction.user.id, w.id)
+        content, view = await manager(interaction.client, interaction.user.id, [f"🗑️ Už nehlídám {label(w)}."])
         await interaction.response.edit_message(content=content, view=view)
 
 
@@ -196,11 +174,7 @@ class MenuButton(discord.ui.DynamicItem[discord.ui.Button], template=r"hlidat:me
 
     @reported
     async def callback(self, interaction: discord.Interaction) -> None:
-        try:
-            content, view = await manager(interaction.client, interaction.user.id)
-        except DatabaseUnavailable:
-            await interaction.response.send_message(UNAVAILABLE, ephemeral=True)
-            return
+        content, view = await manager(interaction.client, interaction.user.id)
         await interaction.response.send_message(content, view=view, ephemeral=True)
 
 
@@ -209,7 +183,7 @@ def notification(items: list[tuple[watches.Watch, list[kupi.Deal]]], marks: dict
     for w, found in items:
         lines += ["", label(w), *deal_lines(found, marks)]
     lines += ["", "-# Hlídání upravíš tlačítkem níž nebo v /hlidat. Data z Kupi.cz."]
-    return _fit(lines)
+    return render.fit_lines(lines, MESSAGE_LIMIT)
 
 
 ITEMS = (AddButton, RemoveSelect, MenuButton)
@@ -251,7 +225,7 @@ class Hlidat(commands.Cog):
     async def notify(self) -> int:
         """Pošle zprávy o nových akcích. Vrací počet lidí, kterým se psalo."""
         db = getattr(self.bot, "db", None)
-        if db is None or not db.is_open:
+        if not ready(db):
             return 0
         deals, marks = _deals(self.bot)
         if not deals:
@@ -275,11 +249,7 @@ class Hlidat(commands.Cog):
 
     @app_commands.command(name="hlidat", description="🔔 Hlídání akcí: napíšu ti, když bude v akci, co chceš (i do ceny)")
     async def hlidat(self, interaction: discord.Interaction) -> None:
-        try:
-            content, view = await manager(self.bot, interaction.user.id)
-        except DatabaseUnavailable:
-            await interaction.response.send_message(UNAVAILABLE, ephemeral=True)
-            return
+        content, view = await manager(self.bot, interaction.user.id)
         await interaction.response.send_message(content, view=view, ephemeral=True)
 
 

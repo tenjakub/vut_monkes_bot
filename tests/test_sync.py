@@ -4,7 +4,6 @@ import asyncio
 import importlib
 import sys
 
-import pytest
 
 GUILD, BOT_DM = 0, 1
 
@@ -46,7 +45,7 @@ def test_guild_commands_unchanged_and_global_only_in_dm(monkeypatch):
     assert set(sent) == {111, 222, "global"}
     names = {p["name"] for p in sent[111]}
     assert {"ppv", "mhd", "restaurace"} <= names
-    # na serveru bez omezení kontextu, tak jako dřív
+    # na serveru bez omezení kontextu
     assert all(p["contexts"] is None for p in sent[111] + sent[222])
     # globální sada jen pro DM s botem -> na serveru se neukáže podruhé; /nastaveni do DM nepatří
     assert {p["name"] for p in sent["global"]} == names - {"nastaveni"}

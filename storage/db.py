@@ -40,6 +40,11 @@ class DatabaseUnavailable(RuntimeError):
     """Databáze není otevřená (nepodařilo se ji otevřít, nebo bot ještě nenastartoval)."""
 
 
+def ready(db: "Database | None") -> bool:
+    """Je databáze k dispozici? (Bot ji nemusí mít otevřenou, testy ji nemusí mít vůbec.)"""
+    return db is not None and db.is_open
+
+
 class Database:
     def __init__(self, path: str | Path = DEFAULT_PATH) -> None:
         self.path = str(path)

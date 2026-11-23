@@ -19,12 +19,11 @@ from discord import app_commands
 from discord.ext import commands
 
 from lunch.service import TZ
-from storage import DatabaseUnavailable, settings
+from storage import ready, settings
 from utils.interactions import STALE, reported
 
 log = logging.getLogger(__name__)
 
-UNAVAILABLE = "Databáze teď není dostupná 😵 Nastavení zkus prosím později."
 ONLY_GUILD = "Nastavení je jen na serveru."
 EVENT_OPTIONS: dict[str, str] = {  # hodnota -> popisek
     "0": "Nezakládat",
@@ -84,13 +83,9 @@ class EventSelect(discord.ui.DynamicItem[discord.ui.Select], template=r"nastaven
             await interaction.response.send_message(STALE, ephemeral=True)
             return
         db = interaction.client.db
-        try:
-            await settings.put(db, interaction.guild_id, settings.EVENT_MIN_PEOPLE, value,
-                               interaction.user.id, datetime.now(TZ))
-            content, view = await message(db, interaction.guild_id, "✅ Uloženo.")
-        except DatabaseUnavailable:
-            await interaction.response.send_message(UNAVAILABLE, ephemeral=True)
-            return
+        await settings.put(db, interaction.guild_id, settings.EVENT_MIN_PEOPLE, value,
+                           interaction.user.id, datetime.now(TZ))
+        content, view = await message(db, interaction.guild_id, "✅ Uloženo.")
         await interaction.response.edit_message(content=content, view=view)
 
 
@@ -101,7 +96,7 @@ class Nastaveni(commands.Cog):
     async def cog_load(self) -> None:
         self.bot.add_dynamic_items(EventSelect)
         db = getattr(self.bot, "db", None)
-        if db is not None and db.is_open:
+        if ready(db):
             try:
                 await settings.load(db)
             except Exception:  # bez uložených nastavení platí výchozí
@@ -118,11 +113,7 @@ class Nastaveni(commands.Cog):
         if interaction.guild_id is None:
             await interaction.response.send_message(ONLY_GUILD, ephemeral=True)
             return
-        try:
-            content, view = await message(self.bot.db, interaction.guild_id)
-        except DatabaseUnavailable:
-            await interaction.response.send_message(UNAVAILABLE, ephemeral=True)
-            return
+        content, view = await message(self.bot.db, interaction.guild_id)
         await interaction.response.send_message(content, view=view, ephemeral=True)
 
 

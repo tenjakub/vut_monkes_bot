@@ -14,6 +14,8 @@ import sqlite3
 import sys
 from pathlib import Path
 
+from utils.text import plural
+
 from .db import DEFAULT_PATH
 
 
@@ -24,7 +26,7 @@ def _connect(path: Path) -> sqlite3.Connection:
 
 
 def _rows(n: int) -> str:
-    return f"{n} řádek" if n == 1 else (f"{n} řádky" if 2 <= n <= 4 else f"{n} řádků")
+    return plural(n, "řádek", "řádky", "řádků")
 
 
 def _print_table(cursor: sqlite3.Cursor, rows: list[tuple]) -> None:

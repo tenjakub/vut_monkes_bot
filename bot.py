@@ -14,7 +14,7 @@ from discord.ext import commands, tasks
 import config
 from lunch.fetcher import Fetcher
 from lunch.service import today
-from storage import Database
+from storage import Database, DatabaseUnavailable
 from utils import changelog
 from utils.interactions import send_error
 from utils.loading import LoadingTracker
@@ -77,7 +77,7 @@ class ObedBot(commands.Bot):
 
         S GUILD_IDS:
           1. Na vybraných serverech jako serverové commandy (objeví se hned). Kontext se
-             neposílá, takže na serveru se chovají stejně jako dřív.
+             neposílá (na serveru bez omezení).
           2. Globálně, ale jen pro DM s botem. Na serverech se tak globální sada neukazuje
              a commandy tam nejsou dvakrát.
           Pozor: discord.py posílá u serverové kopie i globálního commandu stejný objekt,
@@ -146,8 +146,12 @@ class ObedBot(commands.Bot):
     async def on_app_command_error(
         self, interaction: discord.Interaction, error: app_commands.AppCommandError
     ) -> None:
-        log.exception("Chyba v commandu", exc_info=error)
-        await send_error(interaction)
+        original = getattr(error, "original", error)  # CommandInvokeError obaluje skutečnou chybu
+        if isinstance(original, DatabaseUnavailable):
+            log.warning("Databáze neběží (/%s)", interaction.command.qualified_name if interaction.command else "?")
+        else:
+            log.exception("Chyba v commandu", exc_info=error)
+        await send_error(interaction, original)
 
     async def close(self) -> None:
         self.heartbeat.cancel()

@@ -20,6 +20,7 @@ from datetime import date, timedelta
 
 from shops import kupi
 from shops.service import unit_price
+from utils.text import price_value
 
 from .db import Database
 
@@ -33,21 +34,11 @@ BAIT_ABOVE = 1.02  # 🎣 až když je cena znatelně nad obvyklou akční cenou
 BATCH = 400  # produktů v jednom dotazu (limit počtu parametrů SQLite)
 
 _SLUG_RE = re.compile(r"/sleva/([^/?#]+)")
-_PRICE_RE = re.compile(r"(\d[\d\s ]*)(?:,(\d+))?")
 
 
 def product_key(deal: kupi.Deal) -> str:
     m = _SLUG_RE.search(deal.url)
     return m.group(1) if m else deal.product.lower()
-
-
-def price_value(price: str) -> float | None:
-    """'1 099,90 Kč' -> 1099.9"""
-    m = _PRICE_RE.search(price)
-    if not m:
-        return None
-    whole = re.sub(r"\D", "", m.group(1))
-    return float(f"{whole}.{m.group(2) or 0}") if whole else None
 
 
 @dataclass(frozen=True)

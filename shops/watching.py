@@ -6,11 +6,12 @@ import re
 from collections.abc import Iterable
 from datetime import date
 
+from utils.text import price_value
+
 from . import kupi
 from .service import STORES, _PACK_COUNT_RE, _simplify, beer_short_name
 
 _WORD_RE = re.compile(r"\w+")
-_PRICE_INPUT_RE = re.compile(r"^\s*(\d+(?:[.,]\d{1,2})?)\s*(?:kč|,-)?\s*$", re.IGNORECASE)
 STORE_OF_LABEL = {label: store for store in STORES.values() for label in store.shop_labels}
 
 
@@ -18,25 +19,11 @@ def words(query: str) -> list[str]:
     return _WORD_RE.findall(_simplify(query))
 
 
-def parse_price(text: str) -> float | None:
-    """'25' / '25,90' / '25 Kč' -> číslo; prázdné -> None; nesmysl -> ValueError."""
-    if not text.strip():
-        return None
-    m = _PRICE_INPUT_RE.match(text)
-    if not m:
-        raise ValueError(text)
-    value = float(m.group(1).replace(",", "."))
-    if value <= 0:
-        raise ValueError(text)
-    return value
-
-
 def piece_price(deal: kupi.Deal) -> float | None:
     """Cena za kus: u multipacků („6x 0.5 l“) cena dělená počtem, jinak cena akce."""
-    m = re.search(r"(\d[\d\s ]*)(?:,(\d+))?", deal.price)
-    if not m:
+    price = price_value(deal.price)
+    if price is None:
         return None
-    price = float(re.sub(r"\D", "", m.group(1)) + "." + (m.group(2) or "0"))
     pack = _PACK_COUNT_RE.search(deal.amount.lower())
     count = int(pack.group(1)) if pack else 1
     return price / count if count > 1 else price

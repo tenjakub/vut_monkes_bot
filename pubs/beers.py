@@ -14,6 +14,8 @@ from __future__ import annotations
 import statistics
 from dataclasses import dataclass, replace
 
+from utils import text as text_utils
+
 MIN_PRICE, MAX_PRICE = 10, 500  # Kč za 0,5 l, víc nebo míň je skoro jistě překlep
 MAX_TAPS = 15  # piv v jedné hospodě (výběr v Discordu unese 25)
 SHOW_ALL = 2  # do kolika piv se vypisují jednotlivě, víc = medián
@@ -35,10 +37,6 @@ class Tap:
 
 def _key(name: str) -> str:
     return name.casefold()
-
-
-def _beers(n: int) -> str:
-    return f"{n} piva" if 2 <= n <= 4 else f"{n} piv"
 
 
 @dataclass(frozen=True)
@@ -70,7 +68,7 @@ class PubBeers:
         if self.many_price is not None:
             return f"víc druhů · {self.price_text}"
         if len(self.taps) > SHOW_ALL:
-            return f"{_beers(len(self.taps))} · {self.price_text}"
+            return f"{text_utils.plural(len(self.taps), 'pivo', 'piva', 'piv')} · {self.price_text}"
         return ", ".join(t.text for t in self.taps)
 
     @property
@@ -128,11 +126,15 @@ def set_many(state: PubBeers, price: int | None) -> tuple[PubBeers, str]:
 
 def parse_price(text: str, required: bool = True) -> int | None:
     """'59' / '59 Kč' / '59,-' -> 59; prázdné -> None (když nepovinné); nesmysl -> BeerError."""
-    raw = text.strip().lower().removesuffix("kč").removesuffix(",-").strip()
-    if not raw:
+    nonsense = BeerError(f"Cenu „{text.strip()}“ nechápu 🤔 Napiš celé číslo v Kč za půllitr ({MIN_PRICE}–{MAX_PRICE}).")
+    try:
+        value = text_utils.parse_price(text)
+    except ValueError:
+        raise nonsense from None
+    if value is None:
         if required:
             raise BeerError("Chybí cena.")
         return None
-    if not raw.isdigit() or not MIN_PRICE <= int(raw) <= MAX_PRICE:
-        raise BeerError(f"Cenu „{text.strip()}“ nechápu 🤔 Napiš celé číslo v Kč za půllitr ({MIN_PRICE}–{MAX_PRICE}).")
-    return int(raw)
+    if value != int(value) or not MIN_PRICE <= value <= MAX_PRICE:
+        raise nonsense
+    return int(value)

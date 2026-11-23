@@ -110,6 +110,18 @@ def soup_field(soups: list[Dish]) -> list[Field]:
     return [Field(f"{emoji.SOUP} {title}", "\n".join(lines)[:FIELD_VALUE_LIMIT], inline=False)]
 
 
+def fit_lines(lines: list[str], limit: int, more: str = "…") -> str:
+    """Řádky pod sebou, nejvýš `limit` znaků. Co se nevejde, nahradí `more` (`{n}` = kolik řádků chybí)."""
+    out, used = [], 0
+    for i, line in enumerate(lines):
+        if used + len(line) + 1 + len(more) + 10 > limit:
+            out.append(more.format(n=len(lines) - i))
+            break
+        out.append(line)
+        used += len(line) + 1
+    return "\n".join(out)
+
+
 def per_embed_limit(count: int) -> int:
     count = max(1, min(count, MAX_EMBEDS))
     # ~120 znaků rezerva na titulek a patičku každého embedu

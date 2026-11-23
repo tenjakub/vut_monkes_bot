@@ -501,7 +501,7 @@ class Mhd(commands.Cog):
         + [app_commands.Choice(name=BOARDS[k].label, value=k) for k in AREAS["vse"][1]]
     )
     async def mhd(self, interaction: discord.Interaction, zastavka: str | None = None) -> None:
-        if zastavka is None:  # bez výběru zastávky podle /koleje (nerozhodnuto = PPV jako dřív)
+        if zastavka is None:  # bez výběru zastávky podle /koleje (nerozhodnuto = PPV)
             dorm = await prefs.dorm(getattr(self.bot, "db", None), interaction.user.id)
             zastavka = "purkyne" if dorm == "purkyne" else "vse"
         await self._send(interaction, zastavka)

@@ -4,7 +4,10 @@ import asyncio
 
 import discord
 
-from utils.interactions import MessageState, reported
+from discord import app_commands
+
+from storage import DatabaseUnavailable
+from utils.interactions import UNAVAILABLE, MessageState, reported
 
 
 class _Response:
@@ -47,6 +50,31 @@ def test_reported_tells_user(monkeypatch):
     (text, ephemeral), = fresh.response.sent
     assert text.startswith("Něco se pokazilo") and ephemeral
     assert deferred.followup.sent and not deferred.response.sent  # po defer() už jen followup
+
+
+class _DbButton:
+    @reported
+    async def callback(self, interaction):
+        raise DatabaseUnavailable("Databáze není otevřená")
+
+
+def test_missing_database_has_own_message():
+    clicked = _Interaction()
+    asyncio.run(_DbButton().callback(clicked))
+    assert clicked.response.sent == [(UNAVAILABLE, True)]
+
+
+def test_command_without_database_has_own_message(monkeypatch):
+    monkeypatch.setenv("DISCORD_TOKEN", "x")
+    from bot import ObedBot
+
+    used = _Interaction()
+    used.command = None
+    error = app_commands.CommandInvokeError(
+        type("C", (), {"name": "x", "qualified_name": "x"})(), DatabaseUnavailable("zavřená")
+    )
+    asyncio.run(ObedBot.on_app_command_error(None, used, error))
+    assert used.response.sent == [(UNAVAILABLE, True)]
 
 
 def test_message_state_is_bounded_and_remembers():

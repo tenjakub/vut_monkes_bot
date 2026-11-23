@@ -109,7 +109,8 @@ pubs/             hospody a hledání termínu pro /na-pivo, BEZ závislosti na 
 transit/          MHD (GTFS), BEZ závislosti na discord.py
 bikes/            sdílená kola nextbike (GBFS), BEZ závislosti na discord.py
 storage/          SQLite databáze (data/bot.db): spojení, migrace, zálohy, dotazy po tématech, BEZ discord.py
-utils/render.py   Field (kartička), mřížka, limity embedů, header s časem
+utils/render.py   Field (kartička), mřížka, limity embedů, header s časem, fit_lines (text do limitu znaků)
+utils/text.py     clean (text od lidí), price_value (cena ze zdroje), parse_price (cena od lidí), plural (1 kolo, 2 kola, 5 kol)
 utils/opening.py  je teď otevřeno? (intervaly od–do -> stav), utils/holidays.py státní svátky a zavřené obchody
 ```
 
@@ -121,7 +122,8 @@ Pravidla:
 - Odpovědi: slash command → `defer(thinking=True)` → `followup.send`. Tlačítko → `defer()` → `edit_original_response`.
 - Každý `callback` tlačítka/výběru a `on_submit` okna má `@reported` (`utils/interactions.py`): když spadne, uživatel
   dostane stejnou hlášku jako u commandu (discord.py by chybu jen zalogoval a tlačítko by „nic neudělalo“).
-  Hláška o zastaralém tlačítku je `interactions.STALE`.
+  Hláška o zastaralém tlačítku je `interactions.STALE`. Když neběží databáze (`DatabaseUnavailable`), pošle `@reported`
+  i obsluha chyb commandů (`ObedBot.on_app_command_error`) hlášku `interactions.UNAVAILABLE`, cogy ji samy nechytají.
 - Hlasovací zprávy (stav v embedu: /obed, /na-pivo) čtou a zapisují stav přes `MessageState`: zámek na zprávu
   a poslední embed, který bot zapsal. `interaction.message` je snímek z okamžiku kliknutí, takže bez toho by druhé
   ze dvou rychlých kliknutí přepsalo první.
@@ -184,7 +186,8 @@ Postup, když jsou nová oprávnění potřeba:
   `aiosqlite` (vlastní vlákno, nezasekne bota). Žádný další kontejner. Vývojový a produkční bot mají každý svou
   databázi. Bot ji otevře v `setup_hook` (`bot.db`) a zavře v `close()`, na `SIGTERM` (docker stop, Watchtower)
   se ukončí slušně. Když se otevřít nepovede, bot běží dál a funkce s databází dostanou `DatabaseUnavailable`
-  (uživateli hláška, nepadat).
+  (uživatel dostane hlášku, viz `@reported`). Co běží na pozadí nebo databázi jen volitelně používá, se zeptá
+  `storage.ready(db)` a bez databáze to tiše vynechá.
 - Režim WAL + `synchronous=NORMAL`, `foreign_keys=ON`. Jednotlivé příkazy se ukládají hned (`db.execute`), víc
   souvisejících najednou v `async with db.transaction() as tx:`. Dotazy vždy s parametry (`?`), nikdy f-stringem.
   Volný text od lidí (název piva, co hlídat) projde `utils.text.clean` (jen písmena, číslice a pár znaků), aby

@@ -1,6 +1,6 @@
 """/koleje – na kterých kolejích bydlím. Podle toho /mhd a /kola rovnou ukážou správné koleje.
 
-Nerozhodnuto (výchozí) = všechno jako dřív. Jiným lidem se nic nemění, tlačítka pod zprávami fungují stejně.
+Nerozhodnuto (výchozí) = PPV. Týká se jen toho, kdo si koleje vybral, tlačítka pod zprávami fungují stejně.
 """
 
 from __future__ import annotations
@@ -11,10 +11,9 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from storage import DatabaseUnavailable, prefs
-from utils.interactions import STALE, reported
+from storage import prefs, ready
+from utils.interactions import STALE, UNAVAILABLE, reported
 
-UNAVAILABLE = "Databáze teď není dostupná 😵 Koleje si nastav prosím později."
 UNDECIDED = "nic"
 CHOICES: dict[str, tuple[str, str]] = {  # klíč v custom_id -> (emoji, popisek)
     "ppv": ("🏘️", "PPV"),
@@ -30,7 +29,7 @@ def message(current: str | None, notice: str = "") -> tuple[str, discord.ui.View
         "### 🏠 Moje koleje",
         f"Teď: {icon} **{label}**",
         "-# `/mhd` a `/kola` ti rovnou ukážou tvoje koleje (přepnout jde dál tlačítky). "
-        "Když je nerozhodnuto, chovají se jako dřív. Ostatním se nic nemění.",
+        "Když je nerozhodnuto, ukazují PPV. Ostatním se nic nemění.",
     ]
     view = discord.ui.View(timeout=None)
     for key, (emoji, text) in CHOICES.items():
@@ -55,11 +54,7 @@ class DormButton(discord.ui.DynamicItem[discord.ui.Button], template=r"koleje:(?
             await interaction.response.send_message(STALE, ephemeral=True)
             return
         value = None if self.dorm == UNDECIDED else self.dorm
-        try:
-            await prefs.put(interaction.client.db, interaction.user.id, prefs.DORM, value)
-        except DatabaseUnavailable:
-            await interaction.response.send_message(UNAVAILABLE, ephemeral=True)
-            return
+        await prefs.put(interaction.client.db, interaction.user.id, prefs.DORM, value)
         content, view = message(value, "✅ Uloženo.")
         await interaction.response.edit_message(content=content, view=view)
 
@@ -77,7 +72,7 @@ class Koleje(commands.Cog):
     @app_commands.command(name="koleje", description="🏠 Na kterých kolejích bydlíš – /mhd a /kola pak ukážou rovnou ty tvoje")
     async def koleje(self, interaction: discord.Interaction) -> None:
         db = self.bot.db
-        if not db.is_open:
+        if not ready(db):
             await interaction.response.send_message(UNAVAILABLE, ephemeral=True)
             return
         content, view = message(await prefs.dorm(db, interaction.user.id))

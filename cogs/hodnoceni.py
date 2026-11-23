@@ -20,7 +20,7 @@ from discord.ext import commands
 
 from lunch import kam, service
 from lunch.models import Category, Menu
-from storage import DatabaseUnavailable, ratings
+from storage import DatabaseUnavailable, ratings, ready
 from storage import menus as stored_menus
 from utils.interactions import STALE, reported
 
@@ -28,7 +28,6 @@ log = logging.getLogger(__name__)
 
 RESTAURANTS = "rest"  # rozsah „restaurace“ v custom_id, jinak klíč skupiny menz (kam.GROUPS)
 MAX_OPTIONS = 25  # limit Discordu na výběr
-UNAVAILABLE = "Databáze teď není dostupná 😵 Hodnocení zkus prosím později."
 NOTHING = "Dnes tu zatím není co hodnotit 🤷"
 SCORE_KEYS = {"g": ratings.GOOD, "o": ratings.OK, "b": ratings.BAD}
 SCORE_STYLES = {
@@ -45,7 +44,7 @@ def _db(client) -> stored_menus.Database | None:
 async def rating_notes(client, menus: Iterable[Menu]) -> dict[str, dict[str, str]]:
     """Souhrny hodnocení do výpisu: {podnik: {název jídla: „👍 3 · 😐 1“}}. Bez databáze prázdné (nic se neukáže)."""
     db = _db(client)
-    if db is None or not db.is_open:
+    if not ready(db):
         return {}
     names = {
         (m.place.key, d.name[: stored_menus.NAME_LIMIT]): d.name
@@ -136,10 +135,7 @@ class RateButton(discord.ui.DynamicItem[discord.ui.Button], template=r"znamka:o:
     @reported
     async def callback(self, interaction: discord.Interaction) -> None:
         await interaction.response.defer(ephemeral=True, thinking=True)
-        try:
-            content, view = await dish_picker(interaction.client, interaction.user.id, self.scope)
-        except DatabaseUnavailable:
-            content, view = UNAVAILABLE, None
+        content, view = await dish_picker(interaction.client, interaction.user.id, self.scope)
         if view is None:
             await interaction.followup.send(content, ephemeral=True)
         else:
@@ -158,15 +154,11 @@ class DishSelect(discord.ui.DynamicItem[discord.ui.Select], template=r"znamka:s"
     async def callback(self, interaction: discord.Interaction) -> None:
         value = self.item.values[0] if self.item.values else ""
         db = _db(interaction.client)
-        try:
-            dish = await stored_menus.get(db, int(value)) if value.isdigit() and db else None
-            if dish is None:
-                await interaction.response.send_message(STALE, ephemeral=True)
-                return
-            current = (await ratings.scores_of(db, interaction.user.id, [dish.id])).get(dish.id)
-        except DatabaseUnavailable:
-            await interaction.response.send_message(UNAVAILABLE, ephemeral=True)
+        dish = await stored_menus.get(db, int(value)) if value.isdigit() and db else None
+        if dish is None:
+            await interaction.response.send_message(STALE, ephemeral=True)
             return
+        current = (await ratings.scores_of(db, interaction.user.id, [dish.id])).get(dish.id)
         content, view = vote_message(dish, current)
         await interaction.response.edit_message(content=content, view=view)
 
@@ -184,16 +176,12 @@ class VoteButton(discord.ui.DynamicItem[discord.ui.Button], template=r"znamka:h:
     @reported
     async def callback(self, interaction: discord.Interaction) -> None:
         db = _db(interaction.client)
-        try:
-            dish = await stored_menus.get(db, self.dish_id) if db else None
-            if dish is None:
-                await interaction.response.send_message(STALE, ephemeral=True)
-                return
-            score = SCORE_KEYS[self.score]
-            await ratings.rate(db, dish.id, interaction.user.id, score, datetime.now(service.TZ))
-        except DatabaseUnavailable:
-            await interaction.response.send_message(UNAVAILABLE, ephemeral=True)
+        dish = await stored_menus.get(db, self.dish_id) if db else None
+        if dish is None:
+            await interaction.response.send_message(STALE, ephemeral=True)
             return
+        score = SCORE_KEYS[self.score]
+        await ratings.rate(db, dish.id, interaction.user.id, score, datetime.now(service.TZ))
         icon, label = ratings.SCORES[score]
         view = discord.ui.View(timeout=None)
         view.add_item(UndoButton(dish.id))
@@ -217,15 +205,11 @@ class UndoButton(discord.ui.DynamicItem[discord.ui.Button], template=r"znamka:z:
     @reported
     async def callback(self, interaction: discord.Interaction) -> None:
         db = _db(interaction.client)
-        try:
-            dish = await stored_menus.get(db, self.dish_id) if db else None
-            if dish is None:
-                await interaction.response.send_message(STALE, ephemeral=True)
-                return
-            await ratings.unrate(db, dish.id, interaction.user.id)
-        except DatabaseUnavailable:
-            await interaction.response.send_message(UNAVAILABLE, ephemeral=True)
+        dish = await stored_menus.get(db, self.dish_id) if db else None
+        if dish is None:
+            await interaction.response.send_message(STALE, ephemeral=True)
             return
+        await ratings.unrate(db, dish.id, interaction.user.id)
         content, view = vote_message(dish)
         await interaction.response.edit_message(content=f"↩️ Hodnocení zrušeno.\n{content}", view=view)
 

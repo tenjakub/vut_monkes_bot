@@ -11,6 +11,7 @@ from cogs import hlidat
 from shops import kupi, watching
 from storage import watches
 from tests.fakes import Interaction, memory_db, with_values
+from utils.text import parse_price
 
 DAY = date(2026, 11, 20)
 
@@ -37,13 +38,13 @@ DEALS = [
 
 @pytest.mark.parametrize(("text", "expected"), [("25", 25.0), ("25,90", 25.9), (" 30 Kč ", 30.0), ("", None)])
 def test_parse_price(text, expected):
-    assert watching.parse_price(text) == expected
+    assert parse_price(text) == expected
 
 
 @pytest.mark.parametrize("text", ["levně", "0", "-5", "25 eur"])
 def test_parse_price_nonsense(text):
     with pytest.raises(ValueError):
-        watching.parse_price(text)
+        parse_price(text)
 
 
 def test_matches_words_price_and_shops():

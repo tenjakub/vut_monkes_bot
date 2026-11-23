@@ -12,10 +12,11 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import date, datetime
 
-from lunch.models import Category, Menu, price_value
+from lunch.models import Category, Menu
 from lunch.service import TZ
+from utils.text import price_value
 
-from .db import Database
+from .db import Database, ready
 
 log = logging.getLogger(__name__)
 
@@ -76,7 +77,7 @@ async def record(db: Database, menus: Iterable[Menu], now: datetime) -> int:
 
 async def remember(db: Database | None, menus: Iterable[Menu], now: datetime | None = None) -> None:
     """Pro obnovu na pozadí: uloží právě stažená jídla, když databáze běží. Chyba databáze nic neshodí."""
-    if db is None or not db.is_open:
+    if not ready(db):
         return
     now = now or datetime.now(TZ)
     try:

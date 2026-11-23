@@ -14,8 +14,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from lunch.service import today
-from storage import Database, DatabaseUnavailable
-from storage import usage
+from storage import Database, ready, usage
 from utils import render
 from utils.interactions import STALE, reported
 
@@ -30,7 +29,6 @@ PERIODS: dict[str, tuple[str, int | None]] = {
 }
 DEFAULT_PERIOD = "30"
 BAR = 8  # délka „sloupečku“ u nejpoužívanějšího commandu
-UNAVAILABLE = "Databáze teď není dostupná 😵 Statistiky se ukážou, až zase poběží."
 
 
 def _bar(count: int, best: int) -> str:
@@ -79,11 +77,7 @@ class StatistikyButton(discord.ui.DynamicItem[discord.ui.Button], template=r"sta
         if self.period not in PERIODS:
             await interaction.response.send_message(STALE, ephemeral=True)
             return
-        try:
-            content, embeds, view = await build_message(interaction.client.db, self.period)
-        except DatabaseUnavailable:
-            await interaction.response.send_message(UNAVAILABLE, ephemeral=True)
-            return
+        content, embeds, view = await build_message(interaction.client.db, self.period)
         await interaction.response.edit_message(content=content, embeds=embeds, view=view)
 
 
@@ -110,7 +104,7 @@ class Statistiky(commands.Cog):
     async def on_app_command_completion(self, interaction: discord.Interaction, command) -> None:
         """Každé úspěšné použití slash commandu +1. Bez databáze se prostě nepočítá."""
         db: Database | None = getattr(self.bot, "db", None)
-        if db is None or not db.is_open:
+        if not ready(db):
             return
         try:
             await usage.record(db, command.qualified_name, today())
@@ -119,11 +113,7 @@ class Statistiky(commands.Cog):
 
     @app_commands.command(name="statistiky", description="📊 Které commandy bota se používají nejvíc")
     async def statistiky(self, interaction: discord.Interaction) -> None:
-        try:
-            content, embeds, view = await build_message(self.bot.db, DEFAULT_PERIOD)
-        except DatabaseUnavailable:
-            await interaction.response.send_message(UNAVAILABLE, ephemeral=True)
-            return
+        content, embeds, view = await build_message(self.bot.db, DEFAULT_PERIOD)
         await interaction.response.send_message(content=content, embeds=embeds, view=view)
 
 

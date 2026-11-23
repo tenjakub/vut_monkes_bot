@@ -2,6 +2,8 @@
 
 - `@reported` na `callback` tlačítka: když callback spadne, uživatel dostane hlášku (jen pro sebe) jako
   u slash commandů. Bez toho discord.py chybu jen zaloguje a tlačítko „nic neudělá“.
+- Když neběží databáze (`DatabaseUnavailable`), dostane místo obecné chyby hlášku `UNAVAILABLE`. Commandy ani
+  tlačítka ji proto samy nechytají.
 - `MessageState`: zámek na zprávu (dvě kliknutí naráz) a poslední embed, který do ní bot zapsal.
   `interaction.message` je totiž snímek zprávy z okamžiku kliknutí, takže druhé z dvou rychlých kliknutí
   by bez toho přepsalo to první. Obojí je omezené na posledních pár set zpráv, ať paměť neroste.
@@ -17,9 +19,12 @@ from collections.abc import Awaitable, Callable
 
 import discord
 
+from storage import DatabaseUnavailable
+
 log = logging.getLogger("bot.interactions")
 
 STALE = "Tohle tlačítko už je zastaralé."
+UNAVAILABLE = "Databáze teď není dostupná 😵 Zkus to prosím za chvíli."
 
 
 def error_text() -> str:
@@ -31,13 +36,14 @@ def error_text() -> str:
     )
 
 
-async def send_error(interaction: discord.Interaction) -> None:
+async def send_error(interaction: discord.Interaction, error: BaseException | None = None) -> None:
     """Chybová hláška jen pro toho, kdo klikl / zadal command."""
+    text = UNAVAILABLE if isinstance(error, DatabaseUnavailable) else error_text()
     try:
         if interaction.response.is_done():
-            await interaction.followup.send(error_text(), ephemeral=True)
+            await interaction.followup.send(text, ephemeral=True)
         else:
-            await interaction.response.send_message(error_text(), ephemeral=True)
+            await interaction.response.send_message(text, ephemeral=True)
     except discord.HTTPException:
         log.exception("Ani chybovou hlášku se nepodařilo poslat")
 
@@ -49,9 +55,12 @@ def reported(callback: Callable[..., Awaitable[None]]):
     async def wrapper(self, interaction: discord.Interaction, *args, **kwargs) -> None:
         try:
             await callback(self, interaction, *args, **kwargs)
-        except Exception:
+        except DatabaseUnavailable as exc:
+            log.warning("Databáze neběží (%s)", type(self).__name__)
+            await send_error(interaction, exc)
+        except Exception as exc:
             log.exception("Chyba v %s", type(self).__name__)
-            await send_error(interaction)
+            await send_error(interaction, exc)
 
     return wrapper
 

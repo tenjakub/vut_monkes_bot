@@ -94,8 +94,8 @@ Na <https://discord.com/developers/applications> → **New Application**:
 
 **View Channels**, **Send Messages**, **Embed Links** a **Create Events**, číselně `17592186063872`. Nic dalšího nedávej.
 
-Create Events (Vytvářet události) potřebuje `/na-pivo`: když jdou aspoň 3 lidi, bot založí na serveru událost
-a při změně času nebo místa ji upraví. Bez tohoto oprávnění funguje všechno ostatní, jen se událost nezaloží.
+Create Events (Vytvářet události) potřebuje `/na-pivo`: když jdou aspoň 3 lidi (admin to změní nebo vypne v `/nastaveni`),
+bot založí na serveru událost a při změně času nebo místa ji upraví. Bez tohoto oprávnění funguje všechno ostatní, jen se událost nezaloží.
 Už pozvanému botovi ho stačí přidat v **Nastavení serveru → Role → role bota**, nebo bota pozvat znovu odkazem níž.
 
 ### 3. Pozvání na server
@@ -121,9 +121,9 @@ hned. Kdo smí které commandy používat, se nastavuje v **Nastavení serveru �
   🐒 Bot pro VUT Monkes – obědy, MHD, slevy a počasí.
 
   🍽️ /ppv · /purkyne · /menzy · /restaurace · /co-jist · /obed
-  🍺 /na-pivo · /na-pivo-termin
-  🚏 /mhd · /mhd-purkyne · /domu · 🚲 /kola
-  🛒 /letaky · /maso · /pivo · /napoje
+  🍺 /na-pivo · /na-pivo-termin · /cena-piva
+  🚏 /mhd · /mhd-purkyne · /domu · 🚲 /kola · 🏠 /koleje
+  🛒 /letaky · /maso · /pivo · /napoje · 🔔 /hlidat
   ☀️ /pocasi · 🕐 /otevreno · 📊 /statistiky · 📰 /novinky
 
   🐛 Něco nefunguje nebo máš nápad? https://github.com/tenjakub/vut_monkes_bot/issues
@@ -154,13 +154,13 @@ volitelně `BOT_TAG` a `WATCHTOWER_POLL_INTERVAL` (viz [.env.example](.env.examp
 
 Bot si data ukládá do jednoho souboru **`data/bot.db`** (SQLite). Žádný další kontejner ani databázový server:
 v Dockeru je `data/` volume `bot_data`, takže databáze přežije aktualizaci i restart. **V Portaineru se nic
-nastavuje**, stack zůstává stejný. Bot si databázi při startu sám vytvoří a doplní do ní nové tabulky (migrace).
+nenastavuje**, stack zůstává stejný. Bot si databázi při startu sám vytvoří a doplní do ní nové tabulky (migrace).
 
 Co se ukládá:
 
-- **statistiky commandů** (`command_usage`): jen počty použití po dnech, ne kdo,
-- **historie jídel** (`dish`): polévky a hlavní jídla z menz a restaurací po dnech s cenou (podklad pro statistiky,
-  ~100 řádků denně),
+- **statistiky commandů** (`command_usage`): jen počty použití po dnech, ne kdo.
+- **historie jídel** (`dish`): polévky a hlavní jídla z menz a restaurací po dnech s cenou (podklad pro hodnocení
+  a statistiky, ~100 řádků denně).
 - **hodnocení jídel** (`dish_rating`): 👍/😐/👎 s ID člověka (každý hodnotí jednou a může hodnocení zrušit).
 - **ceny akcí** (`deal_price`): každá akce z Kupi.cz jednou (cena, sleva, platnost) pro 🔥/🎣 u slev a statistiky.
 - **hlídání akcí** (`watch`, `watch_hit`): co kdo hlídá (s ID člověka, komu psát) a o kterých akcích už ví. Zruší se v `/hlidat`.
@@ -213,10 +213,12 @@ bot.py           # vstupní bod: cogy, registrace commandů, status, healthcheck
 cogs/            # Discord vrstva: commandy, embedy, tlačítka
 lunch/           # menzy a restaurace (stahování, parsování, emoji k jídlům)
 transit/         # MHD: jízdní řád GTFS, výluky, zastávky
-shops/           # slevy a letáky z Kupi.cz
+bikes/           # sdílená kola nextbike
+shops/           # slevy a letáky z Kupi.cz, hlídání akcí
 weather/         # počasí z Open-Meteo
-pubs/            # hospody pro /na-pivo a hledání termínu
-utils/           # vykreslování embedů, changelog, načítání na pozadí
+pubs/            # hospody a piva pro /na-pivo, hledání termínu
+storage/         # databáze SQLite: migrace, zálohy, dotazy
+utils/           # vykreslování embedů, changelog, načítání na pozadí, otevírací doby
 tests/           # testy
 ```
 
@@ -224,7 +226,7 @@ tests/           # testy
 v `lunch/service.py`. **Nová menza nebo skupina:** `MENZY` / `GROUPS` v `lunch/kam.py`, tlačítko v `GROUP_BUTTONS`
 v `cogs/menza.py`. **Obchody a pobočky:** `STORES` v `shops/service.py`. **Zastávky MHD:** `BOARDS` a `AREAS`
 v `transit/service.py`. **Nová hospoda pro /na-pivo:** řádek v `PUBS` v `pubs/venues.py` (název, oblast, adresa),
-odkaz na mapu se složí sám. Volitelně i cena točeného (`beer`), zobrazí se po zapnutí `SHOW_BEER_PRICES`.
+odkaz na mapu se složí sám. Piva a ceny pak zadají lidé v `/cena-piva`.
 
 ## Licence
 

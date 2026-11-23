@@ -34,9 +34,10 @@ from shops.service import (
     unit_price,
     sugar_free,
 )
-from storage import prices
+from storage import prices, ready
 from utils import loading, render
 from utils.interactions import STALE, reported
+from utils.text import price_value
 
 log = logging.getLogger(__name__)
 
@@ -96,8 +97,6 @@ DEAL_VIEWS: dict[str, DealView] = {
     ]
 }
 VIEWS = (VIEW_LEAFLETS, *DEAL_VIEWS)
-# zpětná kompatibilita (testy, starší kód)
-MEAT_FILTERS = {ALL: ("🥩", "Všechno"), **DEAL_VIEWS[VIEW_MEAT].filters}
 
 _DRINK_PREFIX_RE = re.compile(r"^(energetický nápoj|limonád[ay])\s+", re.IGNORECASE)
 
@@ -129,17 +128,6 @@ def _discount_badge(percent: int | None) -> str:
     """Sleva na začátku řádku se stejnou šířkou: `−64 %`, `−5 %` doplněné mezerou, bez slevy prázdné místo."""
     text = f"−{percent} %" if percent else "–"
     return f"`{text.rjust(5, _FIGURE_SPACE)}`"
-
-
-def _fit(lines: list[str], limit: int, more_text: str) -> str:
-    out, used = [], 0
-    for i, line in enumerate(lines):
-        if used + len(line) + 1 + len(more_text) + 10 > limit:
-            out.append(more_text.format(n=len(lines) - i))
-            break
-        out.append(line)
-        used += len(line) + 1
-    return "\n".join(out)
 
 
 # --- letáky ---------------------------------------------------------------------------------
@@ -208,7 +196,7 @@ def _deal_line(d: kupi.Deal, view: DealView, day: date, mark: str | None = None)
         brand, rest = beer_short_name(d.product)
         name = f"**{brand}** {rest}".strip() if brand else rest
         size = beer_size(d)
-        total = _price_value(d.price)
+        total = price_value(d.price)
         if pack == BEER_PACK and size and size[0] > 1 and total:
             # multipack: hlavní je cena za kus, celková až v závorce
             price, extra = f"**{_czk(total / size[0])}/ks**", f" ({d.price})"
@@ -240,7 +228,7 @@ def describe_deal(d: kupi.Deal, day: date, mark: str | None = None) -> str:
     view = view_of(d)
     line = _deal_line(d, view, day, mark)
     size = beer_size(d)
-    total = _price_value(d.price)
+    total = price_value(d.price)
     if view.key != VIEW_BEER and size and size[0] > 1 and total:
         line = line.replace(f"**{d.price}**", f"**{d.price}** ({_czk(total / size[0])}/ks)", 1)
     return f"{line} · {d.shop}"
@@ -317,14 +305,13 @@ def _deals_embed(
     else:
         lines = [_deal_line(d, view, day, marks.get(d.id)) for d in mine[:MAX_DEALS]]
     shown = sum(1 for l in lines if not l.startswith("**"))
-    text = _fit(lines, limit, "_…a další ({n}) na Kupi.cz_")
+    text = render.fit_lines(lines, limit, "_…a další ({n}) na Kupi.cz_")
     if len(mine) > shown and "a další" not in text:
         text += f"\n_…a další ({len(mine) - shown}) na Kupi.cz_"
     embed.description = text
     return embed
 
 
-_price_value = prices.price_value  # '1 099,90 Kč' -> 1099.9
 
 
 def _czk(value: float) -> str:
@@ -516,7 +503,7 @@ class Slevy(commands.Cog):
     async def remember_prices(self) -> None:
         """Uloží akce do historie cen a podle ní přepočítá 🔥/🎣. Bez databáze se značky prostě neukazují."""
         db = getattr(self.bot, "db", None)
-        if db is None or not db.is_open:
+        if not ready(db):
             return
         deals = self.shops.all_deals()
         try:
