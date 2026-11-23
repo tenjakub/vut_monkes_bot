@@ -99,6 +99,15 @@ MIGRATIONS: list[str] = [
     );
     CREATE INDEX beer_price_pub ON beer_price (pub, id);
     """,
+    # 7 – nastavení lidí (storage/prefs.py), zatím jen výchozí koleje z /koleje. Bez řádku = výchozí chování.
+    """
+    CREATE TABLE user_setting (
+        user_id INTEGER NOT NULL,
+        key     TEXT    NOT NULL,             -- „koleje“
+        value   TEXT    NOT NULL,             -- „ppv“ / „purkyne“
+        PRIMARY KEY (user_id, key)
+    ) WITHOUT ROWID;
+    """,
 ]
 
 LATEST = len(MIGRATIONS)

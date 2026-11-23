@@ -28,6 +28,7 @@ from transit.service import (
     Transit,
     area_of,
 )
+from storage import prefs
 from utils import loading, render
 from utils.interactions import STALE, reported
 
@@ -499,7 +500,10 @@ class Mhd(commands.Cog):
         zastavka=[app_commands.Choice(name="Obě zastávky", value="vse")]
         + [app_commands.Choice(name=BOARDS[k].label, value=k) for k in AREAS["vse"][1]]
     )
-    async def mhd(self, interaction: discord.Interaction, zastavka: str = "vse") -> None:
+    async def mhd(self, interaction: discord.Interaction, zastavka: str | None = None) -> None:
+        if zastavka is None:  # bez výběru zastávky podle /koleje (nerozhodnuto = PPV jako dřív)
+            dorm = await prefs.dorm(getattr(self.bot, "db", None), interaction.user.id)
+            zastavka = "purkyne" if dorm == "purkyne" else "vse"
         await self._send(interaction, zastavka)
 
     @app_commands.command(name="domu", description="🌙 Jak se dostat z centra na koleje – nejbližší, poslední denní a noční spoje")

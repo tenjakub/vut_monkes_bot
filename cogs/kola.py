@@ -13,6 +13,7 @@ from discord.ext import commands, tasks
 from bikes import nextbike
 from bikes.service import AREAS, REFRESH_MINUTES, Bikes, Snapshot
 from lunch.service import TZ
+from storage import prefs
 from utils import loading, render
 from utils.interactions import STALE, reported
 
@@ -147,8 +148,9 @@ class Kola(commands.Cog):
     @app_commands.command(name="kola", description="🚲 Volná kola nextbike u kolejí PPV (tlačítky i u Purkyní a FITu)")
     async def kola(self, interaction: discord.Interaction) -> None:
         await interaction.response.defer(thinking=True)
+        dorm = await prefs.dorm(getattr(self.bot, "db", None), interaction.user.id)  # /koleje, jinak PPV
         try:
-            content, embeds, view = await build_message(self.bikes, "ppv")
+            content, embeds, view = await build_message(self.bikes, dorm or "ppv")
         except Exception:
             log.exception("Načtení kol nextbike selhalo")
             await interaction.followup.send("Kola se teď nepodařilo načíst 😵 Zkus to za chvíli.")

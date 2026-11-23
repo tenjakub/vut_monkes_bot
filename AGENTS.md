@@ -8,7 +8,7 @@ Tenhle soubor je pro AI, která na projektu pracuje. Lidský návod je v [README
 - Commandy: `/ppv`, `/purkyne`, `/menzy` (menzy VUT, s ⭐ hodnocením jídel), `/restaurace` (polední menu), `/mhd`, `/mhd-purkyne` (odjezdy MHD Brno),
   `/letaky`, `/maso`, `/napoje`, `/pivo` (letáky a slevy supermarketů), `/domu` (spoje z centra na koleje), `/kola` (nextbike),
   `/obed` (kdo jde na oběd), `/na-pivo`, `/na-pivo-termin` (domluva na pivo), `/cena-piva` (ceny točeného), `/co-jist` (náhodné jídlo), `/pocasi`,
-  `/otevreno` (co má teď otevřeno), `/statistiky` (nejpoužívanější commandy), `/hlidat` (hlídání akcí), `/novinky` (changelog).
+  `/otevreno` (co má teď otevřeno), `/statistiky` (nejpoužívanější commandy), `/hlidat` (hlídání akcí), `/koleje` (moje koleje), `/novinky` (changelog).
 - Repo je veřejné, kód je pod licencí MIT ([LICENSE](LICENSE)). Data ze zdrojů patří jim (viz README → Licence).
 - **Celý kód píše AI.** Majitel repa zadává požadavky, testuje na Discordu a rozhoduje. Kód nepíše, ale čte ho.
 - **Jazyk:** komunikace s uživatelem, texty v botovi, komentáře, docstringy i commit zprávy jsou **česky**.
@@ -143,7 +143,7 @@ Pravidla:
 
 ## Oprávnění a intenty – kontrola při každé změně
 
-Aktuální stav (ověřeno pro verzi s `/ppv`, `/purkyne`, `/menzy`, `/restaurace`, `/mhd`, `/mhd-purkyne`, `/kola`, `/letaky`, `/maso`, `/napoje`, `/pivo`, `/domu`, `/obed`, `/na-pivo`, `/na-pivo-termin`, `/co-jist`, `/pocasi`, `/otevreno`, `/statistiky`, `/hlidat`, `/cena-piva`, `/novinky`):
+Aktuální stav (ověřeno pro verzi s `/ppv`, `/purkyne`, `/menzy`, `/restaurace`, `/mhd`, `/mhd-purkyne`, `/kola`, `/letaky`, `/maso`, `/napoje`, `/pivo`, `/domu`, `/obed`, `/na-pivo`, `/na-pivo-termin`, `/co-jist`, `/pocasi`, `/otevreno`, `/statistiky`, `/hlidat`, `/cena-piva`, `/koleje`, `/novinky`):
 
 - **Intenty:** `discord.Intents.default()`, žádné privilegované (Message Content, Server Members, Presence vypnuté).
 - **Oprávnění bota:** View Channels, Send Messages, Embed Links, Create Events → číselně `17592186063872`
@@ -217,6 +217,10 @@ Postup, když jsou nová oprávnění potřeba:
   balení|cena|do), ne ID z Kupi.cz (Albert má stejnou akci pod dvěma ID). Co platí při přidání hlídání, se ukáže
   hned a zprávou se neposílá. Max `MAX_PER_USER` (10) hlídání na člověka. Tlačítka `hlidat:pridat` (okno),
   `hlidat:zrusit` (výběr), `hlidat:menu` (pod soukromou zprávou).
+- **/koleje** (`cogs/koleje.py`, `storage/prefs.py`, tabulka `user_setting` = klíč/hodnota na člověka): výchozí
+  koleje `ppv` / `purkyne`, nerozhodnuto = řádek se smaže. `prefs.dorm()` vrací None i bez databáze, takže se pak
+  všechno chová jako dřív. Používá jen `/mhd` (bez vybrané zastávky) a `/kola`; tlačítka pod zprávami se nemění.
+  Tlačítka `koleje:<ppv|purkyne|nic>`.
 
 ## Zdroje dat a jejich záludnosti
 

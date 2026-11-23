@@ -11,6 +11,10 @@ Formát (bot ho čte, viz utils/changelog.py):
 Nejnovější verze je vždy nahoře.
 -->
 
+## 1.20 · 2026-11-23 · Moje koleje 🏠
+
+- 🏠 Nový command `/koleje`: nastav si, jestli bydlíš na PPV, nebo na Purkyních. `/mhd` a `/kola` ti pak rovnou ukážou tvoje koleje (přepínat jde dál tlačítky). Kdo nic nenastaví, má všechno jako dřív.
+
 ## 1.19 · 2026-11-23 · Ceny piva v hospodách 🍺
 
 - 🍺 Nový command `/cena-piva`: kdokoli může zadat nebo opravit, kolik stojí točené pivo v hospodách z `/na-pivo` (cena za půllitr, jaké pivo, nebo že točí víc druhů). Jde to i z 🗺️ **Kde co je** u pozvánky.
