@@ -11,6 +11,7 @@ from discord.ext import commands, tasks
 
 from lunch import service
 from lunch.models import NO_MENU, Menu
+from cogs import hodnoceni
 from cogs.obed import ObedNewButton
 from storage import menus as stored_menus
 from utils import loading, render
@@ -20,11 +21,12 @@ from utils.interactions import reported
 log = logging.getLogger(__name__)
 
 
-def restaurant_fields(menu: Menu) -> list[render.Field]:
+def restaurant_fields(menu: Menu, notes: dict[str, str] | None = None) -> list[render.Field]:
     # stejná mřížka kartiček jako u menz, polévka přes celou šířku nahoře,
     # jídla s výběrem (pizza dne v La Stradě) a skupiny (pizzy a těstoviny v Sesamu) přes celou šířku
     # pod mřížkou, i s popisem nebo přísadami
-    simple = [render.dish_field(d) for d in menu.mains if not d.options and not d.group]
+    notes = notes or {}
+    simple = [render.dish_field(d, note=notes.get(d.name)) for d in menu.mains if not d.options and not d.group]
     with_options = [render.options_field(d) for d in menu.mains if d.options]
     groups: dict[str, list] = {}
     for d in menu.mains:
@@ -39,7 +41,8 @@ async def build_message(
 ) -> tuple[str, list[discord.Embed], discord.ui.View]:
     menus = await service.restaurant_menus(bot.fetcher, force=force)
     limit = render.per_embed_limit(len(menus))
-    embeds = [render.menu_embed(m, restaurant_fields(m), limit, NO_MENU) for m in menus]
+    notes = await hodnoceni.rating_notes(bot, menus)
+    embeds = [render.menu_embed(m, restaurant_fields(m, notes.get(m.place.key)), limit, NO_MENU) for m in menus]
     content = render.header("🍴 Polední menu restaurací", menus)
     return content, embeds, build_view()
 
@@ -76,6 +79,7 @@ def build_view() -> discord.ui.View:
         view.add_item(discord.ui.Button(label=r.place.name, emoji=r.place.emoji, url=r.place.url, row=i // 5))
     actions = (len(service.RESTAURANTS) + 4) // 5  # první řada pod odkazy
     view.add_item(RefreshButton(row=actions))
+    view.add_item(hodnoceni.RateButton(hodnoceni.RESTAURANTS, row=actions))  # ⭐ ohodnotit dnešní jídlo
     view.add_item(ObedNewButton(row=actions))  # rovnou svolat, kdo jde na oběd
     return view
 

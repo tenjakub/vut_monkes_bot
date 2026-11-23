@@ -39,6 +39,7 @@ v embedech s tlačítky na přepínání.
 | `/novinky` | Co je nového (z [CHANGELOG.md](CHANGELOG.md)) |
 
 Menzové commandy mají parametr `vse: True`: místo Economy ukážou polévky a všechna hlavní jídla.
+Pod menzami a restauracemi je ⭐ **Ohodnotit** (👍 dobré / 😐 neurazí / 👎 špatné), souhrn je pak vidět pod jídlem.
 Tlačítka pod zprávou mají stav uložený přímo v ID, takže fungují i po restartu bota.
 Commandy fungují i v soukromém chatu s botem.
 
@@ -148,6 +149,13 @@ volitelně `BOT_TAG` a `WATCHTOWER_POLL_INTERVAL` (viz [.env.example](.env.examp
 Bot si data ukládá do jednoho souboru **`data/bot.db`** (SQLite). Žádný další kontejner ani databázový server:
 v Dockeru je `data/` volume `bot_data`, takže databáze přežije aktualizaci i restart. **V Portaineru se nic
 nastavuje**, stack zůstává stejný. Bot si databázi při startu sám vytvoří a doplní do ní nové tabulky (migrace).
+
+Co se ukládá:
+
+- **statistiky commandů** (`command_usage`): jen počty použití po dnech, ne kdo,
+- **historie jídel** (`dish`): polévky a hlavní jídla z menz a restaurací po dnech s cenou (podklad pro statistiky,
+  ~100 řádků denně),
+- **hodnocení jídel** (`dish_rating`): 👍/😐/👎 s ID člověka (každý hodnotí jednou a může hodnocení zrušit).
 
 - **Zálohy:** bot jednou denně uloží kopii do `data/backups/bot-RRRR-MM-DD.db` a nechává posledních 7.
   Jsou ve stejném volume, takže chrání před chybou v botovi, ne před odchodem disku. Kopie mimo server:

@@ -60,10 +60,13 @@ def _split_caps_title(name: str) -> tuple[str | None, str]:
     return " ".join(words[:n]).title(), " ".join(words[n:])
 
 
-def dish_field(d: Dish, inline: bool = True) -> Field:
+def dish_field(d: Dish, inline: bool = True, note: str | None = None) -> Field:
+    """`note` = nevýrazný řádek pod názvem (souhrn hodnocení „👍 3 · 😐 1“)."""
     head = " · ".join(p for p in (d.label, d.price) if p)
     title, rest = _split_caps_title(d.name)
     value = f"**{title}**\n{rest}" if title else d.name
+    if note:
+        value = f"{value[:FIELD_VALUE_LIMIT - len(note) - 4]}\n-# {note}"
     return Field(f"{emoji.for_dish(d)} {head}".strip(), value[:FIELD_VALUE_LIMIT], inline)
 
 

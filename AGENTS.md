@@ -5,7 +5,7 @@ Tenhle soubor je pro AI, která na projektu pracuje. Lidský návod je v [README
 ## O projektu
 
 - **VUT Monkes bot** – Discord bot pro kamarádský server studentů VUT (FIT). Python 3.14, discord.py 2.x.
-- Commandy: `/ppv`, `/purkyne`, `/menzy` (menzy VUT), `/restaurace` (polední menu), `/mhd`, `/mhd-purkyne` (odjezdy MHD Brno),
+- Commandy: `/ppv`, `/purkyne`, `/menzy` (menzy VUT, s ⭐ hodnocením jídel), `/restaurace` (polední menu), `/mhd`, `/mhd-purkyne` (odjezdy MHD Brno),
   `/letaky`, `/maso`, `/napoje`, `/pivo` (letáky a slevy supermarketů), `/domu` (spoje z centra na koleje), `/kola` (nextbike),
   `/obed` (kdo jde na oběd), `/na-pivo`, `/na-pivo-termin` (domluva na pivo), `/co-jist` (náhodné jídlo), `/pocasi`,
   `/otevreno` (co má teď otevřeno), `/statistiky` (nejpoužívanější commandy), `/novinky` (changelog).
@@ -196,6 +196,11 @@ Postup, když jsou nová oprávnění potřeba:
   uloží polévky a hlavní jídla (den, podnik = `Place.key`, název, cena v Kč, Economy). `first_seen`/`last_seen` je
   čas stažení stránky, ne uložení (menzy vyprodané mažou, takže je vidět, kdy co došlo). ~100 řádků denně.
   Klíče podniků (`Place.key`) se proto nepřejmenovávají.
+- **Hodnocení jídel** (`storage/ratings.py`, `cogs/hodnoceni.py`, tabulka `dish_rating`): 1 = 👍, 0 = 😐, -1 = 👎,
+  jedno na člověka a jídlo (`dish.id`). Tlačítko ⭐ `znamka:o:<skupina menz|rest>` → ephemeral výběr dnešních jídel
+  `znamka:s` (hodnota = `dish.id`, max 25, hlavní jídla první) → `znamka:h:<id>:<g|o|b>` → uloženo + `znamka:z:<id>`
+  (zrušit). Souhrn (`rating_notes`) je pod kartičkou jídla jako `-# 👍 3 · 😐 1`, sčítá se podle (podnik, název)
+  přes všechny dny.
 
 ## Zdroje dat a jejich záludnosti
 

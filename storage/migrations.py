@@ -37,6 +37,17 @@ MIGRATIONS: list[str] = [
     );
     CREATE INDEX dish_place_name ON dish (place, name);
     """,
+    # 3 – hodnocení jídel (storage/ratings.py): každý jedno hodnocení na jídlo, dá se zrušit
+    """
+    CREATE TABLE dish_rating (
+        dish_id  INTEGER NOT NULL REFERENCES dish (id) ON DELETE CASCADE,
+        user_id  INTEGER NOT NULL,            -- Discord ID (jedno hodnocení na člověka, zrušit ho může jen on)
+        score    INTEGER NOT NULL CHECK (score IN (-1, 0, 1)),  -- 1 dobré, 0 neurazí, -1 špatné
+        rated_at TEXT    NOT NULL,            -- RRRR-MM-DD HH:MM
+        PRIMARY KEY (dish_id, user_id)
+    ) WITHOUT ROWID;
+    CREATE INDEX dish_rating_user ON dish_rating (user_id);
+    """,
 ]
 
 LATEST = len(MIGRATIONS)

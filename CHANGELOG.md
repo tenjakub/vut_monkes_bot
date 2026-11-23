@@ -11,6 +11,11 @@ Formát (bot ho čte, viz utils/changelog.py):
 Nejnovější verze je vždy nahoře.
 -->
 
+## 1.16 · 2026-11-23 · Hodnocení jídel ⭐
+
+- ⭐ Pod `/ppv`, `/purkyne`, `/menzy` a `/restaurace` je tlačítko **Ohodnotit**: vybereš, co sis dal(a), a dáš 👍 dobré, 😐 neurazí nebo 👎 špatné. Vidíš to jen ty, a kdyby ses překlikl(a), jde to hned zrušit.
+- Souhrn hodnocení je nevýrazně pod jídlem ve výpisu (třeba „👍 3 · 😐 1“) a platí i příště, až se stejné jídlo zase vaří.
+
 ## 1.15 · 2026-11-22 · Statistiky 📊
 
 - 📊 Nový command `/statistiky` ukáže, které commandy bota se používají nejvíc, za posledních 7 nebo 30 dní i od začátku. Počítá se jen kolikrát se který command použil, ne kdo ho použil.

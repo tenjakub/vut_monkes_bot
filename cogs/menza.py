@@ -11,6 +11,7 @@ from discord.ext import commands, tasks
 
 from lunch import kam, service
 from lunch.models import Menu
+from cogs import hodnoceni
 from cogs.obed import ObedNewButton
 from storage import menus as stored_menus
 from utils import loading, render
@@ -31,13 +32,15 @@ GROUP_BUTTONS = {
 }
 
 
-def menza_fields(menu: Menu, mode: str) -> list[render.Field]:
-    economy = [render.dish_field(d) for d in menu.economy]
+def menza_fields(menu: Menu, mode: str, notes: dict[str, str] | None = None) -> list[render.Field]:
+    """`notes` = souhrny hodnocení podle názvu jídla (nevýrazně pod jídlem)."""
+    notes = notes or {}
+    economy = [render.dish_field(d, note=notes.get(d.name)) for d in menu.economy]
     if mode == MODE_ECO:
         return economy
     # "vše" = polévky + hlavní jídla, bez salátů/příloh/dezertů.
     # Economy mají štítek E1, E2…, ostatní jídla jen cenu.
-    others = [render.dish_field(d) for d in menu.mains if not d.economy]
+    others = [render.dish_field(d, note=notes.get(d.name)) for d in menu.mains if not d.economy]
     return render.soup_field(menu.soups) + economy + others
 
 
@@ -47,7 +50,8 @@ async def build_message(
     menus = await service.menza_menus(bot.fetcher, group, force=force)
     limit = render.per_embed_limit(len(menus))
     empty = "Dnes tu není žádné Economy jídlo." if mode == MODE_ECO else "Dnes tu nejsou žádná hlavní jídla."
-    embeds = [render.menu_embed(m, menza_fields(m, mode), limit, empty) for m in menus]
+    notes = await hodnoceni.rating_notes(bot, menus)
+    embeds = [render.menu_embed(m, menza_fields(m, mode, notes.get(m.place.key)), limit, empty) for m in menus]
     title = "Economy menu" if mode == MODE_ECO else "Jídla v menzách"
     content = render.header(f"🍽️ {title}", menus, f"💰 ceny: {kam.PRICE_LABEL}")
     return content, embeds, build_view(group, mode)
@@ -101,6 +105,7 @@ def build_view(group: str, mode: str) -> discord.ui.View:
                 row=0,
             )
         )
+    view.add_item(hodnoceni.RateButton(group, row=0))  # ⭐ ohodnotit dnešní jídlo
     for key, label, emoji in ((MODE_ECO, "Jen Economy", "💰"), (MODE_ALL, "Všechna jídla", "📋")):
         current = key == mode
         view.add_item(
