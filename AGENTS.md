@@ -8,7 +8,7 @@ Tenhle soubor je pro AI, která na projektu pracuje. Lidský návod je v [README
 - Commandy: `/ppv`, `/purkyne`, `/menzy` (menzy VUT, s ⭐ hodnocením jídel), `/restaurace` (polední menu), `/mhd`, `/mhd-purkyne` (odjezdy MHD Brno),
   `/letaky`, `/maso`, `/napoje`, `/pivo` (letáky a slevy supermarketů), `/domu` (spoje z centra na koleje), `/kola` (nextbike),
   `/obed` (kdo jde na oběd), `/na-pivo`, `/na-pivo-termin` (domluva na pivo), `/cena-piva` (ceny točeného), `/co-jist` (náhodné jídlo), `/pocasi`,
-  `/otevreno` (co má teď otevřeno), `/statistiky` (nejpoužívanější commandy), `/hlidat` (hlídání akcí), `/koleje` (moje koleje), `/novinky` (changelog).
+  `/otevreno` (co má teď otevřeno), `/statistiky` (nejpoužívanější commandy), `/hlidat` (hlídání akcí), `/koleje` (moje koleje), `/nastaveni` (jen admini), `/novinky` (changelog).
 - Repo je veřejné, kód je pod licencí MIT ([LICENSE](LICENSE)). Data ze zdrojů patří jim (viz README → Licence).
 - **Celý kód píše AI.** Majitel repa zadává požadavky, testuje na Discordu a rozhoduje. Kód nepíše, ale čte ho.
 - **Jazyk:** komunikace s uživatelem, texty v botovi, komentáře, docstringy i commit zprávy jsou **česky**.
@@ -140,10 +140,15 @@ Pravidla:
   beze změny) + globální sada **jen s kontextem DM s botem** (v DM fungují, na serveru nejsou dvakrát). Kontext se
   nastavuje na stromu až po synchronizaci serverů, protože serverová kopie a globální command jsou tentýž objekt.
   Hlídá to `tests/test_sync.py`. Kód commandů nesmí počítat s `interaction.guild` (v DM je `None`).
+- Commandy jen pro server (`extras={"guild_only": True}`, zatím `/nastaveni`) se do DM sady nedávají (bez `GUILD_IDS`
+  dostanou kontext jen server). Nepoužívej `@app_commands.guild_only()`, to by poslalo kontext i serverové kopii.
+- **Admin commandy** mají `@app_commands.default_permissions(manage_guild=True)`: Discord je ukáže jen lidem
+  s oprávněním Spravovat server a admin serveru může v Nastavení serveru → Integrace → bot povolit konkrétní roli.
+  V kódu se oprávnění znovu nekontroluje (role z Integrací by jinak neprošla), odpovědi jsou ephemeral.
 
 ## Oprávnění a intenty – kontrola při každé změně
 
-Aktuální stav (ověřeno pro verzi s `/ppv`, `/purkyne`, `/menzy`, `/restaurace`, `/mhd`, `/mhd-purkyne`, `/kola`, `/letaky`, `/maso`, `/napoje`, `/pivo`, `/domu`, `/obed`, `/na-pivo`, `/na-pivo-termin`, `/co-jist`, `/pocasi`, `/otevreno`, `/statistiky`, `/hlidat`, `/cena-piva`, `/koleje`, `/novinky`):
+Aktuální stav (ověřeno pro verzi s `/ppv`, `/purkyne`, `/menzy`, `/restaurace`, `/mhd`, `/mhd-purkyne`, `/kola`, `/letaky`, `/maso`, `/napoje`, `/pivo`, `/domu`, `/obed`, `/na-pivo`, `/na-pivo-termin`, `/co-jist`, `/pocasi`, `/otevreno`, `/statistiky`, `/hlidat`, `/cena-piva`, `/koleje`, `/nastaveni`, `/novinky`):
 
 - **Intenty:** `discord.Intents.default()`, žádné privilegované (Message Content, Server Members, Presence vypnuté).
 - **Oprávnění bota:** View Channels, Send Messages, Embed Links, Create Events → číselně `17592186063872`
@@ -221,6 +226,10 @@ Postup, když jsou nová oprávnění potřeba:
   koleje `ppv` / `purkyne`, nerozhodnuto = řádek se smaže. `prefs.dorm()` vrací None i bez databáze, takže se pak
   všechno chová jako dřív. Používá jen `/mhd` (bez vybrané zastávky) a `/kola`; tlačítka pod zprávami se nemění.
   Tlačítka `koleje:<ppv|purkyne|nic>`.
+- **/nastaveni** (`cogs/nastaveni.py`, `storage/settings.py`, tabulka `guild_setting` i s tím, kdo to změnil): nastavení
+  serveru, zatím `udalost_lidi` (0 = vypnuto, 2–5). Hodnoty drží `settings._cache` (načte se při startu, mění se
+  přes `settings.put`), takže je jde číst i při kreslení zpráv. Bez záznamu platí `settings.DEFAULTS`. Výběr
+  `nastaveni:udalost`. Nové nastavení = klíč v `DEFAULTS` + výběr v cogu.
 
 ## Zdroje dat a jejich záludnosti
 
@@ -369,7 +378,8 @@ Datum založení je v `embed.timestamp` (z něj se dopočítá rok a 14 dní hla
   U Dřevěného orla schválně ne (je hned vedle vlka a kluci znají vlka).
 - /na-pivo: `napivo:cas` a `napivo:kam` jsou výběry (DynamicItem[Select]), `napivo:a:<jdu|jindy|nejdu>` odpovědi,
   `napivo:mapa` = 🗺️ Kde co je (ephemeral), `napivo:termin` = založí hledání termínu se stejným místem.
-- Událost na serveru: když na pozvánku klikne „Jdu“ aspoň `EVENT_MIN_PEOPLE` (3) lidí a je zadaný čas, `sync_event`
+- Událost na serveru: když na pozvánku klikne „Jdu“ aspoň `settings.event_min_people(server)` lidí (výchozí 3,
+  admin to mění nebo vypíná v `/nastaveni`; v DM None = žádná událost ani věta o ní) a je zadaný čas, `sync_event`
   po odpovědi na kliknutí založí externí událost (místo = podnik/oblast, konec za `EVENT_HOURS`) a odkaz
   `📅 [Událost na serveru](https://discord.com/events/…)` přidá do embedu (z něj se pozná, že už existuje).
   Změna času nebo místa událost upraví, odhlášení lidí ji nemaže. Bez oprávnění Create Events nebo v DM se nic nezaloží.

@@ -8,8 +8,8 @@
 Jako u /obed je celý stav jen v embedu zprávy (kdo, kdy, kam), takže přežije restart bota.
 Datum založení je v `embed.timestamp`, z něj se dopočítá rok a dny hlasování.
 
-Když na pozvánku /na-pivo kliknou aspoň EVENT_MIN_PEOPLE lidí „Jdu“ a je známý čas, bot založí na serveru
-událost (Discord Scheduled Event). Odkaz na ni je v embedu, při změně času nebo místa ji bot upraví.
+Když na pozvánku /na-pivo kliknou aspoň EVENT_MIN_PEOPLE lidí „Jdu“ (admin to může v /nastaveni změnit nebo
+vypnout, storage/settings.py) a je známý čas, bot založí na serveru událost (Discord Scheduled Event). Odkaz na ni je v embedu, při změně času nebo místa ji bot upraví.
 Potřebuje oprávnění Create Events (bez něj se událost prostě nezaloží).
 """
 
@@ -27,6 +27,7 @@ from discord.ext import commands
 from lunch import service
 from cogs import cenapiva
 from pubs import planning, venues
+from storage import settings
 from utils import render
 from utils.interactions import STALE, MessageState, reported
 from weather import openmeteo
@@ -36,7 +37,7 @@ log = logging.getLogger(__name__)
 COLOR = 0xE8A317  # barva piva
 TIMES = [f"{h}:{m:02d}" for h in range(14, 23) for m in (0, 30)][:-1]  # 14:00 … 22:00 pro /na-pivo
 FROM_TIMES = [f"{h}:00" for h in range(14, 22)]  # "můžu od" pro /na-pivo-termin
-EVENT_MIN_PEOPLE = 3  # kolik lidí musí jít, aby bot založil událost na serveru
+EVENT_MIN_PEOPLE = settings.DEFAULT_EVENT_MIN_PEOPLE  # kolik lidí musí jít, aby bot založil událost (výchozí)
 EVENT_HOURS = 3  # jak dlouho událost trvá (Discord u externích událostí chce konec)
 
 # odpověď -> (emoji, nadpis kartičky, popisek tlačítka, styl tlačítka)
@@ -214,13 +215,16 @@ class Meetup:
         m = _EVENT_RE.search(self.event) if self.event else None
         return int(m.group(1)) if m else None
 
-    def wants_event(self, now: datetime) -> bool:
-        """Založit událost? Jdou aspoň EVENT_MIN_PEOPLE, je známý čas a ještě nezačala."""
-        return (self.event is None and self.count("jdu") >= EVENT_MIN_PEOPLE
+    def wants_event(self, now: datetime, min_people: int | None = EVENT_MIN_PEOPLE) -> bool:
+        """Založit událost? Jdou aspoň `min_people` (None = vypnuto), je známý čas a ještě nezačala."""
+        return (min_people is not None and self.event is None and self.count("jdu") >= min_people
                 and self.start is not None and self.start > now)
 
 
-def meetup_embed(m: Meetup, weather: openmeteo.Forecast | None = None) -> discord.Embed:
+def meetup_embed(
+    m: Meetup, weather: openmeteo.Forecast | None = None, min_people: int | None = EVENT_MIN_PEOPLE
+) -> discord.Embed:
+    """`min_people` = od kolika lidí se zakládá událost (nastavení serveru), None = nezakládá se (vypnuto, DM)."""
     lines = [f"Svolává <@{m.creator}>"] if m.creator else []
     lines.append(f"🕐 **Kdy:** {m.time}" if m.time else "🕐 **Kdy:** _ještě se neví – vyber níž_")
     if w := _weather_line(weather, m.day, m.time):
@@ -229,8 +233,8 @@ def meetup_embed(m: Meetup, weather: openmeteo.Forecast | None = None) -> discor
     if m.event:
         lines.append(f"📅 [Událost na serveru]({m.event})")
     hint = "-# Klikni, jestli jdeš. Kdy a kam může upravit kdokoliv ve výběru pod zprávou."
-    if not m.event:
-        hint += f" Když půjdou aspoň {EVENT_MIN_PEOPLE}, bot založí na serveru událost."
+    if not m.event and min_people is not None:
+        hint += f" Když půjdou aspoň {min_people}, bot založí na serveru událost."
     lines.append(hint)
     embed = discord.Embed(
         title=f"🍺 Na pivo – {render.czech_date(m.day)}", description="\n".join(lines),
@@ -378,15 +382,17 @@ def plan_message(p: Plan, client) -> dict:
     return {"embed": plan_embed(p, today, weather), "view": plan_view(p, today, weather)}
 
 
-def meetup_message(m: Meetup, client) -> dict:
-    return {"embed": meetup_embed(m, forecast(client)), "view": meetup_view(m)}
+def meetup_message(m: Meetup, client, guild_id: int | None = None) -> dict:
+    """`guild_id` = server, kde zpráva je (podle jeho nastavení se píše, od kolika lidí bude událost)."""
+    embed = meetup_embed(m, forecast(client), settings.event_min_people(guild_id))
+    return {"embed": embed, "view": meetup_view(m)}
 
 
 # --- tlačítka a výběry -----------------------------------------------------------------------------
 
 
-def _message_for(state: Meetup | Plan, client) -> dict:
-    return plan_message(state, client) if isinstance(state, Plan) else meetup_message(state, client)
+def _message_for(state: Meetup | Plan, client, guild_id: int | None = None) -> dict:
+    return plan_message(state, client) if isinstance(state, Plan) else meetup_message(state, client, guild_id)
 
 
 async def _edit(interaction: discord.Interaction, change) -> None:
@@ -403,12 +409,12 @@ async def _edit(interaction: discord.Interaction, change) -> None:
         if error:
             await interaction.response.send_message(error, ephemeral=True)
             return
-        payload = _message_for(state, interaction.client)
+        payload = _message_for(state, interaction.client, interaction.guild_id)
         await interaction.response.edit_message(**payload)
         _state.remember(message.id, payload["embed"])
         # událost se zakládá až po odpovědi (Discord na odpověď čeká jen 3 s)
         if isinstance(state, Meetup) and await sync_event(interaction, before, state):
-            payload = _message_for(state, interaction.client)
+            payload = _message_for(state, interaction.client, interaction.guild_id)
             await interaction.edit_original_response(**payload)
             _state.remember(message.id, payload["embed"])
 
@@ -450,7 +456,8 @@ async def sync_event(interaction: discord.Interaction, before: Meetup | None, m:
     guild, now = interaction.guild, _now()
     if guild is None:  # DM s botem
         return False
-    creating = m.wants_event(now)
+    min_people = settings.event_min_people(guild.id)
+    creating = m.wants_event(now, min_people)
     moved = m.event_id is not None and before is not None and (before.time, before.place) != (m.time, m.place)
     if not (creating or (moved and m.start and m.start > now)):
         return False
@@ -462,7 +469,7 @@ async def sync_event(interaction: discord.Interaction, before: Meetup | None, m:
         if creating:
             description = f"Kdo jde, se hlásí v pozvánce: {interaction.message.jump_url}"
             event = await guild.create_scheduled_event(
-                **_event_fields(m), description=description, reason=f"/na-pivo: jdou aspoň {EVENT_MIN_PEOPLE}"
+                **_event_fields(m), description=description, reason=f"/na-pivo: jdou aspoň {min_people}"
             )
             m.event = event.url
             return True
@@ -657,7 +664,9 @@ class CallButton(discord.ui.DynamicItem[discord.ui.Button], template=r"pivokdy:s
         meetup = Meetup(best.day, _now(), str(interaction.user.id), best.time, plan.place)
         when = render.czech_date(best.day) + (f" od {best.time}" if best.time else "")
         content = f"🍺 Jde se na pivo – {when}! " + " ".join(f"<@{u}>" for u in best.users)
-        await interaction.response.send_message(content=content, **meetup_message(meetup, interaction.client))
+        await interaction.response.send_message(
+            content=content, **meetup_message(meetup, interaction.client, interaction.guild_id)
+        )
 
 
 class ClearButton(discord.ui.DynamicItem[discord.ui.Button], template=r"pivokdy:x"):
@@ -695,7 +704,7 @@ class NaPivo(commands.Cog):
     @app_commands.command(name="na-pivo", description="🍺 Kdo jde dneska na pivo? Kdy, kam a kdo jde")
     async def na_pivo(self, interaction: discord.Interaction) -> None:
         meetup = Meetup(service.today(), _now(), str(interaction.user.id))
-        await interaction.response.send_message(**meetup_message(meetup, self.bot))
+        await interaction.response.send_message(**meetup_message(meetup, self.bot, interaction.guild_id))
 
     @app_commands.command(name="na-pivo-termin", description="🗓️ Najděte společný den na pivo v příštích dvou týdnech")
     async def na_pivo_termin(self, interaction: discord.Interaction) -> None:

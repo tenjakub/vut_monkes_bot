@@ -39,12 +39,15 @@ v embedech s tlačítky na přepínání.
 | `/statistiky` | Které commandy se používají nejvíc (za 7 dní, 30 dní, od začátku) |
 | `/hlidat` | Hlídání akcí: když bude v akci, co chceš (případně do zadané ceny), bot ti napíše do soukromé zprávy |
 | `/koleje` | Nastavení, na kterých kolejích bydlíš: `/mhd` a `/kola` pak rovnou ukážou ty tvoje |
+| `/nastaveni` | Jen pro adminy: nastavení bota na serveru (od kolika lidí zakládat událost z `/na-pivo`, nebo vůbec) |
 | `/novinky` | Co je nového (z [CHANGELOG.md](CHANGELOG.md)) |
 
 Menzové commandy mají parametr `vse: True`: místo Economy ukážou polévky a všechna hlavní jídla.
 Pod menzami a restauracemi je ⭐ **Ohodnotit** (👍 dobré / 😐 neurazí / 👎 špatné), souhrn je pak vidět pod jídlem.
 Tlačítka pod zprávou mají stav uložený přímo v ID, takže fungují i po restartu bota.
-Commandy fungují i v soukromém chatu s botem.
+Commandy fungují i v soukromém chatu s botem. Kromě `/nastaveni`, to je jen na serveru a jen pro lidi s oprávněním
+**Spravovat server**. Jestli ho má mít jen konkrétní role, nastaví se to v Discordu: **Nastavení serveru → Integrace →
+VUT Monkes bot → /nastaveni** (přidat roli, třeba „Admin bota“, a odebrat @everyone).
 
 ## Zdroje dat
 
@@ -163,6 +166,7 @@ Co se ukládá:
 - **hlídání akcí** (`watch`, `watch_hit`): co kdo hlídá (s ID člověka, komu psát) a o kterých akcích už ví. Zruší se v `/hlidat`.
 - **ceny piva v hospodách** (`beer_price`): každá změna zvlášť i s ID toho, kdo ji zadal (aby šly vrátit nesmysly).
 - **nastavení lidí** (`user_setting`): výchozí koleje z `/koleje` (nerozhodnuto = žádný záznam).
+- **nastavení serverů** (`guild_setting`): co admin nastavil v `/nastaveni` a kdo to naposledy změnil.
 
 - **Zálohy:** bot jednou denně uloží kopii do `data/backups/bot-RRRR-MM-DD.db` a nechává posledních 7.
   Jsou ve stejném volume, takže chrání před chybou v botovi, ne před odchodem disku. Kopie mimo server:

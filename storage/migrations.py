@@ -108,6 +108,17 @@ MIGRATIONS: list[str] = [
         PRIMARY KEY (user_id, key)
     ) WITHOUT ROWID;
     """,
+    # 8 – nastavení serverů (storage/settings.py, /nastaveni jen pro adminy). Bez řádku = výchozí hodnota.
+    """
+    CREATE TABLE guild_setting (
+        guild_id   INTEGER NOT NULL,
+        key        TEXT    NOT NULL,          -- „udalost_lidi“
+        value      TEXT    NOT NULL,
+        updated_by INTEGER NOT NULL,          -- kdo to naposledy změnil
+        updated_at TEXT    NOT NULL,          -- RRRR-MM-DD HH:MM
+        PRIMARY KEY (guild_id, key)
+    ) WITHOUT ROWID;
+    """,
 ]
 
 LATEST = len(MIGRATIONS)

@@ -310,6 +310,7 @@ class _Interaction:
     def __init__(self, message, guild, user_id, can_create=True):
         self.message = message
         self.guild = guild
+        self.guild_id = getattr(guild, "id", None)
         self.user = type("U", (), {"id": user_id})()
         self.client = object()
         self.app_permissions = discord.Permissions(create_events=can_create)

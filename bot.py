@@ -21,7 +21,7 @@ from utils.loading import LoadingTracker
 
 log = logging.getLogger("bot")
 
-EXTENSIONS = ["cogs.hodnoceni", "cogs.menza", "cogs.restaurace", "cogs.mhd", "cogs.kola", "cogs.slevy", "cogs.hlidat", "cogs.cojist", "cogs.obed", "cogs.napivo", "cogs.cenapiva", "cogs.pocasi", "cogs.otevreno", "cogs.statistiky", "cogs.koleje", "cogs.novinky"]
+EXTENSIONS = ["cogs.hodnoceni", "cogs.menza", "cogs.restaurace", "cogs.mhd", "cogs.kola", "cogs.slevy", "cogs.hlidat", "cogs.cojist", "cogs.obed", "cogs.napivo", "cogs.cenapiva", "cogs.pocasi", "cogs.otevreno", "cogs.statistiky", "cogs.koleje", "cogs.nastaveni", "cogs.novinky"]
 
 
 LOADING_SUFFIX = " · ⏳"
@@ -83,20 +83,28 @@ class ObedBot(commands.Bot):
           Pozor: discord.py posílá u serverové kopie i globálního commandu stejný objekt,
           proto se kontext DM nastaví na stromu až PO synchronizaci serverů.
         Bez GUILD_IDS: jedna globální sada pro servery i DM.
+        Commandy s `extras={"guild_only": True}` (/nastaveni) jsou jen na serveru, do DM se nedávají.
         """
         tree = self.tree
         installs = app_commands.AppInstallationType(guild=True, user=False)
+        # commandy jen pro server (extras guild_only, např. /nastaveni): do DM nepatří
+        guild_only = [c for c in tree.get_commands() if c.extras.get("guild_only")]
         if config.GUILD_IDS:
             guilds = [discord.Object(id=gid) for gid in config.GUILD_IDS]
             for guild in guilds:
                 tree.copy_global_to(guild=guild)
                 synced = await tree.sync(guild=guild)
                 log.info("Synchronizováno %d commandů na server %s", len(synced), guild.id)
+            for command in guild_only:  # serverové kopie zůstanou, jen se nepošlou do DM
+                tree.remove_command(command.name)
             tree.allowed_contexts = app_commands.AppCommandContext(guild=False, dm_channel=True, private_channel=False)
             tree.allowed_installs = installs
             synced = await tree.sync()
             log.info("Synchronizováno %d commandů pro DM s botem", len(synced))
         else:
+            only_guild = app_commands.AppCommandContext(guild=True, dm_channel=False, private_channel=False)
+            for command in guild_only:
+                command.allowed_contexts = only_guild
             tree.allowed_contexts = app_commands.AppCommandContext(guild=True, dm_channel=True, private_channel=False)
             tree.allowed_installs = installs
             synced = await tree.sync()

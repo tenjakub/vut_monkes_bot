@@ -48,12 +48,17 @@ def test_guild_commands_unchanged_and_global_only_in_dm(monkeypatch):
     assert {"ppv", "mhd", "restaurace"} <= names
     # na serveru bez omezení kontextu, tak jako dřív
     assert all(p["contexts"] is None for p in sent[111] + sent[222])
-    # globální sada jen pro DM s botem -> na serveru se neukáže podruhé
-    assert {p["name"] for p in sent["global"]} == names
+    # globální sada jen pro DM s botem -> na serveru se neukáže podruhé; /nastaveni do DM nepatří
+    assert {p["name"] for p in sent["global"]} == names - {"nastaveni"}
     assert all(p["contexts"] == [BOT_DM] for p in sent["global"])
+    # /nastaveni jen pro lidi s oprávněním Spravovat server (víc rolí povolí admin v Integracích)
+    admin = next(p for p in sent[111] if p["name"] == "nastaveni")
+    assert int(admin["default_member_permissions"]) == 1 << 5
+    assert all(p["default_member_permissions"] is None for p in sent[111] if p["name"] != "nastaveni")
 
 
 def test_without_guild_ids_one_global_set_for_guild_and_dm(monkeypatch):
     sent = _sent_payloads(monkeypatch, "")
     assert set(sent) == {"global"}
-    assert all(p["contexts"] == [GUILD, BOT_DM] for p in sent["global"])
+    assert all(p["contexts"] == [GUILD, BOT_DM] for p in sent["global"] if p["name"] != "nastaveni")
+    assert next(p for p in sent["global"] if p["name"] == "nastaveni")["contexts"] == [GUILD]
