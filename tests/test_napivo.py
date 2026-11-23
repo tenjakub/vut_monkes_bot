@@ -178,10 +178,10 @@ def test_beer_prices_from_cache(monkeypatch):
     monkeypatch.setattr(venues, "beer_prices", {
         "burza": venues.Beer(70, many=True, checked="11/2026"), "vlk": venues.Beer(65, "Plzeň 12°"),
     })
-    assert venues.PUBS["burza"].beer_text == "🍻 víc druhů, kolem 70 Kč (11/2026)"
-    assert venues.PUBS["vlk"].beer_text == "🍺 Plzeň 12° · 65 Kč"
-    assert napivo.place_lines("vlk")[1] == "-# 🍺 Plzeň 12° · 65 Kč"
-    assert "-# 🍻 víc druhů, kolem 70 Kč (11/2026)" in " ".join(f.value for f in napivo.map_embed().fields)
+    assert venues.PUBS["burza"].beer_text == "💰 víc druhů · ~70 Kč (11/2026)"
+    assert venues.PUBS["vlk"].beer_text == "💰 Plzeň 12° · 65 Kč"
+    assert napivo.place_lines("vlk")[1] == "-# 💰 Plzeň 12° · 65 Kč"
+    assert "-# 💰 víc druhů · ~70 Kč (11/2026)" in " ".join(f.value for f in napivo.map_embed().fields)
     # řádek s cenou nesmí rozbít čtení místa z embedu
     m = napivo.Meetup(TODAY, CREATED, "42", place="vlk")
     assert napivo.read_meetup(via_discord(napivo.meetup_embed(m))).place == "vlk"

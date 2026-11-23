@@ -64,11 +64,11 @@ def test_edit_history_and_revert(monkeypatch):
     assert "**Pivní burza** — _nevíme_" in opened["content"] and opened["ephemeral"]
     assert "_Cenu zatím nikdo nezadal._" in picked["content"]
     assert edit[0] == "modal"
-    assert saved["content"].startswith("✅ Uloženo, díky!") and "**Teď:** 🍺 Plzeň 12° · 59 Kč" in saved["content"]
-    assert in_napivo[1].startswith("-# 🍺 Plzeň 12° · 59 Kč (")
-    assert "**Teď:** 🍺 zadarmo · 499 Kč" in vandal["content"]
+    assert saved["content"].startswith("✅ Uloženo, díky!") and "**Teď:** 💰 Plzeň 12° · 59 Kč" in saved["content"]
+    assert in_napivo[1].startswith("-# 💰 Plzeň 12° · 59 Kč (")
+    assert "**Teď:** 💰 zadarmo · 499 Kč" in vandal["content"]
     assert "nechápu" in bad["content"]
-    assert back["content"].startswith("↩️ Vráceno na: 🍺 Plzeň 12° · 59 Kč")
+    assert back["content"].startswith("↩️ Vráceno na: 💰 Plzeň 12° · 59 Kč")
     assert "(vráceno) · <@1>" in back["content"] and "<@2>" in back["content"]  # kdo co zadal, je vidět
     assert [h.price for h in history] == [59, 499, 59] and history[0].reverted_from == history[-1].id
     assert cache["burza"].price == 59
@@ -86,10 +86,18 @@ def test_cleared_price_disappears_and_map_offers_editing(monkeypatch):
             return many, cleared, venues.PUBS["burza"].beer_text
 
     many, cleared, after = run(go())
-    assert many.startswith("🍻 víc druhů, kolem 70 Kč")
+    assert many.startswith("💰 víc druhů · ~70 Kč")
     assert cleared["content"].startswith("🚫 Cena smazaná.") and after == ""
 
     shown = Interaction(SimpleNamespace())
     run(napivo.MapButton().callback(shown))
     select = shown.last()["view"].children[0].item
     assert select.custom_id == "pivocena:p:n" and "burza" in [o.value for o in select.options]
+
+
+def test_pub_select_shows_only_prices(monkeypatch):
+    monkeypatch.setattr(venues, "beer_prices", {
+        "burza": venues.Beer(70, many=True, checked="11/2026"), "vlk": venues.Beer(65, "Plzeň 12°"),
+    })
+    options = {o.value: o.description for o in cenapiva.PubSelect("e").item.options}
+    assert (options["burza"], options["vlk"], options["yacht"]) == ("~70 Kč", "65 Kč", "cenu zatím nevíme")

@@ -29,18 +29,21 @@ class Area:
 class Beer:
     """Točené pivo, cena za 0,5 l v Kč (zadávají lidé v /cena-piva)."""
 
-    price: int  # u `many` orientační („kolem“)
+    price: int  # u `many` orientační (~)
     name: str = ""  # jedno pivo: "Plzeň 12°"
-    many: bool = False  # víc druhů -> „víc druhů, kolem XX Kč“
+    many: bool = False  # víc druhů -> „víc druhů · ~XX Kč“
     checked: str = ""  # kdy zjištěno, např. "11/2026"
 
     @property
+    def price_text(self) -> str:
+        """'65 Kč', u víc druhů orientačně '~70 Kč' (vždy za půllitr)."""
+        return f"{'~' if self.many else ''}{self.price} Kč"
+
+    @property
     def text(self) -> str:
-        """'🍻 víc druhů, kolem 70 Kč' / '🍺 Plzeň 12° · 65 Kč' (cena vždy za půllitr)."""
-        if self.many:
-            text = f"🍻 víc druhů, kolem {self.price} Kč"
-        else:
-            text = "🍺 " + " · ".join(p for p in (self.name, f"{self.price} Kč") if p)
+        """'💰 víc druhů · ~70 Kč' / '💰 Plzeň 12° · 65 Kč'. 💰, ne 🍺: pivo je ikona některých podniků."""
+        what = "víc druhů" if self.many else self.name
+        text = "💰 " + " · ".join(p for p in (what, self.price_text) if p)
         return text + (f" ({self.checked})" if self.checked else "")
 
 

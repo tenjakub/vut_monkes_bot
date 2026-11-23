@@ -161,7 +161,7 @@ class PubSelect(discord.ui.DynamicItem[discord.ui.Select], template=r"pivocena:p
     def __init__(self, mode: str, row: int | None = None) -> None:
         options = [
             discord.SelectOption(label=pub.name, value=pub.key, emoji=pub.emoji,
-                                 description=(pub.beer_text or "cenu zatím nevíme")[:100])
+                                 description=pub.beer.price_text if pub.beer else "cenu zatím nevíme")
             for area in venues.AREAS.values() for pub in venues.pubs_in(area.key)
         ][:25]
         super().__init__(discord.ui.Select(
