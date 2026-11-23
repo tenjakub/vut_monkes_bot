@@ -7,7 +7,7 @@ Tenhle soubor je pro AI, která na projektu pracuje. Lidský návod je v [README
 - **VUT Monkes bot** – Discord bot pro kamarádský server studentů VUT (FIT). Python 3.14, discord.py 2.x.
 - Commandy: `/ppv`, `/purkyne`, `/menzy` (menzy VUT, s ⭐ hodnocením jídel), `/restaurace` (polední menu), `/mhd`, `/mhd-purkyne` (odjezdy MHD Brno),
   `/letaky`, `/maso`, `/napoje`, `/pivo` (letáky a slevy supermarketů), `/domu` (spoje z centra na koleje), `/kola` (nextbike),
-  `/obed` (kdo jde na oběd), `/na-pivo`, `/na-pivo-termin` (domluva na pivo), `/cena-piva` (ceny točeného), `/co-jist` (náhodné jídlo), `/pocasi`,
+  `/obed` (kdo jde na oběd), `/na-pivo`, `/na-pivo-termin` (domluva na pivo), `/co-toci`, `/cena-piva` (točená piva a ceny v hospodách), `/co-jist` (náhodné jídlo), `/pocasi`,
   `/otevreno` (co má teď otevřeno), `/statistiky` (nejpoužívanější commandy), `/hlidat` (hlídání akcí), `/koleje` (moje koleje), `/nastaveni` (jen admini), `/novinky` (changelog).
 - Repo je veřejné, kód je pod licencí MIT ([LICENSE](LICENSE)). Data ze zdrojů patří jim (viz README → Licence).
 - **Celý kód píše AI.** Majitel repa zadává požadavky, testuje na Discordu a rozhoduje. Kód nepíše, ale čte ho.
@@ -150,7 +150,7 @@ Pravidla:
 
 ## Oprávnění a intenty – kontrola při každé změně
 
-Aktuální stav (ověřeno pro verzi s `/ppv`, `/purkyne`, `/menzy`, `/restaurace`, `/mhd`, `/mhd-purkyne`, `/kola`, `/letaky`, `/maso`, `/napoje`, `/pivo`, `/domu`, `/obed`, `/na-pivo`, `/na-pivo-termin`, `/co-jist`, `/pocasi`, `/otevreno`, `/statistiky`, `/hlidat`, `/cena-piva`, `/koleje`, `/nastaveni`, `/novinky`):
+Aktuální stav (ověřeno pro verzi s `/ppv`, `/purkyne`, `/menzy`, `/restaurace`, `/mhd`, `/mhd-purkyne`, `/kola`, `/letaky`, `/maso`, `/napoje`, `/pivo`, `/domu`, `/obed`, `/na-pivo`, `/na-pivo-termin`, `/co-toci`, `/co-jist`, `/pocasi`, `/otevreno`, `/statistiky`, `/hlidat`, `/co-toci`, `/cena-piva`, `/koleje`, `/nastaveni`, `/novinky`):
 
 - **Intenty:** `discord.Intents.default()`, žádné privilegované (Message Content, Server Members, Presence vypnuté).
 - **Oprávnění bota:** View Channels, Send Messages, Embed Links, Create Events → číselně `17592186063872`
@@ -372,17 +372,20 @@ Datum založení je v `embed.timestamp` (z něj se dopočítá rok a 14 dní hla
   sloupců přes celou šířku. Nový podnik = řádek v `PUBS`; klíč se nemění
   (je hodnotou ve výběru), podnik se v embedu pozná podle názvu (`by_name`). Výběr „Kam“ má oblasti i podniky
   dohromady a **unese max. 25 možností** (hlídá test). Při překročení je potřeba dvoustupňový výběr (oblast → podnik).
-- Točená piva zadávají lidé v **/cena-piva** (`cogs/cenapiva.py`, logika `pubs/beers.py`, `storage/beer.py`, tabulka
-  `pub_beers`). Stav podniku (`PubBeers`) = seznam piv (`Tap`: název, cena za 0,5 l, max `MAX_TAPS`) a/nebo ručně
+- Točená piva (`cogs/cenapiva.py`, logika `pubs/beers.py`, `storage/beer.py`, tabulka `pub_beers`): **/co-toci**
+  ukáže profil jedné hospody všem v kanálu, **/cena-piva** přehled všech jen pro sebe. Hospoda se všude kreslí jedinou
+  funkcí `cenapiva.profile` (embed: kde je, piva v mřížce s cenou a datem, historie + ovládání), i po každé změně.
+  Stav podniku (`PubBeers`) = seznam piv (`Tap`: název, cena za 0,5 l, `since` = odkdy cena platí, max `MAX_TAPS`) a/nebo ručně
   „víc druhů, ~XX Kč“ (`many_price`, má přednost). Do `SHOW_ALL` (2) piv se vypisují jednotlivě, víc = počet + medián.
   Nic se nepřepisuje: každá změna je nový řádek s **celým stavem** podniku (piva jako JSON), popisem změny a ID toho,
   kdo ji udělal; aktuální = poslední řádek. Čtení a zápis jsou v jedné transakci (`beer.change`). Vrácení
   (`beer.revert`) = kopie staršího stavu s `reverted_from`, jde na kterýkoli. Aktuální stav drží v paměti
   `venues.beer_prices` (`cenapiva.reload` při startu a po každé změně), `Pub.beer_text` / `beer.price_text` z něj kreslí
   řádek v „Kde co je“, u podniku v pozvánce a ve výběru „Kam“. Cena 10–500 Kč, název piva prochází `utils.text.clean`.
-  Tlačítka: `pivocena:p:<e|n>` (výběr podniku: upravit zprávu / poslat novou z Kde co je), `pivocena:a:<podnik>`
-  (➕ okno), `pivocena:m:<podnik>` (🍻 víc druhů), `pivocena:e:<podnik>` (výběr piva k úpravě, hodnota = název),
-  `pivocena:v:<podnik>` (vrátit, hodnota = id řádku), `pivocena:o` (přehled).
+  `since` doplní `beers.stamp` při uložení jen pivům bez data (nová nebo změněná cena), vrácený stav si ho nechá.
+  Tlačítka: `pivocena:p:<e|n>` (výběr podniku: přepnout zprávu na profil / poslat novou z Kde co je),
+  `pivocena:a:<podnik>` (➕ okno), `pivocena:m:<podnik>` (🍻 víc druhů), `pivocena:e:<podnik>` (výběr piva k úpravě,
+  hodnota = název), `pivocena:v:<podnik>` (vrátit, hodnota = id řádku). Podnik z custom_id čte společné `_ForPub`.
 - Mapa = Google Maps vyhledávání z názvu a adresy, `query` ho upřesní, `map_url` (odkaz ze „Sdílet“) má přednost.
   Seznam podniků i odkazy na mapu potvrdil uživatel (u Mystiky a Utopie mapa schválně hledá jen název). Pivní burza jen Jánská,
   U Dřevěného orla schválně ne (je hned vedle vlka a kluci znají vlka).

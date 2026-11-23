@@ -7,9 +7,9 @@ from __future__ import annotations
 import json
 from collections.abc import Callable
 from dataclasses import dataclass, replace
-from datetime import datetime
+from datetime import date, datetime
 
-from pubs.beers import BeerError, PubBeers, Tap
+from pubs.beers import BeerError, PubBeers, Tap, stamp
 
 from .db import Database
 
@@ -32,7 +32,10 @@ _COLUMNS = "id, pub, taps, many_price, change, user_id, created_at, reverted_fro
 
 def _version(row) -> Version:
     created = datetime.strptime(row["created_at"], "%Y-%m-%d %H:%M")
-    taps = tuple(Tap(t["name"], t["price"]) for t in json.loads(row["taps"]))
+    taps = tuple(
+        Tap(t["name"], t["price"], date.fromisoformat(t["since"]) if "since" in t else created.date())
+        for t in json.loads(row["taps"])
+    )
     state = PubBeers(taps, row["many_price"], f"{created.month}/{created.year}")
     return Version(row["id"], row["pub"], state, row["change"], row["user_id"], created, row["reverted_from"])
 
@@ -52,7 +55,10 @@ async def change(
     async with db.transaction() as tx:
         latest = await _latest(tx, pub)
         state, text = edit(latest.state if latest else PubBeers())
-        taps = json.dumps([{"name": t.name, "price": t.price} for t in state.taps], ensure_ascii=False)
+        state = stamp(state, now.date())
+        taps = json.dumps(
+            [{"name": t.name, "price": t.price, "since": t.since.isoformat()} for t in state.taps], ensure_ascii=False
+        )
         cursor = await tx.execute(
             "INSERT INTO pub_beers (pub, taps, many_price, change, user_id, created_at, reverted_from) "
             "VALUES (?, ?, ?, ?, ?, ?, ?)",

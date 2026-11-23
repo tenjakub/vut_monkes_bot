@@ -129,6 +129,15 @@ async def _tap(client, user_id, name, price, original=None):
     return interaction.last()
 
 
+def _shown(msg: dict) -> str:
+    """Celý text zprávy: hláška nad profilem + embed (nadpis, popis, kartičky)."""
+    e = msg.get("embed")
+    parts = [msg.get("content") or ""]
+    if e:
+        parts += [e.title or "", e.description or ""] + [f"{f.name}: {f.value}" for f in e.fields]
+    return "\n".join(parts)
+
+
 async def _many(client, user_id, price):
     modal = cenapiva.ManyModal("burza", None)
     modal.price._value = price
@@ -167,23 +176,31 @@ def test_add_edit_remove_and_revert(monkeypatch):
             again = Interaction(client, user_id=1)
             await with_values(cenapiva.RevertSelect("burza"), str(first_two.id)).callback(again)
             out["again"] = again.last()
+            public = Interaction(client)
+            await cog.co_toci.callback(cog, public, SimpleNamespace(value="burza"))
+            out["public"] = public.last()
             out["history"] = await beer.history(db, "burza")
             out["cache"] = dict(venues.beer_prices)
             return out
 
     out = run(go())
     assert "**Pivní burza** — _nevíme_" in out["opened"]["content"] and out["opened"]["ephemeral"]
-    assert "_Zatím nikdo nic nezadal._" in out["picked"]["content"]
+    assert out["picked"]["content"] is None and "_Zatím nikdo nezadal, co tu točí._" in _shown(out["picked"])
     assert out["add"][0] == "modal"
-    assert out["first"]["content"].startswith("✅ Uloženo: ➕ Plzeň 12° · 59 Kč")  # bez markdownu
-    assert "• Kozel 11° — **45 Kč**\n• Plzeň 12° — **59 Kč**" in out["second"]["content"]
+    assert out["first"]["content"] == "✅ Uloženo: ➕ Plzeň 12° · 59 Kč"  # bez markdownu
+    second = _shown(out["second"])
+    assert "🍺 Kozel 11°: **45 Kč**\n-# od " in second and "🍺 Plzeň 12°: **59 Kč**" in second
+    assert "🍺 Točí **2 piva** · 45–59 Kč" in second
     assert out["napivo"][1].startswith("-# 💰 Kozel 11° · 45 Kč, Plzeň 12° · 59 Kč (")
     assert out["edit"][0] == "modal"
-    assert "✏️ Plzeň 12° → zadarmo · 499 Kč" in out["vandal"]["content"]
+    assert "✏️ Plzeň 12° → zadarmo · 499 Kč" in _shown(out["vandal"])
     assert "nechápu" in out["bad"]["content"] and out["bad"]["ephemeral"]
-    assert "✅ Uloženo: 🗑️ Kozel 11°" in out["removed"]["content"]
+    assert out["removed"]["content"] == "✅ Uloženo: 🗑️ Kozel 11°"
     assert out["back"]["content"].startswith("✅ Uloženo: ↩️ vráceno na stav z ")
-    assert "<@1>" in out["back"]["content"] and "<@2>" in out["back"]["content"]  # kdo co změnil, je vidět
+    assert "<@1>" in _shown(out["back"]) and "<@2>" in _shown(out["back"])  # kdo co změnil, je vidět
+    public = out["public"]
+    assert not public.get("ephemeral") and "🍺 Pivní burza" in _shown(public)  # /co-toci vidí všichni
+    assert "🍺 Plzeň 12°: **59 Kč**" in _shown(public) and "🍺 Kozel 11°" in _shown(public)
     assert out["again"]["content"] == "Tohle už teď platí."
     history = out["history"]
     assert [len(v.state.taps) for v in history] == [2, 1, 2, 2, 1]
@@ -191,27 +208,27 @@ def test_add_edit_remove_and_revert(monkeypatch):
     assert out["cache"]["burza"].summary == "Kozel 11° · 45 Kč, Plzeň 12° · 59 Kč"
 
 
-def test_card_offers_editing_only_what_exists(monkeypatch):
+def test_profile_offers_editing_only_what_exists(monkeypatch):
     monkeypatch.setattr(venues, "beer_prices", {})
 
     async def go():
         async with memory_db() as db:
             client = SimpleNamespace(db=db)
-            empty = await cenapiva.card(db, "burza")
+            empty = await cenapiva.profile(db, "burza")
             await _tap(client, 1, "Plzeň 12°", "59")
-            one = await cenapiva.card(db, "burza")
+            one = await cenapiva.profile(db, "burza")
             await _tap(client, 1, "Kozel 11°", "45")
-            two = await cenapiva.card(db, "burza")
+            two = await cenapiva.profile(db, "burza")
             return empty, one, two
 
     def ids(view):
         return [c.item.custom_id for c in view.children]
 
-    (_, empty), (_, one), (_, two) = run(go())
-    assert ids(empty) == ["pivocena:a:burza", "pivocena:m:burza", "pivocena:o"]
-    assert ids(one) == ids(empty) + ["pivocena:e:burza"]
-    assert ids(two) == ids(one) + ["pivocena:v:burza"]
-    revert = two.children[-1].item
+    empty, one, two = (shown["view"] for shown in run(go()))
+    assert ids(empty) == ["pivocena:a:burza", "pivocena:m:burza", "pivocena:p:e"]
+    assert ids(one) == ["pivocena:a:burza", "pivocena:m:burza", "pivocena:e:burza", "pivocena:p:e"]
+    assert ids(two) == ["pivocena:a:burza", "pivocena:m:burza", "pivocena:e:burza", "pivocena:v:burza", "pivocena:p:e"]
+    revert = two.children[3].item
     assert [o.label for o in revert.options] == ["Plzeň 12° · 59 Kč"]
     assert revert.options[0].description.endswith("· ➕ Plzeň 12° · 59 Kč")
 
@@ -229,7 +246,7 @@ def test_many_kinds_and_cancel(monkeypatch):
             return many, text, cancelled, venues.PUBS["burza"].beer_text
 
     many, text, cancelled, after = run(go())
-    assert "🍻 **Víc druhů**, kolem **70 Kč**" in many["content"]
+    assert "🍻 Víc druhů: kolem **70 Kč**" in _shown(many)
     assert text.startswith("💰 víc druhů · ~70 Kč (")
     assert "🍻 zrušeno „víc druhů“" in cancelled["content"] and after.startswith("💰 Plzeň 12° · 59 Kč")
 
@@ -277,3 +294,59 @@ def test_pubs_by_area_matches_choices():
     assert sorted(keys) == sorted(venues.PUBS)
     assert [c.value for c in cenapiva.PUB_CHOICES] == keys[:25]
     assert [o.value for o in napivo.place_options(None) if o.value in venues.PUBS] == keys[:25 - len(venues.AREAS)]
+
+
+def test_since_kept_for_unchanged_beers_and_after_revert():
+    from datetime import datetime
+
+    from lunch.service import TZ
+
+    async def go():
+        async with memory_db() as db:
+            def at(day):
+                return datetime(2026, 11, day, 18, 0, tzinfo=TZ)
+
+            await beer.change(db, "burza", lambda s: beers.add(s, "Plzeň 12°", 59), 1, at(20))
+            await beer.change(db, "burza", lambda s: beers.add(s, "Kozel 11°", 45), 1, at(21))
+            first = (await beer.history(db, "burza"))[0]
+            await beer.change(db, "burza", lambda s: beers.add(s, "Kozel 11°", 47, "Kozel 11°"), 1, at(22))
+            edited = (await beer.history(db, "burza"))[0]
+            await beer.revert(db, first, 2, at(23))
+            reverted = (await beer.history(db, "burza"))[0]
+            return first, edited, reverted
+
+    first, edited, reverted = run(go())
+    since = {v: {t.name: t.since.day for t in v.state.taps} for v in (first, edited, reverted)}
+    assert since[first] == {"Kozel 11°": 21, "Plzeň 12°": 20}
+    assert since[edited] == {"Kozel 11°": 22, "Plzeň 12°": 20}  # nová cena = nové datum, Plzeň beze změny
+    assert since[reverted] == {"Kozel 11°": 21, "Plzeň 12°": 20}  # vrácená cena platí od původního data
+
+
+def test_profile_buttons_survive_restart():
+    async def go():
+        items = []
+        for cls, custom_id in [(cenapiva.AddButton, "pivocena:a:burza"), (cenapiva.RevertSelect, "pivocena:v:vlk")]:
+            match = cls.__discord_ui_compiled_template__.fullmatch(custom_id)
+            items.append(await cls.from_custom_id(None, None, match))
+        return items
+
+    add, revert = run(go())
+    assert isinstance(add, cenapiva.AddButton) and add.pub_key == "burza"
+    assert isinstance(revert, cenapiva.RevertSelect) and revert.pub_key == "vlk"
+
+
+def test_profile_of_pub_with_many_beers(monkeypatch):
+    monkeypatch.setattr(venues, "beer_prices", {})
+
+    async def go():
+        async with memory_db() as db:
+            client = SimpleNamespace(db=db)
+            for i in range(6):
+                await _tap(client, 1, f"Pivo {i}", str(40 + i * 5))
+            return await cenapiva.profile(db, "burza"), venues.PUBS["burza"].beer_text
+
+    shown, listed = run(go())
+    text = _shown(shown)
+    assert "🍺 Točí **6 piv** · 40–65 Kč" in text and all(f"🍺 Pivo {i}" in text for i in range(6))
+    assert listed.startswith("💰 6 piv · ~52 Kč")  # ve výpisech jen počet a medián
+    assert len([f for f in shown["embed"].fields if f.inline]) % 3 == 0  # mřížka po třech

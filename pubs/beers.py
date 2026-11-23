@@ -12,7 +12,8 @@ Jak se to ukazuje ve výpisech (`text`, krátce `price_text`):
 from __future__ import annotations
 
 import statistics
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
+from datetime import date
 
 from utils import text as text_utils
 
@@ -29,6 +30,7 @@ class BeerError(ValueError):
 class Tap:
     name: str
     price: int
+    since: date | None = field(default=None, compare=False)  # odkdy platí tahle cena (doplní `stamp` při uložení)
 
     @property
     def text(self) -> str:
@@ -80,6 +82,11 @@ class PubBeers:
 
     def find(self, name: str) -> Tap | None:
         return next((t for t in self.taps if _key(t.name) == _key(name)), None)
+
+
+def stamp(state: PubBeers, day: date) -> PubBeers:
+    """Pivům bez data (právě přidaným nebo upraveným) dá dnešní datum, ostatní si nechají svoje."""
+    return replace(state, taps=tuple(t if t.since else replace(t, since=day) for t in state.taps))
 
 
 def _with_taps(state: PubBeers, taps: list[Tap]) -> PubBeers:

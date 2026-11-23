@@ -32,7 +32,8 @@ v embedech s tlačítky na přepínání.
 | `/obed` | Hlasování „Kdo jde na oběd?“: kam a v kolik |
 | `/na-pivo` | Pozvánka na dnešní pivo: v kolik, kam (s mapou) a kdo jde / nejde / šel by jindy |
 | `/na-pivo-termin` | Hledání společného dne na pivo v příštích dvou týdnech i s počasím, nejlepší termín jde rovnou svolat |
-| `/cena-piva` | Točená piva a ceny v hospodách z `/na-pivo`: zadá je kdokoli, každá změna se pamatuje a jde vrátit |
+| `/co-toci` | Profil hospody: kde je, všechna točená piva s cenou a odkdy platí, historie změn (a rovnou úpravy) |
+| `/cena-piva` | Točená piva a ceny ve všech hospodách z `/na-pivo`: zadá je kdokoli, každá změna se pamatuje a jde vrátit |
 | `/co-jist` | Náhodné jídlo z dnešních menz a restaurací, volitelně do 150 Kč |
 | `/pocasi` | Počasí u FITu: teď, dalších 18 h, dnes a zítra, rady k oblečení a k oknu přes noc, kdo má svátek |
 | `/otevreno` | Co má teď otevřeno: menzy, pizzerie, kavárny a bufety VUT a okolní obchody (i se svátky) |
@@ -121,7 +122,7 @@ hned. Kdo smí které commandy používat, se nastavuje v **Nastavení serveru �
   🐒 Bot pro VUT Monkes – obědy, MHD, slevy a počasí.
 
   🍽️ /ppv · /purkyne · /menzy · /restaurace · /co-jist · /obed
-  🍺 /na-pivo · /na-pivo-termin · /cena-piva
+  🍺 /na-pivo · /na-pivo-termin · /co-toci
   🚏 /mhd · /mhd-purkyne · /domu · 🚲 /kola · 🏠 /koleje
   🛒 /letaky · /maso · /pivo · /napoje · 🔔 /hlidat
   ☀️ /pocasi · 🕐 /otevreno · 📊 /statistiky · 📰 /novinky
@@ -226,7 +227,7 @@ tests/           # testy
 v `lunch/service.py`. **Nová menza nebo skupina:** `MENZY` / `GROUPS` v `lunch/kam.py`, tlačítko v `GROUP_BUTTONS`
 v `cogs/menza.py`. **Obchody a pobočky:** `STORES` v `shops/service.py`. **Zastávky MHD:** `BOARDS` a `AREAS`
 v `transit/service.py`. **Nová hospoda pro /na-pivo:** řádek v `PUBS` v `pubs/venues.py` (název, oblast, adresa),
-odkaz na mapu se složí sám. Piva a ceny pak zadají lidé v `/cena-piva`.
+odkaz na mapu se složí sám. Piva a ceny pak zadají lidé v `/co-toci` nebo `/cena-piva`.
 
 ## Licence
 

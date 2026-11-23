@@ -54,6 +54,7 @@ class Pub:
         return f"https://www.google.com/maps/search/?api=1&query={quote_plus(query)}"
 
 
+COLOR = 0xE8A317  # barva piva (embedy /na-pivo a profil hospody)
 NO_BEERS = PubBeers()
 # Aktuální piva a ceny podle klíče podniku (z databáze, viz docstring nahoře).
 beer_prices: dict[str, PubBeers] = {}

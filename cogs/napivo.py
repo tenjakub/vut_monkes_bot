@@ -35,7 +35,7 @@ from weather import openmeteo
 
 log = logging.getLogger(__name__)
 
-COLOR = 0xE8A317  # barva piva
+COLOR = venues.COLOR
 TIMES = [f"{h}:{m:02d}" for h in range(14, 23) for m in (0, 30)][:-1]  # 14:00 … 22:00 pro /na-pivo
 FROM_TIMES = [f"{h}:00" for h in range(14, 22)]  # "můžu od" pro /na-pivo-termin
 EVENT_HOURS = 3  # jak dlouho událost trvá (Discord u externích událostí chce konec)

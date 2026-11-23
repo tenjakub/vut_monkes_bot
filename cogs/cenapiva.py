@@ -1,19 +1,21 @@
-"""/cena-piva – točená piva a jejich ceny v hospodách z /na-pivo. Zadat nebo opravit je může kdokoli.
+"""Točená piva v hospodách z /na-pivo: /co-toci (profil jedné hospody) a /cena-piva (přehled všech).
 
-Každá změna se pamatuje (storage/beer.py) i s tím, kdo ji udělal, a jde vrátit na kterýkoli starší stav.
-Ceny se ukazují v /na-pivo (u vybraného podniku, ve výběru „Kam“ a v 🗺️ Kde co je). Všechno tady vidí jen ten,
-kdo klikl.
+Zadat nebo opravit piva může kdokoli. Každá změna se pamatuje (storage/beer.py) i s tím, kdo ji udělal, a jde vrátit
+na kterýkoli starší stav. Ceny se ukazují v /na-pivo (u vybraného podniku, ve výběru „Kam“ a v 🗺️ Kde co je).
 
-- /cena-piva → přehled podniků + výběr podniku (`pivocena:p:e` upraví zprávu),
-- 🗺️ Kde co je v /na-pivo má stejný výběr (`pivocena:p:n`, karta přijde jako nová zpráva, mapa zůstane),
-- karta podniku: ➕ Přidat pivo, 🍻 Víc druhů (ručně), výběr ✏️ Upravit nebo smazat pivo, výběr ↩️ Vrátit.
+Hospoda se všude ukazuje jako stejný profil (`profile`): kde je, všechna piva s cenou a odkdy platí, historie změn
+a pod tím ovládání: ➕ Přidat pivo, 🍻 Víc druhů, ✏️ Upravit nebo smazat pivo, ↩️ Vrátit a výběr jiné hospody.
+- /co-toci <hospoda> → profil pro všechny v kanálu,
+- /cena-piva → přehled hospod jen pro sebe, výběr (`pivocena:p:e`) ho přepne na profil,
+- 🗺️ Kde co je v /na-pivo → stejný výběr (`pivocena:p:n`), profil přijde jako nová zpráva jen pro sebe.
+Po každé změně se profil překreslí ve zprávě, ze které se změna udělala.
 """
 
 from __future__ import annotations
 
 import logging
 import re
-from datetime import datetime
+from datetime import date, datetime
 
 import discord
 from discord import app_commands
@@ -22,13 +24,15 @@ from discord.ext import commands
 from lunch.service import TZ
 from pubs import beers, venues
 from storage import beer, ready
+from utils import render
 from utils.interactions import STALE, reported
-from utils.text import clean
+from utils.text import clean, plural
 
 log = logging.getLogger(__name__)
 
 HISTORY_SHOWN = 8
 NAME_LIMIT = 40
+FOOTER = "Ceny za 0,5 l · zadat, opravit i vrátit je může kdokoli"
 
 
 async def reload(db) -> None:
@@ -36,15 +40,18 @@ async def reload(db) -> None:
     venues.beer_prices = {pub: s for pub, s in (await beer.current(db)).items() if pub in venues.PUBS}
 
 
+def _day(d: date) -> str:
+    return f"{d.day}. {d.month}. {d.year}"
+
+
 def _when(v: beer.Version) -> str:
-    return f"{v.created_at.day}. {v.created_at.month}. {v.created_at.year} {v.created_at:%H:%M}"
+    return f"{_day(v.created_at)} {v.created_at:%H:%M}"
 
 
 def overview() -> str:
     lines = [
         "### 🍺 Točená piva v hospodách",
-        "-# Ceny za 0,5 l. Zadat nebo opravit je může kdokoli, každá změna se pamatuje a jde vrátit. "
-        "Ukazují se v /na-pivo.",
+        "-# Vyber hospodu a uvidíš všechna piva, můžeš je i doplnit nebo opravit. Pro všechny v kanálu: /co-toci.",
     ]
     for pub in venues.pubs_by_area():
         lines.append(f"{pub.emoji} **{pub.name}** — {pub.beer_text or '_nevíme_'}")
@@ -57,38 +64,54 @@ def overview_view() -> discord.ui.View:
     return view
 
 
-async def card(db, pub_key: str, notice: str = "") -> tuple[str, discord.ui.View]:
+def profile_embed(pub: venues.Pub, versions: list[beer.Version]) -> discord.Embed:
+    state = versions[0].state if versions else beers.PubBeers()
+    area = venues.AREAS[pub.area]
+    where = " · ".join(p for p in (f"{area.emoji} {area.label}", pub.address, f"[🗺️ mapa]({pub.map})") if p)
+    lines = [f"📍 {where}"]
+    if state.taps:
+        prices = [t.price for t in state.taps]
+        span = f"{min(prices)}–{max(prices)} Kč" if min(prices) != max(prices) else f"{prices[0]} Kč"
+        lines.append(f"🍺 Točí **{plural(len(prices), 'pivo', 'piva', 'piv')}** · {span}")
+    if state.empty:
+        lines.append("_Zatím nikdo nezadal, co tu točí._ Klikni na ➕ Přidat pivo.")
+    else:
+        lines.append(f"-# Ve výpisech /na-pivo: {state.text}")
+    embed = discord.Embed(title=f"{pub.emoji} {pub.name}", url=pub.map, description="\n".join(lines),
+                          color=venues.COLOR)
+
+    fields = [render.Field(f"🍺 {t.name}", f"**{t.price} Kč**\n-# od {_day(t.since)}") for t in state.taps]
+    if state.many_price is not None:
+        fields.append(render.Field(
+            "🍻 Víc druhů", f"kolem **{state.many_price} Kč**\n-# ve výpisech místo seznamu piv", inline=False,
+        ))
+    if versions:
+        history = [f"-# {_when(v)} · {v.change} · <@{v.user_id}>" for v in versions[:HISTORY_SHOWN]]
+        fields.append(render.Field("🕓 Historie změn", render.fit_lines(history, render.FIELD_VALUE_LIMIT),
+                                   inline=False))
+    render.add_fields(embed, fields, render.TOTAL_BUDGET)
+    embed.set_footer(text=FOOTER)
+    return embed
+
+
+async def profile(db, pub_key: str, notice: str = "") -> dict:
+    """Profil hospody jako zpráva: `send_message(**profile(…))` nebo `edit_message(**profile(…))`."""
     pub = venues.PUBS[pub_key]
     versions = await beer.history(db, pub_key)
     state = versions[0].state if versions else beers.PubBeers()
-    head = " · ".join(p for p in (pub.address, f"[🗺️ mapa]({pub.map})") if p)
-    lines = [notice] if notice else []
-    lines += [f"### {pub.emoji} {pub.name}", f"-# {head}"]
-    if state.taps:
-        lines.append("**Točí** (za 0,5 l)")
-        lines += [f"• {t.name} — **{t.price} Kč**" for t in state.taps]
-    if state.many_price is not None:
-        lines.append(f"🍻 **Víc druhů**, kolem **{state.many_price} Kč** (ve výpisech místo seznamu)")
-    if state.empty:
-        lines.append("_Zatím nikdo nic nezadal._ Klikni na ➕ Přidat pivo.")
-    else:
-        lines.append(f"-# Ve výpisech: {state.text}")
-    if versions:
-        lines.append("**Historie změn**")
-        lines += [f"-# {_when(v)} · {v.change} · <@{v.user_id}>" for v in versions[:HISTORY_SHOWN]]
     view = discord.ui.View(timeout=None)
     view.add_item(AddButton(pub_key))
     view.add_item(ManyButton(pub_key))
-    view.add_item(BackButton())
     if state.taps:
         view.add_item(TapSelect(pub_key, state.taps))
     if len(versions) > 1:
         view.add_item(RevertSelect(pub_key, versions[1:]))
-    return "\n".join(lines), view
+    view.add_item(PubSelect("e", row=3, placeholder="🍺 Jiná hospoda…"))
+    return {"content": notice or None, "embed": profile_embed(pub, versions), "view": view}
 
 
 async def _save(interaction: discord.Interaction, pub_key: str, edit=None, back: beer.Version | None = None) -> None:
-    """Uloží změnu podniku (`edit`, nebo vrácení na stav `back`) a ukáže kartu znovu s hláškou.
+    """Uloží změnu podniku (`edit`, nebo vrácení na stav `back`) a překreslí profil s hláškou.
     Chybu zadání ukáže jen jako hlášku."""
     db = interaction.client.db
     now = datetime.now(TZ)
@@ -97,12 +120,11 @@ async def _save(interaction: discord.Interaction, pub_key: str, edit=None, back:
             version = await beer.revert(db, back, interaction.user.id, now)
         else:
             version = await beer.change(db, pub_key, edit, interaction.user.id, now)
-        await reload(db)
-        content, view = await card(db, pub_key, f"✅ Uloženo: {version.change}")
     except beers.BeerError as exc:
         await interaction.response.send_message(str(exc), ephemeral=True)
         return
-    await interaction.response.edit_message(content=content, embed=None, view=view)
+    await reload(db)
+    await interaction.response.edit_message(**await profile(db, pub_key, f"✅ Uloženo: {version.change}"))
 
 
 class TapModal(discord.ui.Modal):
@@ -175,16 +197,16 @@ async def _current(interaction: discord.Interaction, pub_key: str) -> beers.PubB
 
 
 class PubSelect(discord.ui.DynamicItem[discord.ui.Select], template=r"pivocena:p:(?P<mode>[en])"):
-    """Výběr podniku. `e` = upraví zprávu (přehled /cena-piva), `n` = pošle novou (z Kde co je)."""
+    """Výběr podniku. `e` = přepne zprávu na profil, `n` = pošle profil jako novou zprávu (z Kde co je)."""
 
-    def __init__(self, mode: str, row: int | None = None) -> None:
+    def __init__(self, mode: str, row: int | None = None, placeholder: str = "🍺 Co kde točí…") -> None:
         options = [
             discord.SelectOption(label=pub.name, value=pub.key, emoji=pub.emoji,
                                  description=pub.beer.price_text or "cenu zatím nevíme")
             for pub in venues.pubs_by_area()
         ][:25]
         super().__init__(discord.ui.Select(
-            custom_id=f"pivocena:p:{mode}", placeholder="🍺 Zadat nebo opravit ceny piva…", options=options, row=row,
+            custom_id=f"pivocena:p:{mode}", placeholder=placeholder, options=options, row=row,
         ))
         self.mode = mode
 
@@ -198,24 +220,30 @@ class PubSelect(discord.ui.DynamicItem[discord.ui.Select], template=r"pivocena:p
         if pub_key not in venues.PUBS:
             await interaction.response.send_message(STALE, ephemeral=True)
             return
-        content, view = await card(interaction.client.db, pub_key)
+        shown = await profile(interaction.client.db, pub_key)
         if self.mode == "e":
-            await interaction.response.edit_message(content=content, embed=None, view=view)
+            await interaction.response.edit_message(**shown)
         else:
-            await interaction.response.send_message(content, view=view, ephemeral=True)
+            await interaction.response.send_message(**shown, ephemeral=True)
 
 
-class AddButton(discord.ui.DynamicItem[discord.ui.Button], template=r"pivocena:a:(?P<pub>[a-z0-9_]+)"):
+class _ForPub:
+    """Tlačítka a výběry profilu: podnik je v custom_id (`pivocena:<akce>:<podnik>`)."""
+
+    pub_key: str
+
+    @classmethod
+    async def from_custom_id(cls, interaction, item, match: re.Match[str], /):
+        return cls(match["pub"])
+
+
+class AddButton(_ForPub, discord.ui.DynamicItem[discord.ui.Button], template=r"pivocena:a:(?P<pub>[a-z0-9_]+)"):
     def __init__(self, pub_key: str) -> None:
         super().__init__(discord.ui.Button(
             custom_id=f"pivocena:a:{pub_key}", label="Přidat pivo", emoji="➕", style=discord.ButtonStyle.success,
             row=0,
         ))
         self.pub_key = pub_key
-
-    @classmethod
-    async def from_custom_id(cls, interaction, item, match: re.Match[str], /) -> AddButton:
-        return cls(match["pub"])
 
     @reported
     async def callback(self, interaction: discord.Interaction) -> None:
@@ -225,17 +253,13 @@ class AddButton(discord.ui.DynamicItem[discord.ui.Button], template=r"pivocena:a
         await interaction.response.send_modal(TapModal(self.pub_key))
 
 
-class ManyButton(discord.ui.DynamicItem[discord.ui.Button], template=r"pivocena:m:(?P<pub>[a-z0-9_]+)"):
+class ManyButton(_ForPub, discord.ui.DynamicItem[discord.ui.Button], template=r"pivocena:m:(?P<pub>[a-z0-9_]+)"):
     def __init__(self, pub_key: str) -> None:
         super().__init__(discord.ui.Button(
             custom_id=f"pivocena:m:{pub_key}", label="Víc druhů", emoji="🍻", style=discord.ButtonStyle.secondary,
             row=0,
         ))
         self.pub_key = pub_key
-
-    @classmethod
-    async def from_custom_id(cls, interaction, item, match: re.Match[str], /) -> ManyButton:
-        return cls(match["pub"])
 
     @reported
     async def callback(self, interaction: discord.Interaction) -> None:
@@ -244,22 +268,7 @@ class ManyButton(discord.ui.DynamicItem[discord.ui.Button], template=r"pivocena:
             await interaction.response.send_modal(ManyModal(self.pub_key, state.many_price))
 
 
-class BackButton(discord.ui.DynamicItem[discord.ui.Button], template=r"pivocena:o"):
-    def __init__(self) -> None:
-        super().__init__(discord.ui.Button(
-            custom_id="pivocena:o", label="Všechny podniky", emoji="📋", style=discord.ButtonStyle.secondary, row=0,
-        ))
-
-    @classmethod
-    async def from_custom_id(cls, interaction, item, match: re.Match[str], /) -> BackButton:
-        return cls()
-
-    @reported
-    async def callback(self, interaction: discord.Interaction) -> None:
-        await interaction.response.edit_message(content=overview(), embed=None, view=overview_view())
-
-
-class TapSelect(discord.ui.DynamicItem[discord.ui.Select], template=r"pivocena:e:(?P<pub>[a-z0-9_]+)"):
+class TapSelect(_ForPub, discord.ui.DynamicItem[discord.ui.Select], template=r"pivocena:e:(?P<pub>[a-z0-9_]+)"):
     """✏️ Upravit nebo smazat pivo: otevře okno s pivem (hodnota = název piva)."""
 
     def __init__(self, pub_key: str, taps: tuple[beers.Tap, ...] = ()) -> None:
@@ -269,10 +278,6 @@ class TapSelect(discord.ui.DynamicItem[discord.ui.Select], template=r"pivocena:e
             row=1,
         ))
         self.pub_key = pub_key
-
-    @classmethod
-    async def from_custom_id(cls, interaction, item, match: re.Match[str], /) -> TapSelect:
-        return cls(match["pub"])
 
     @reported
     async def callback(self, interaction: discord.Interaction) -> None:
@@ -286,7 +291,7 @@ class TapSelect(discord.ui.DynamicItem[discord.ui.Select], template=r"pivocena:e
         await interaction.response.send_modal(TapModal(self.pub_key, tap))
 
 
-class RevertSelect(discord.ui.DynamicItem[discord.ui.Select], template=r"pivocena:v:(?P<pub>[a-z0-9_]+)"):
+class RevertSelect(_ForPub, discord.ui.DynamicItem[discord.ui.Select], template=r"pivocena:v:(?P<pub>[a-z0-9_]+)"):
     """↩️ Vrátit na starší stav (třeba když někdo zadal nesmysl). Hodnota = id stavu."""
 
     def __init__(self, pub_key: str, older: list[beer.Version] | None = None) -> None:
@@ -300,10 +305,6 @@ class RevertSelect(discord.ui.DynamicItem[discord.ui.Select], template=r"pivocen
         ))
         self.pub_key = pub_key
 
-    @classmethod
-    async def from_custom_id(cls, interaction, item, match: re.Match[str], /) -> RevertSelect:
-        return cls(match["pub"])
-
     @reported
     async def callback(self, interaction: discord.Interaction) -> None:
         value = self.item.values[0] if self.item.values else ""
@@ -314,7 +315,7 @@ class RevertSelect(discord.ui.DynamicItem[discord.ui.Select], template=r"pivocen
         await _save(interaction, self.pub_key, back=version)
 
 
-ITEMS = (PubSelect, AddButton, ManyButton, BackButton, TapSelect, RevertSelect)
+ITEMS = (PubSelect, AddButton, ManyButton, TapSelect, RevertSelect)
 PUB_CHOICES = [app_commands.Choice(name=pub.name, value=pub.key) for pub in venues.pubs_by_area()][:25]
 
 
@@ -334,15 +335,18 @@ class CenaPiva(commands.Cog):
     async def cog_unload(self) -> None:
         self.bot.remove_dynamic_items(*ITEMS)
 
-    @app_commands.command(name="cena-piva", description="🍺 Točená piva a ceny v hospodách – zadat, opravit, vrátit")
-    @app_commands.describe(podnik="Rovnou otevřít konkrétní podnik")
-    @app_commands.choices(podnik=PUB_CHOICES)
-    async def cena_piva(self, interaction: discord.Interaction, podnik: app_commands.Choice[str] | None = None) -> None:
-        if podnik is None or podnik.value not in venues.PUBS:
+    @app_commands.command(name="co-toci", description="🍺 Co točí v hospodě: všechna piva, ceny a odkdy platí")
+    @app_commands.describe(hospoda="Která hospoda")
+    @app_commands.choices(hospoda=PUB_CHOICES)
+    async def co_toci(self, interaction: discord.Interaction, hospoda: app_commands.Choice[str]) -> None:
+        if hospoda.value not in venues.PUBS:
             await interaction.response.send_message(overview(), view=overview_view(), ephemeral=True)
             return
-        content, view = await card(self.bot.db, podnik.value)
-        await interaction.response.send_message(content, view=view, ephemeral=True)
+        await interaction.response.send_message(**await profile(self.bot.db, hospoda.value))
+
+    @app_commands.command(name="cena-piva", description="🍺 Točená piva a ceny ve všech hospodách – zadat, opravit, vrátit")
+    async def cena_piva(self, interaction: discord.Interaction) -> None:
+        await interaction.response.send_message(overview(), view=overview_view(), ephemeral=True)
 
 
 async def setup(bot: commands.Bot) -> None:

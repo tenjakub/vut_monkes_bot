@@ -90,7 +90,7 @@ MIGRATIONS: list[str] = [
     CREATE TABLE pub_beers (
         id            INTEGER PRIMARY KEY,
         pub           TEXT    NOT NULL,       -- klíč podniku (pubs/venues.py PUBS)
-        taps          TEXT    NOT NULL,       -- JSON [{"name": "Plzeň 12°", "price": 59}, …], Kč za 0,5 l
+        taps          TEXT    NOT NULL,       -- JSON [{"name": "Plzeň 12°", "price": 59, "since": "2026-11-23"}, …], Kč za 0,5 l
         many_price    INTEGER,                -- ručně „víc druhů, ~XX Kč“, NULL = podle seznamu piv
         change        TEXT    NOT NULL,       -- co se změnilo („➕ Plzeň 12° · 59 Kč“), do historie
         user_id       INTEGER NOT NULL,       -- kdo to změnil (kvůli dohledání nesmyslů)

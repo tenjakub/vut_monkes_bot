@@ -19,9 +19,10 @@ Nejnovější verze je vždy nahoře.
 
 - 🏠 Nový command `/koleje`: nastav si, jestli bydlíš na PPV, nebo na Purkyních. `/mhd` a `/kola` ti pak rovnou ukážou tvoje koleje (přepínat jde dál tlačítky). Kdo nic nenastaví, má všechno jako dřív.
 
-## 1.19 · 2026-11-23 · Ceny piva v hospodách 🍺
+## 1.19 · 2026-11-23 · Co točí v hospodě 🍺
 
-- 🍺 Nový command `/cena-piva`: kdokoli může zapsat, jaká piva se v hospodách z `/na-pivo` točí a kolik stojí půllitr. Každé pivo jde zvlášť upravit nebo smazat. Pro hospody s velkým výběrem (Pivní burza) stačí zadat „🍻 víc druhů, kolem 70 Kč“. Jde to i z 🗺️ **Kde co je** u pozvánky.
+- 🍺 Nový command `/co-toci`: profil hospody z `/na-pivo` – kde je (s mapou), všechna točená piva s cenou za půllitr a odkdy cena platí, a kdo co naposledy měnil.
+- ✏️ Piva může kdokoli doplnit nebo opravit rovnou v profilu: přidat pivo, upravit nebo smazat jednotlivá piva, a u hospod s velkým výběrem (Pivní burza) jen „🍻 víc druhů, kolem 70 Kč“. Přehled všech hospod je v `/cena-piva` a jde se tam dostat i z 🗺️ **Kde co je** u pozvánky.
 - 💰 Ceny se ukazují v pozvánce `/na-pivo` u vybraného podniku, v 🗺️ Kde co je a ve výběru „Kam“. Jedno nebo dvě piva jsou vypsaná rovnou, u víc piv je jen jejich počet a obvyklá cena (~ = medián).
 - ↩️ Každá změna se pamatuje i s tím, kdo ji udělal, takže když někdo zadá nesmysl, jde to výběrem vrátit na kterýkoli dřívější stav.
 
