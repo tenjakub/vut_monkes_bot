@@ -48,6 +48,26 @@ MIGRATIONS: list[str] = [
     ) WITHOUT ROWID;
     CREATE INDEX dish_rating_user ON dish_rating (user_id);
     """,
+    # 4 – historie cen akcí z Kupi.cz (storage/prices.py): jeden řádek = jedna akce (ID akce z Kupi.cz)
+    """
+    CREATE TABLE deal_price (
+        deal_id    TEXT    PRIMARY KEY,       -- ID akce na Kupi.cz (data-discount)
+        product    TEXT    NOT NULL,          -- produkt: slug z odkazu /sleva/<slug>, jinak název
+        name       TEXT    NOT NULL,          -- název produktu, jak ho píše Kupi.cz
+        amount     TEXT    NOT NULL,          -- balení („6x 0.5 l“, „1 kg“, '' když není)
+        shop       TEXT    NOT NULL,          -- obchod („Lidl“, „Albert supermarket“…)
+        category   TEXT    NOT NULL,          -- kategorie Kupi.cz
+        price      REAL    NOT NULL,          -- Kč za balení
+        unit_price REAL,                      -- Kč za 1 kg / 1 l, když ho Kupi.cz uvádí
+        unit       TEXT,                      -- kg / l
+        percent    INTEGER,                   -- sleva v %, když ji Kupi.cz uvádí
+        valid_from TEXT,                      -- RRRR-MM-DD
+        valid_to   TEXT,
+        first_seen TEXT    NOT NULL,          -- RRRR-MM-DD, kdy jsme akci viděli poprvé
+        last_seen  TEXT    NOT NULL
+    );
+    CREATE INDEX deal_price_product ON deal_price (product, amount);
+    """,
 ]
 
 LATEST = len(MIGRATIONS)

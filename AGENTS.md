@@ -201,6 +201,12 @@ Postup, když jsou nová oprávnění potřeba:
   `znamka:s` (hodnota = `dish.id`, max 25, hlavní jídla první) → `znamka:h:<id>:<g|o|b>` → uloženo + `znamka:z:<id>`
   (zrušit). Souhrn (`rating_notes`) je pod kartičkou jídla jako `-# 👍 3 · 😐 1`, sčítá se podle (podnik, název)
   přes všechny dny.
+- **Historie cen akcí** (`storage/prices.py`, tabulka `deal_price`): po obnově Kupi.cz (`Slevy.remember_prices`)
+  se uloží všechny načtené akce (řádek = akce podle ID z Kupi.cz, `first_seen`/`last_seen`), ~100 nových denně.
+  Produkt = slug z `/sleva/<slug>` + balení. Z toho `prices.marks` → `Slevy.marks` {ID akce: hot/bait}: 🔥 = nejnižší
+  známá akční cena (a pod obvyklou), 🎣 = sleva v %, ale nad mediánem ostatních akcí. Porovnává se cena za kg/l,
+  počítají se i souběžné akce jiných obchodů, potřeba aspoň `MIN_HISTORY` (3) jiných akcí. Značka je za cenou,
+  legenda pod nadpisem jen když se nějaká značka ukazuje.
 
 ## Zdroje dat a jejich záludnosti
 

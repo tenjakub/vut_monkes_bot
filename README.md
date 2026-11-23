@@ -27,7 +27,7 @@ v embedech s tlačítky na přepínání.
 | `/domu` | Jak se dostat z centra (Česká, Hlavní nádraží) na koleje: tramvaje, poslední denní spoj, noční N99 |
 | `/letaky` | Akční letáky a otevírací doba okolních Lidlů, BILLY, Alberta a Globusu |
 | `/maso` | Slevy na čerstvé maso, nahoře 🏆 nejlevnější za kilo |
-| `/pivo` | Pivo v akci (lahve, plechovky, multipacky), ceny za půllitr nebo za kus |
+| `/pivo` | Pivo v akci (lahve, plechovky, multipacky), ceny za půllitr nebo za kus, 🔥 nejlevnější / 🎣 sleva na oko |
 | `/napoje` | Energetické nápoje a limonády bez cukru v akci |
 | `/obed` | Hlasování „Kdo jde na oběd?“: kam a v kolik |
 | `/na-pivo` | Pozvánka na dnešní pivo: v kolik, kam (s mapou) a kdo jde / nejde / šel by jindy |
@@ -156,6 +156,7 @@ Co se ukládá:
 - **historie jídel** (`dish`): polévky a hlavní jídla z menz a restaurací po dnech s cenou (podklad pro statistiky,
   ~100 řádků denně),
 - **hodnocení jídel** (`dish_rating`): 👍/😐/👎 s ID člověka (každý hodnotí jednou a může hodnocení zrušit).
+- **ceny akcí** (`deal_price`): každá akce z Kupi.cz jednou (cena, sleva, platnost) pro 🔥/🎣 u slev a statistiky.
 
 - **Zálohy:** bot jednou denně uloží kopii do `data/backups/bot-RRRR-MM-DD.db` a nechává posledních 7.
   Jsou ve stejném volume, takže chrání před chybou v botovi, ne před odchodem disku. Kopie mimo server:

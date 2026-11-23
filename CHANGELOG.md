@@ -11,6 +11,10 @@ Formát (bot ho čte, viz utils/changelog.py):
 Nejnovější verze je vždy nahoře.
 -->
 
+## 1.17 · 2026-11-23 · Dobrá cena, nebo past? 🔥
+
+- 🔥 V `/maso`, `/napoje` a `/pivo` je u ceny 🔥, když je to nejlevnější, za kolik jsme produkt v akci viděli, a 🎣, když je sleva jen na oko (jinde nebo jindy bývá v akci levněji). Bot si ceny akcí pamatuje, takže čím déle běží, tím je to přesnější.
+
 ## 1.16 · 2026-11-23 · Hodnocení jídel ⭐
 
 - ⭐ Pod `/ppv`, `/purkyne`, `/menzy` a `/restaurace` je tlačítko **Ohodnotit**: vybereš, co sis dal(a), a dáš 👍 dobré, 😐 neurazí nebo 👎 špatné. Vidíš to jen ty, a kdyby ses překlikl(a), jde to hned zrušit.

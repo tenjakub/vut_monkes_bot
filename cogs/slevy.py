@@ -34,6 +34,7 @@ from shops.service import (
     unit_price,
     sugar_free,
 )
+from storage import prices
 from utils import loading, render
 from utils.interactions import STALE, reported
 
@@ -48,6 +49,10 @@ MAX_DEALS = 10  # akcí na obchod
 DEFAULT_ONLY_DISCOUNT = True  # výpisy akcí se otevírají rovnou s filtrem "jen se slevou"
 MAX_LEAFLETS = 5
 SHORT_DAYS = ["po", "út", "st", "čt", "pá", "so", "ne"]
+PRICE_LEGEND = {
+    prices.HOT: "🔥 nejlevnější, za kolik jsme to v akci viděli",
+    prices.BAIT: "🎣 sleva jen na oko, v akci to bývá levněji",
+}
 
 
 @dataclass(frozen=True)
@@ -188,8 +193,10 @@ def _leaflets_embed(store: Store, pages: dict[str, kupi.StorePage | None], day: 
 # --- akce (maso, nápoje) ----------------------------------------------------------------------
 
 
-def _deal_line(d: kupi.Deal, view: DealView, day: date) -> str:
-    """`−39 %` 🥫 **Kozel** 12° ležák 0,5 l — **16,90 Kč** · do 22. 11.  (sleva vlevo = zarovnaný sloupec)"""
+def _deal_line(d: kupi.Deal, view: DealView, day: date, mark: str | None = None) -> str:
+    """`−39 %` 🥫 **Kozel** 12° ležák 0,5 l — **16,90 Kč** 🔥 · do 22. 11.  (sleva vlevo = zarovnaný sloupec)
+
+    `mark` = 🔥/🎣 z historie cen (storage/prices.py), za cenou."""
     extra = ""
     price = f"**{d.price}**"
     if view.key == VIEW_DRINKS:
@@ -218,7 +225,8 @@ def _deal_line(d: kupi.Deal, view: DealView, day: date) -> str:
         name = name if len(name) <= 50 else name[:49] + "…"
     amount = f" {_pretty_amount(d.amount)}" if d.amount else ""
     when = _validity(d.valid_from, d.valid_to, day, weekday=False)
-    return f"{_discount_badge(d.percent)} {icon} {name}{amount} — {price}{extra}" + (f" · {when}" if when else "")
+    flag = f" {prices.MARKS[mark]}" if mark in prices.MARKS else ""
+    return f"{_discount_badge(d.percent)} {icon} {name}{amount} — {price}{extra}{flag}" + (f" · {when}" if when else "")
 
 
 def store_deals(
@@ -263,9 +271,11 @@ def store_deals(
 
 
 def _deals_embed(
-    store: Store, view: DealView, deals: list[kupi.Deal], flt: str, only_discount: bool, day: date, limit: int, error: bool
+    store: Store, view: DealView, deals: list[kupi.Deal], flt: str, only_discount: bool, day: date, limit: int,
+    error: bool, marks: dict[str, str] | None = None,
 ) -> discord.Embed | None:
     """Kartička obchodu, nebo None, když v něm nic není (prázdné obchody jsou jen v hlavičce)."""
+    marks = marks or {}
     mine = store_deals(deals, store, flt, day, view.key, only_discount)[:MAX_DEALS * 2]
     if not mine:
         return None
@@ -282,12 +292,13 @@ def _deals_embed(
         maybe = [d for d in mine if sugar_free(d) != SUGAR_FREE]
         lines = []
         if sure:
-            lines += ["**✅ Bez cukru**"] + [_deal_line(d, view, day) for d in sure]
+            lines += ["**✅ Bez cukru**"] + [_deal_line(d, view, day, marks.get(d.id)) for d in sure]
         if maybe:
-            lines += ["**🤷 Různé druhy (můžou být i bez cukru)**"] + [_deal_line(d, view, day) for d in maybe]
+            lines += ["**🤷 Různé druhy (můžou být i bez cukru)**"]
+            lines += [_deal_line(d, view, day, marks.get(d.id)) for d in maybe]
         lines = lines[: MAX_DEALS + 2]
     else:
-        lines = [_deal_line(d, view, day) for d in mine[:MAX_DEALS]]
+        lines = [_deal_line(d, view, day, marks.get(d.id)) for d in mine[:MAX_DEALS]]
     shown = sum(1 for l in lines if not l.startswith("**"))
     text = _fit(lines, limit, "_…a další ({n}) na Kupi.cz_")
     if len(mine) > shown and "a další" not in text:
@@ -296,10 +307,7 @@ def _deals_embed(
     return embed
 
 
-def _price_value(price: str) -> float | None:
-    """'1 099,90 Kč' -> 1099.9"""
-    m = re.search(r"(\d[\d\s]*),(\d+)", price)
-    return float(m.group(1).replace(" ", "").replace("\u00a0", "") + "." + m.group(2)) if m else None
+_price_value = prices.price_value  # '1 099,90 Kč' -> 1099.9
 
 
 def _czk(value: float) -> str:
@@ -347,8 +355,11 @@ def cheapest_lines(
 
 
 async def build_message(
-    shops: Shops, view: str, flt: str = ALL, force: bool = False, only_discount: bool = False
+    shops: Shops, view: str, flt: str = ALL, force: bool = False, only_discount: bool = False,
+    marks: dict[str, str] | None = None,
 ) -> tuple[str, list[discord.Embed], discord.ui.View]:
+    """`marks` = 🔥/🎣 u akcí podle historie cen ({ID akce: HOT/BAIT}), počítá se při obnově na pozadí."""
+    marks = marks or {}
     day = today()
     stores = list(STORES.values())
     info = "Data z [Kupi.cz](https://www.kupi.cz)"
@@ -359,13 +370,17 @@ async def build_message(
         limit = render.per_embed_limit(max(len(with_deals), 1))
         embeds = [
             e for s in with_deals
-            if (e := _deals_embed(s, dv, result.deals, flt, only_discount, day, limit, bool(result.errors)))
+            if (e := _deals_embed(s, dv, result.deals, flt, only_discount, day, limit, bool(result.errors), marks))
         ]
         title = dv.title + (" · jen se slevou" if only_discount else "")
         if result.fetched_at:
             info += f" · aktualizováno <t:{int(result.fetched_at)}:R>"
         if dv.note:
             info += f"\n-# {dv.note}"
+        used = {marks[d.id] for s in with_deals
+                for d in store_deals(result.deals, s, flt, day, view, only_discount)[:MAX_DEALS] if d.id in marks}
+        if used:
+            info += "\n-# " + " · ".join(PRICE_LEGEND[m] for m in (prices.HOT, prices.BAIT) if m in used)
         if dv.cheapest:
             top = cheapest_lines(dv, stores, result.deals, flt, only_discount, day)
             if top:
@@ -416,7 +431,7 @@ class SlevyButton(
         await interaction.response.defer()
         cog = interaction.client.get_cog("Slevy")  # type: ignore[attr-defined]
         content, embeds, view = await build_message(
-            cog.shops, self.view_name, self.flt, force=self.slot == "r", only_discount=self.only
+            cog.shops, self.view_name, self.flt, force=self.slot == "r", only_discount=self.only, marks=cog.marks
         )
         await interaction.edit_original_response(content=content, embeds=embeds, view=view)
 
@@ -458,6 +473,7 @@ class Slevy(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         self.shops = Shops(bot.fetcher)
+        self.marks: dict[str, str] = {}  # 🔥/🎣 u akcí podle historie cen, přepočítá se po každé obnově
 
     async def cog_load(self) -> None:
         self.bot.add_dynamic_items(SlevyButton)
@@ -475,13 +491,26 @@ class Slevy(commands.Cog):
         try:
             async with loading.track(self.bot, "slevy a letáky"):
                 await self.shops.refresh_all()
+            await self.remember_prices()
         except Exception:
             log.exception("Obnova slev z Kupi.cz selhala")
+
+    async def remember_prices(self) -> None:
+        """Uloží akce do historie cen a podle ní přepočítá 🔥/🎣. Bez databáze se značky prostě neukazují."""
+        db = getattr(self.bot, "db", None)
+        if db is None or not db.is_open:
+            return
+        deals = self.shops.all_deals()
+        try:
+            await prices.record(db, deals, today())
+            self.marks = await prices.marks(db, deals, today())
+        except Exception:
+            log.exception("Uložení historie cen selhalo")
 
     async def _send(self, interaction: discord.Interaction, view: str) -> None:
         await interaction.response.defer(thinking=True)
         only = DEFAULT_ONLY_DISCOUNT and view in DEAL_VIEWS
-        content, embeds, ui = await build_message(self.shops, view, only_discount=only)
+        content, embeds, ui = await build_message(self.shops, view, only_discount=only, marks=self.marks)
         await interaction.followup.send(content=content, embeds=embeds, view=ui)
 
     @app_commands.command(name="letaky", description="📰 Akční letáky: Lidl, BILLA, Albert, Globus")

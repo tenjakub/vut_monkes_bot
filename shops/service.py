@@ -339,6 +339,14 @@ class Shops:
     async def beer_deals(self, force: bool = False) -> DealsResult:
         return await self.deals(tuple(BEER_CATEGORIES), force)
 
+    def all_deals(self) -> list[kupi.Deal]:
+        """Všechny akce, které jsou teď načtené (ze všech výpisů), každá jednou."""
+        seen: dict[str, kupi.Deal] = {}
+        for result in self._deals.values():
+            for d in result.deals:
+                seen.setdefault(d.id, d)
+        return list(seen.values())
+
     async def store_pages(self, force: bool = False) -> dict[str, kupi.StorePage | None]:
         """Stránky poboček (letáky + otevírací doba). Klíč = Branch.kupi_path."""
         if not force and self._stores is not None:
