@@ -134,7 +134,7 @@ def place_options(current: str | None) -> list[discord.SelectOption]:
         area = venues.AREAS[pub.area]
         options.append(discord.SelectOption(
             label=pub.name, value=pub.key, emoji=pub.emoji,
-            description=" · ".join(p for p in (area.label, pub.address, pub.beer.price_text) if p)[:100],
+            description=" · ".join(p for p in (area.label, pub.address, pub.beer.short_text) if p)[:100],
             default=current == pub.key,
         ))
     return options[:25]

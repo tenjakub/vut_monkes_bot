@@ -2,7 +2,7 @@
 Bez discord.py a databáze. Změny se dělají funkcemi `add`, `remove`, `set_many`, které vrátí nový stav a popis
 změny do historie (`storage/beer.py` ukládá každý stav zvlášť, takže jde vrátit jakýkoli starší).
 
-Jak se to ukazuje ve výpisech (`text`, krátce `price_text`):
+Jak se to ukazuje ve výpisech (`text`, ve výběru „Kam“ `short_text`, nejkratší `price_text`):
 - 1–2 piva: „💰 Plzeň 12° · 59 Kč, Kozel 11° · 45 Kč“ (krátce „59 Kč“ / „45–59 Kč“),
 - 3 a víc: „💰 4 piva · ~55 Kč“ (medián cen),
 - ručně víc druhů: „💰 víc druhů · ~70 Kč“ (má přednost před seznamem).
@@ -65,12 +65,19 @@ class PubBeers:
         return f"{low} Kč" if low == high else f"{low}–{high} Kč"
 
     @property
+    def short_text(self) -> str:
+        """Do výběru „Kam“: cena, u víc piv i jejich počet („59 Kč“, „45–59 Kč“, „4 piva · ~55 Kč“, „~70 Kč“)."""
+        if self.many_price is None and len(self.taps) > SHOW_ALL:
+            return f"{text_utils.plural(len(self.taps), 'pivo', 'piva', 'piv')} · {self.price_text}"
+        return self.price_text
+
+    @property
     def summary(self) -> str:
         """Bez emoji a data: „Plzeň 12° · 59 Kč“, „4 piva · ~55 Kč“, „víc druhů · ~70 Kč“."""
         if self.many_price is not None:
             return f"víc druhů · {self.price_text}"
         if len(self.taps) > SHOW_ALL:
-            return f"{text_utils.plural(len(self.taps), 'pivo', 'piva', 'piv')} · {self.price_text}"
+            return self.short_text
         return ", ".join(t.text for t in self.taps)
 
     @property

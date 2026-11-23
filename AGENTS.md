@@ -384,8 +384,8 @@ Datum založení je v `embed.timestamp` (z něj se dopočítá rok a 14 dní hla
   Nic se nepřepisuje: každá změna je nový řádek s **celým stavem** podniku (piva jako JSON), popisem změny a ID toho,
   kdo ji udělal; aktuální = poslední řádek. Čtení a zápis jsou v jedné transakci (`beer.change`). Vrácení
   (`beer.revert`) = kopie staršího stavu s `reverted_from`, jde na kterýkoli. Aktuální stav drží v paměti
-  `venues.beer_prices` (`cenapiva.reload` při startu a po každé změně), `Pub.beer_text` / `beer.price_text` z něj kreslí
-  řádek v „Kde co je“, u podniku v pozvánce a ve výběru „Kam“. Cena 10–500 Kč, název piva prochází `utils.text.clean`.
+  `venues.beer_prices` (`cenapiva.reload` při startu a po každé změně), `Pub.beer_text` z něj kreslí řádek
+  v „Kde co je“ a u podniku v pozvánce, `beer.short_text` popis ve výběru „Kam“ (u spočítané ceny i počet piv). Cena 10–500 Kč, název piva prochází `utils.text.clean`.
   `since` doplní `beers.stamp` při uložení jen pivům bez data (nová nebo změněná cena), vrácený stav si ho nechá.
   Tlačítka: `pivocena:p:<e|n>` (výběr podniku: přepnout zprávu na profil / poslat novou z Kde co je),
   `pivocena:a:<podnik>` (➕ okno), `pivocena:m:<podnik>` (🍻 víc druhů), `pivocena:e:<podnik>` (výběr piva k úpravě,

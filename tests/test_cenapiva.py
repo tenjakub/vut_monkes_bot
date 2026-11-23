@@ -283,9 +283,10 @@ def test_pub_select_shows_only_prices(monkeypatch):
     options = {o.value: o.description for o in cenapiva.PubSelect("e").item.options}
     assert (options["burza"], options["vlk"], options["palac"]) == ("~70 Kč", "65 Kč", "~50 Kč")
     assert options["yacht"] == "cenu zatím nevíme"
-    # výběr „Kam“ v /na-pivo: za adresou jen cena
+    # výběr „Kam“ v /na-pivo: za adresou cena, u spočítané ceny i počet piv, u ručního „víc druhů“ jen cena
     places = {o.value: o.description for o in napivo.place_options(None)}
     assert places["vlk"] == "V centru · Zelný trh · 65 Kč" and places["burza"] == "V centru · Jánská 16 · ~70 Kč"
+    assert places["palac"] == "V centru · Běhounská 18 · 3 piva · ~50 Kč"
     assert places["yacht"] == "U PPV · Kolejní 2 (koleje PPV)"
 
 
