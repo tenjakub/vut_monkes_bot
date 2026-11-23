@@ -229,6 +229,23 @@ def _deal_line(d: kupi.Deal, view: DealView, day: date, mark: str | None = None)
     return f"{_discount_badge(d.percent)} {icon} {name}{amount} — {price}{extra}{flag}" + (f" · {when}" if when else "")
 
 
+def view_of(deal: kupi.Deal) -> DealView:
+    """Výpis, do kterého akce patří (podle kategorie Kupi.cz)."""
+    return next((v for v in DEAL_VIEWS.values() if deal.category in v.categories), DEAL_VIEWS[VIEW_MEAT])
+
+
+def describe_deal(d: kupi.Deal, day: date, mark: str | None = None) -> str:
+    """Řádek akce jako ve výpisu + obchod (pro hlídání akcí). U balení po víc kusech (mimo pivo, to cenu za kus
+    má) i cena za kus, protože hlídání „do XX Kč“ hlídá cenu za kus."""
+    view = view_of(d)
+    line = _deal_line(d, view, day, mark)
+    size = beer_size(d)
+    total = _price_value(d.price)
+    if view.key != VIEW_BEER and size and size[0] > 1 and total:
+        line = line.replace(f"**{d.price}**", f"**{d.price}** ({_czk(total / size[0])}/ks)", 1)
+    return f"{line} · {d.shop}"
+
+
 def store_deals(
     deals: list[kupi.Deal],
     store: Store,
@@ -492,6 +509,7 @@ class Slevy(commands.Cog):
             async with loading.track(self.bot, "slevy a letáky"):
                 await self.shops.refresh_all()
             await self.remember_prices()
+            self.bot.dispatch("deals_refreshed")  # hlídání akcí (cogs/hlidat.py)
         except Exception:
             log.exception("Obnova slev z Kupi.cz selhala")
 

@@ -36,6 +36,7 @@ v embedech s tlačítky na přepínání.
 | `/pocasi` | Počasí u FITu: teď, dalších 18 h, dnes a zítra, rady k oblečení a k oknu přes noc, kdo má svátek |
 | `/otevreno` | Co má teď otevřeno: menzy, pizzerie, kavárny a bufety VUT a okolní obchody (i se svátky) |
 | `/statistiky` | Které commandy se používají nejvíc (za 7 dní, 30 dní, od začátku) |
+| `/hlidat` | Hlídání akcí: když bude v akci, co chceš (případně do zadané ceny), bot ti napíše do soukromé zprávy |
 | `/novinky` | Co je nového (z [CHANGELOG.md](CHANGELOG.md)) |
 
 Menzové commandy mají parametr `vse: True`: místo Economy ukážou polévky a všechna hlavní jídla.
@@ -157,6 +158,7 @@ Co se ukládá:
   ~100 řádků denně),
 - **hodnocení jídel** (`dish_rating`): 👍/😐/👎 s ID člověka (každý hodnotí jednou a může hodnocení zrušit).
 - **ceny akcí** (`deal_price`): každá akce z Kupi.cz jednou (cena, sleva, platnost) pro 🔥/🎣 u slev a statistiky.
+- **hlídání akcí** (`watch`, `watch_hit`): co kdo hlídá (s ID člověka, komu psát) a o kterých akcích už ví. Zruší se v `/hlidat`.
 
 - **Zálohy:** bot jednou denně uloží kopii do `data/backups/bot-RRRR-MM-DD.db` a nechává posledních 7.
   Jsou ve stejném volume, takže chrání před chybou v botovi, ne před odchodem disku. Kopie mimo server:

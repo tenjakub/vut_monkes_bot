@@ -11,6 +11,10 @@ Formát (bot ho čte, viz utils/changelog.py):
 Nejnovější verze je vždy nahoře.
 -->
 
+## 1.18 · 2026-11-23 · Hlídání akcí 🔔
+
+- 🔔 Nový command `/hlidat`: napíšeš, co chceš hlídat (třeba `Monster`, `Plzeň`, `kuřecí prsa`), a případně cenu, do které to bereš. Jakmile to bude v Lidlu, BILLE, Albertu nebo Globusu v akci, bot ti napíše do soukromé zprávy. Co je v akci už teď, ukáže hned. Hlídá se maso, nápoje a pivo.
+
 ## 1.17 · 2026-11-23 · Dobrá cena, nebo past? 🔥
 
 - 🔥 V `/maso`, `/napoje` a `/pivo` je u ceny 🔥, když je to nejlevnější, za kolik jsme produkt v akci viděli, a 🎣, když je sleva jen na oko (jinde nebo jindy bývá v akci levněji). Bot si ceny akcí pamatuje, takže čím déle běží, tím je to přesnější.

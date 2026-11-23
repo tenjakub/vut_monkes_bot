@@ -8,7 +8,7 @@ Tenhle soubor je pro AI, která na projektu pracuje. Lidský návod je v [README
 - Commandy: `/ppv`, `/purkyne`, `/menzy` (menzy VUT, s ⭐ hodnocením jídel), `/restaurace` (polední menu), `/mhd`, `/mhd-purkyne` (odjezdy MHD Brno),
   `/letaky`, `/maso`, `/napoje`, `/pivo` (letáky a slevy supermarketů), `/domu` (spoje z centra na koleje), `/kola` (nextbike),
   `/obed` (kdo jde na oběd), `/na-pivo`, `/na-pivo-termin` (domluva na pivo), `/co-jist` (náhodné jídlo), `/pocasi`,
-  `/otevreno` (co má teď otevřeno), `/statistiky` (nejpoužívanější commandy), `/novinky` (changelog).
+  `/otevreno` (co má teď otevřeno), `/statistiky` (nejpoužívanější commandy), `/hlidat` (hlídání akcí), `/novinky` (changelog).
 - Repo je veřejné, kód je pod licencí MIT ([LICENSE](LICENSE)). Data ze zdrojů patří jim (viz README → Licence).
 - **Celý kód píše AI.** Majitel repa zadává požadavky, testuje na Discordu a rozhoduje. Kód nepíše, ale čte ho.
 - **Jazyk:** komunikace s uživatelem, texty v botovi, komentáře, docstringy i commit zprávy jsou **česky**.
@@ -143,13 +143,15 @@ Pravidla:
 
 ## Oprávnění a intenty – kontrola při každé změně
 
-Aktuální stav (ověřeno pro verzi s `/ppv`, `/purkyne`, `/menzy`, `/restaurace`, `/mhd`, `/mhd-purkyne`, `/kola`, `/letaky`, `/maso`, `/napoje`, `/pivo`, `/domu`, `/obed`, `/na-pivo`, `/na-pivo-termin`, `/co-jist`, `/pocasi`, `/otevreno`, `/statistiky`, `/novinky`):
+Aktuální stav (ověřeno pro verzi s `/ppv`, `/purkyne`, `/menzy`, `/restaurace`, `/mhd`, `/mhd-purkyne`, `/kola`, `/letaky`, `/maso`, `/napoje`, `/pivo`, `/domu`, `/obed`, `/na-pivo`, `/na-pivo-termin`, `/co-jist`, `/pocasi`, `/otevreno`, `/statistiky`, `/hlidat`, `/novinky`):
 
 - **Intenty:** `discord.Intents.default()`, žádné privilegované (Message Content, Server Members, Presence vypnuté).
 - **Oprávnění bota:** View Channels, Send Messages, Embed Links, Create Events → číselně `17592186063872`
   (Create Events = `1 << 44` pro události z `/na-pivo`: zakládá události a upravuje jen ty vlastní).
-  Bot dnes komunikuje **jen přes odpovědi na interakce** (slash commandy, tlačítka) a sám do kanálů nic neposílá.
-  Jediná akce mimo odpovědi je událost na serveru z `/na-pivo` (`cogs/napivo.sync_event`).
+  Bot komunikuje přes odpovědi na interakce (slash commandy, tlačítka) a sám do kanálů nic neposílá.
+  Mimo odpovědi dělá jen dvě věci: událost na serveru z `/na-pivo` (`cogs/napivo.sync_event`) a soukromé zprávy
+  z `/hlidat` (`user.send`, jen lidem, kteří si hlídání sami zapnuli). Na soukromé zprávy žádné oprávnění ani intent
+  potřeba není; když je má člověk vypnuté (`Forbidden`), bot to tiše vzdá.
 - **Scopes:** `bot` + `applications.commands`, Integration Type *Guild Install*.
 
 Když změna přidává něco z tohoto seznamu, je potřeba upravit oprávnění/intenty:
@@ -207,6 +209,14 @@ Postup, když jsou nová oprávnění potřeba:
   známá akční cena (a pod obvyklou), 🎣 = sleva v %, ale nad mediánem ostatních akcí. Porovnává se cena za kg/l,
   počítají se i souběžné akce jiných obchodů, potřeba aspoň `MIN_HISTORY` (3) jiných akcí. Značka je za cenou,
   legenda pod nadpisem jen když se nějaká značka ukazuje.
+- **/hlidat** (`cogs/hlidat.py`, `shops/watching.py`, `storage/watches.py`, tabulky `watch` a `watch_hit`): hlídání =
+  slova + volitelně cena do (Kč **za kus**, u multipacků cena / počet). Hledá se jen v akcích, které bot stahuje
+  (maso, nápoje, pivo) a jen v našich obchodech, bez diakritiky a s tolerancí koncovek (`watching._similar`), u piva
+  i podle zkrácené značky (Plzeň). Po obnově slev pošle cog Slevy událost `deals_refreshed` → `Hlidat.notify` pošle
+  každému jednu soukromou zprávu s novými akcemi. „Už ví“ = `watch_hit` s klíčem `watching.hit_key` (obchod|produkt|
+  balení|cena|do), ne ID z Kupi.cz (Albert má stejnou akci pod dvěma ID). Co platí při přidání hlídání, se ukáže
+  hned a zprávou se neposílá. Max `MAX_PER_USER` (10) hlídání na člověka. Tlačítka `hlidat:pridat` (okno),
+  `hlidat:zrusit` (výběr), `hlidat:menu` (pod soukromou zprávou).
 
 ## Zdroje dat a jejich záludnosti
 

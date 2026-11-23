@@ -68,6 +68,23 @@ MIGRATIONS: list[str] = [
     );
     CREATE INDEX deal_price_product ON deal_price (product, amount);
     """,
+    # 5 – hlídání akcí (storage/watches.py): co kdo hlídá a o kterých akcích už ví
+    """
+    CREATE TABLE watch (
+        id         INTEGER PRIMARY KEY,
+        user_id    INTEGER NOT NULL,          -- komu poslat zprávu (smaže si ho sám v /hlidat)
+        query      TEXT    NOT NULL,          -- co hledat v názvu produktu („monster“, „pilsner“)
+        max_price  REAL,                      -- cena do (Kč za kus), NULL = jakákoli akce
+        created_at TEXT    NOT NULL
+    );
+    CREATE INDEX watch_user ON watch (user_id);
+    CREATE TABLE watch_hit (
+        watch_id    INTEGER NOT NULL REFERENCES watch (id) ON DELETE CASCADE,
+        deal_id     TEXT    NOT NULL,         -- klíč akce (obchod|produkt|balení|cena|do), o které už člověk ví
+        notified_at TEXT    NOT NULL,
+        PRIMARY KEY (watch_id, deal_id)
+    ) WITHOUT ROWID;
+    """,
 ]
 
 LATEST = len(MIGRATIONS)
