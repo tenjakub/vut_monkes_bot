@@ -85,6 +85,20 @@ MIGRATIONS: list[str] = [
         PRIMARY KEY (watch_id, deal_id)
     ) WITHOUT ROWID;
     """,
+    # 6 – ceny točeného piva v hospodách (storage/beer.py): každá změna je nový řádek, aktuální = poslední
+    """
+    CREATE TABLE beer_price (
+        id            INTEGER PRIMARY KEY,
+        pub           TEXT    NOT NULL,       -- klíč podniku (pubs/venues.py PUBS)
+        price         INTEGER,                -- Kč za 0,5 l, NULL = cena smazaná („nevíme“)
+        beer          TEXT    NOT NULL DEFAULT '',  -- „Plzeň 12°“
+        many          INTEGER NOT NULL DEFAULT 0,   -- víc druhů, cena je orientační („kolem“)
+        user_id       INTEGER NOT NULL,       -- kdo cenu zadal (kvůli dohledání nesmyslů)
+        created_at    TEXT    NOT NULL,       -- RRRR-MM-DD HH:MM
+        reverted_from INTEGER                 -- vráceno na záznam s tímhle id
+    );
+    CREATE INDEX beer_price_pub ON beer_price (pub, id);
+    """,
 ]
 
 LATEST = len(MIGRATIONS)

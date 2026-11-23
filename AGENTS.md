@@ -7,7 +7,7 @@ Tenhle soubor je pro AI, která na projektu pracuje. Lidský návod je v [README
 - **VUT Monkes bot** – Discord bot pro kamarádský server studentů VUT (FIT). Python 3.14, discord.py 2.x.
 - Commandy: `/ppv`, `/purkyne`, `/menzy` (menzy VUT, s ⭐ hodnocením jídel), `/restaurace` (polední menu), `/mhd`, `/mhd-purkyne` (odjezdy MHD Brno),
   `/letaky`, `/maso`, `/napoje`, `/pivo` (letáky a slevy supermarketů), `/domu` (spoje z centra na koleje), `/kola` (nextbike),
-  `/obed` (kdo jde na oběd), `/na-pivo`, `/na-pivo-termin` (domluva na pivo), `/co-jist` (náhodné jídlo), `/pocasi`,
+  `/obed` (kdo jde na oběd), `/na-pivo`, `/na-pivo-termin` (domluva na pivo), `/cena-piva` (ceny točeného), `/co-jist` (náhodné jídlo), `/pocasi`,
   `/otevreno` (co má teď otevřeno), `/statistiky` (nejpoužívanější commandy), `/hlidat` (hlídání akcí), `/novinky` (changelog).
 - Repo je veřejné, kód je pod licencí MIT ([LICENSE](LICENSE)). Data ze zdrojů patří jim (viz README → Licence).
 - **Celý kód píše AI.** Majitel repa zadává požadavky, testuje na Discordu a rozhoduje. Kód nepíše, ale čte ho.
@@ -143,7 +143,7 @@ Pravidla:
 
 ## Oprávnění a intenty – kontrola při každé změně
 
-Aktuální stav (ověřeno pro verzi s `/ppv`, `/purkyne`, `/menzy`, `/restaurace`, `/mhd`, `/mhd-purkyne`, `/kola`, `/letaky`, `/maso`, `/napoje`, `/pivo`, `/domu`, `/obed`, `/na-pivo`, `/na-pivo-termin`, `/co-jist`, `/pocasi`, `/otevreno`, `/statistiky`, `/hlidat`, `/novinky`):
+Aktuální stav (ověřeno pro verzi s `/ppv`, `/purkyne`, `/menzy`, `/restaurace`, `/mhd`, `/mhd-purkyne`, `/kola`, `/letaky`, `/maso`, `/napoje`, `/pivo`, `/domu`, `/obed`, `/na-pivo`, `/na-pivo-termin`, `/co-jist`, `/pocasi`, `/otevreno`, `/statistiky`, `/hlidat`, `/cena-piva`, `/novinky`):
 
 - **Intenty:** `discord.Intents.default()`, žádné privilegované (Message Content, Server Members, Presence vypnuté).
 - **Oprávnění bota:** View Channels, Send Messages, Embed Links, Create Events → číselně `17592186063872`
@@ -354,9 +354,12 @@ Datum založení je v `embed.timestamp` (z něj se dopočítá rok a 14 dní hla
   sloupců přes celou šířku. Nový podnik = řádek v `PUBS`; klíč se nemění
   (je hodnotou ve výběru), podnik se v embedu pozná podle názvu (`by_name`). Výběr „Kam“ má oblasti i podniky
   dohromady a **unese max. 25 možností** (hlídá test). Při překročení je potřeba dvoustupňový výběr (oblast → podnik).
-- Ceny točeného (`Pub.beer = Beer(cena za 0,5 l, "Plzeň 12°", checked="11/2026")`, u víc druhů `Beer(70, many=True)`
-  = „víc druhů, kolem 70 Kč“) se zadávají ručně. Zatím nejsou vyplněné a jsou vypnuté přes `SHOW_BEER_PRICES = False`
-  (po vyplnění zapnout a přidat do CHANGELOG). Ukazují se v „Kde co je“ a u vybraného podniku v pozvánce.
+- Ceny točeného zadávají lidé v **/cena-piva** (`cogs/cenapiva.py`, `storage/beer.py`, tabulka `beer_price`). Nic se
+  nepřepisuje: změna, smazání (prázdná cena) i vrácení (`beer.revert` = kopie starého řádku s `reverted_from`) je nový
+  řádek s ID toho, kdo ho zadal; aktuální = poslední řádek podniku. Aktuální ceny drží v paměti `venues.beer_prices`
+  (`cenapiva.reload` při startu a po každé změně), `Pub.beer_text` z nich kreslí řádek v „Kde co je“ a u podniku
+  v pozvánce. Cena 10–500 Kč za 0,5 l, jinak hláška. Tlačítka `pivocena:p:<e|n>` (výběr podniku: upravit zprávu /
+  poslat novou z Kde co je), `pivocena:u:<podnik>` (okno), `pivocena:v:<podnik>` (vrátit), `pivocena:o` (přehled).
 - Mapa = Google Maps vyhledávání z názvu a adresy, `query` ho upřesní, `map_url` (odkaz ze „Sdílet“) má přednost.
   Seznam podniků i odkazy na mapu potvrdil uživatel (u Mystiky a Utopie mapa schválně hledá jen název). Pivní burza jen Jánská,
   U Dřevěného orla schválně ne (je hned vedle vlka a kluci znají vlka).

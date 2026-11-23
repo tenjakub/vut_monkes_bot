@@ -25,6 +25,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from lunch import service
+from cogs import cenapiva
 from pubs import planning, venues
 from utils import render
 from utils.interactions import STALE, MessageState, reported
@@ -555,7 +556,9 @@ class MapButton(discord.ui.DynamicItem[discord.ui.Button], template=r"napivo:map
 
     @reported
     async def callback(self, interaction: discord.Interaction) -> None:
-        await interaction.response.send_message(embed=map_embed(), ephemeral=True)
+        view = discord.ui.View(timeout=None)
+        view.add_item(cenapiva.PubSelect("n"))  # 🍺 zadat nebo opravit cenu piva
+        await interaction.response.send_message(embed=map_embed(), view=view, ephemeral=True)
 
 
 class PlanNewButton(discord.ui.DynamicItem[discord.ui.Button], template=r"napivo:termin"):

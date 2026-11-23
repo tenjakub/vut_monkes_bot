@@ -4,8 +4,8 @@ Nový podnik = jeden řádek v PUBS. Klíč (`key`) se nesmí měnit, jinak by s
 (podnik se pozná podle názvu v embedu a hodnoty ve výběru). Odkaz na mapu se skládá sám z názvu a adresy;
 když Google podnik nenajde správně, dej do `map_url` odkaz z „Sdílet“ v Google Mapách.
 
-Ceny točeného piva (`Pub.beer`) se zadávají ručně a ukazují se, jen když je zapnuté SHOW_BEER_PRICES.
-Kde mají hodně druhů, stačí `Beer(70, many=True)` = „víc druhů, kolem 70 Kč“.
+Ceny točeného piva zadávají lidé v /cena-piva (databáze, storage/beer.py, i s historií). Aktuální ceny drží
+`beer_prices` (načte je cog CenaPiva při startu a po každé změně), `Pub.beer_text` je z nich vykreslí.
 
 Ve výběru „Kam“ jsou nahoře oblasti a pod nimi podniky. Dohromady jich Discord ve výběru unese nejvýš 25.
 """
@@ -25,13 +25,9 @@ class Area:
     note: str = "kam přesně, se domluví"  # v pozvánce za názvem
 
 
-# Ceny piva zatím nejsou vyplněné. Po vyplnění `beer` u podniků přepnout na True.
-SHOW_BEER_PRICES = False
-
-
 @dataclass(frozen=True)
 class Beer:
-    """Točené pivo, cena za 0,5 l v Kč (zadává se ručně)."""
+    """Točené pivo, cena za 0,5 l v Kč (zadávají lidé v /cena-piva)."""
 
     price: int  # u `many` orientační („kolem“)
     name: str = ""  # jedno pivo: "Plzeň 12°"
@@ -57,12 +53,15 @@ class Pub:
     emoji: str = "🍺"
     query: str = ""  # co hledat v mapě, když název + adresa nestačí
     map_url: str = ""  # vlastní odkaz na mapu (třeba z „Sdílet“ v Google Mapách), má přednost
-    beer: Beer | None = None  # cena točeného, např. Beer(65, "Plzeň 12°", checked="11/2026")
+
+    @property
+    def beer(self) -> Beer | None:
+        return beer_prices.get(self.key)
 
     @property
     def beer_text(self) -> str:
-        """Cena piva k zobrazení, nebo "" (nevyplněná nebo vypnutá přes SHOW_BEER_PRICES)."""
-        return self.beer.text if SHOW_BEER_PRICES and self.beer else ""
+        """Cena piva k zobrazení, nebo "" (zatím ji nikdo nezadal)."""
+        return self.beer.text if self.beer else ""
 
     @property
     def map(self) -> str:
@@ -71,6 +70,9 @@ class Pub:
         query = self.query or ", ".join(p for p in (self.name, self.address, "Brno") if p)
         return f"https://www.google.com/maps/search/?api=1&query={quote_plus(query)}"
 
+
+# Aktuální ceny točeného podle klíče podniku (z databáze, viz docstring nahoře).
+beer_prices: dict[str, Beer] = {}
 
 AREAS: dict[str, Area] = {
     a.key: a

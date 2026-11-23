@@ -11,6 +11,12 @@ Formát (bot ho čte, viz utils/changelog.py):
 Nejnovější verze je vždy nahoře.
 -->
 
+## 1.19 · 2026-11-23 · Ceny piva v hospodách 🍺
+
+- 🍺 Nový command `/cena-piva`: kdokoli může zadat nebo opravit, kolik stojí točené pivo v hospodách z `/na-pivo` (cena za půllitr, jaké pivo, nebo že točí víc druhů). Jde to i z 🗺️ **Kde co je** u pozvánky.
+- Ceny se pak ukazují v pozvánce `/na-pivo` u vybraného podniku a v 🗺️ Kde co je.
+- Každá změna se pamatuje i s tím, kdo ji udělal, takže když někdo zadá nesmysl, jde to jedním výběrem vrátit.
+
 ## 1.18 · 2026-11-23 · Hlídání akcí 🔔
 
 - 🔔 Nový command `/hlidat`: napíšeš, co chceš hlídat (třeba `Monster`, `Plzeň`, `kuřecí prsa`), a případně cenu, do které to bereš. Jakmile to bude v Lidlu, BILLE, Albertu nebo Globusu v akci, bot ti napíše do soukromé zprávy. Co je v akci už teď, ukáže hned. Hlídá se maso, nápoje a pivo.

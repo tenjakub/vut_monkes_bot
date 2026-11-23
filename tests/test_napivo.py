@@ -168,23 +168,18 @@ def test_day_modal_preselects_current_choice():
 
 
 
-# --- ceny piva (připravené, zatím vypnuté) -------------------------------------------------------
+# --- ceny piva (z /cena-piva) ------------------------------------------------------------------------
 
 
-def test_beer_prices_hidden_until_switched_on(monkeypatch):
-    import dataclasses
+def test_beer_prices_from_cache(monkeypatch):
+    monkeypatch.setattr(venues, "beer_prices", {})
+    assert venues.PUBS["burza"].beer_text == "" and "Kč" not in " ".join(f.value for f in napivo.map_embed().fields)
 
-    many = dataclasses.replace(venues.PUBS["burza"], beer=venues.Beer(70, many=True, checked="11/2026"))
-    one = dataclasses.replace(venues.PUBS["vlk"], beer=venues.Beer(65, "Plzeň 12°"))
-    monkeypatch.setitem(venues.PUBS, "burza", many)
-    monkeypatch.setitem(venues.PUBS, "vlk", one)
-
-    monkeypatch.setattr(venues, "SHOW_BEER_PRICES", False)
-    assert many.beer_text == "" and "Kč" not in " ".join(f.value for f in napivo.map_embed().fields)
-
-    monkeypatch.setattr(venues, "SHOW_BEER_PRICES", True)
-    assert many.beer_text == "🍻 víc druhů, kolem 70 Kč (11/2026)"
-    assert one.beer_text == "🍺 Plzeň 12° · 65 Kč"
+    monkeypatch.setattr(venues, "beer_prices", {
+        "burza": venues.Beer(70, many=True, checked="11/2026"), "vlk": venues.Beer(65, "Plzeň 12°"),
+    })
+    assert venues.PUBS["burza"].beer_text == "🍻 víc druhů, kolem 70 Kč (11/2026)"
+    assert venues.PUBS["vlk"].beer_text == "🍺 Plzeň 12° · 65 Kč"
     assert napivo.place_lines("vlk")[1] == "-# 🍺 Plzeň 12° · 65 Kč"
     assert "-# 🍻 víc druhů, kolem 70 Kč (11/2026)" in " ".join(f.value for f in napivo.map_embed().fields)
     # řádek s cenou nesmí rozbít čtení místa z embedu

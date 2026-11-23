@@ -93,14 +93,12 @@ async def manager(client, user_id: int, notice: list[str] | None = None) -> tupl
 class WatchModal(discord.ui.Modal):
     def __init__(self) -> None:
         super().__init__(title="🔔 Hlídat akci", timeout=900)
-        self.query = discord.ui.TextInput(
-            label="Co hlídat", placeholder="např. Monster, Plzeň, kuřecí prsa", min_length=2, max_length=40,
-        )
-        self.price = discord.ui.TextInput(
-            label="Cena do (Kč za kus)", placeholder="prázdné = dát vědět o každé akci", required=False, max_length=8,
-        )
-        self.add_item(self.query)
-        self.add_item(self.price)
+        self.query = discord.ui.TextInput(placeholder="např. Monster, Plzeň, kuřecí prsa", min_length=2, max_length=40)
+        self.price = discord.ui.TextInput(placeholder="prázdné = dát vědět o každé akci", required=False, max_length=8)
+        self.add_item(discord.ui.Label(text="Co hlídat", component=self.query))
+        self.add_item(discord.ui.Label(
+            text="Cena do (Kč za kus)", description="U balení po víc kusech se počítá cena za kus.", component=self.price,
+        ))
 
     @reported
     async def on_submit(self, interaction: discord.Interaction) -> None:
