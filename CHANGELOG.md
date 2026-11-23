@@ -37,7 +37,7 @@ Nejnovější verze je vždy nahoře.
 ## 1.16 · 2026-11-23 · Hodnocení jídel ⭐
 
 - ⭐ Pod `/ppv`, `/purkyne`, `/menzy` a `/restaurace` je tlačítko **Ohodnotit**: vybereš, co sis dal(a), a dáš 👍 dobré, 😐 neurazí nebo 👎 špatné. Vidíš to jen ty, a kdyby ses překlikl(a), jde to hned zrušit.
-- Souhrn hodnocení je nevýrazně pod jídlem ve výpisu (třeba „👍 3 · 😐 1“) a platí i příště, až se stejné jídlo zase vaří.
+- Souhrn hodnocení je nevýrazně pod jídlem ve výpisu (třeba „👍 3 · 😐 1“) a platí i příště, až se stejné jídlo zase vaří. Hodnotí se jídlo bez přílohy: „Smažený sýr, Hranolky“ a „Smažený sýr, tatarská omáčka, Brambory americké“ je pro hodnocení totéž. V menzách se hodnocení sčítají ze všech menz, protože vaří podle stejných receptů.
 
 ## 1.15 · 2026-11-22 · Statistiky 📊
 

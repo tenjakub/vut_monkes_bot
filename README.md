@@ -45,6 +45,7 @@ v embedech s tlačítky na přepínání.
 
 Menzové commandy mají parametr `vse: True`: místo Economy ukážou polévky a všechna hlavní jídla.
 Pod menzami a restauracemi je ⭐ **Ohodnotit** (👍 dobré / 😐 neurazí / 👎 špatné), souhrn je pak vidět pod jídlem.
+Hodnotí se jídlo bez přílohy (s hranolky i s americkými bramborami je to stejné jídlo), v menzách ze všech menz dohromady.
 Tlačítka pod zprávou mají stav uložený přímo v ID, takže fungují i po restartu bota.
 Commandy fungují i v soukromém chatu s botem. Kromě `/nastaveni`, to je jen na serveru a jen pro lidi s oprávněním
 **Spravovat server**. Jestli ho má mít jen konkrétní role, nastaví se to v Discordu: **Nastavení serveru → Integrace →

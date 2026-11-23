@@ -103,6 +103,7 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
 bot.py            ObedBot: načte cogy, sync commandů, heartbeat pro healthcheck
 cogs/             Discord vrstva – každý cog má build_message() -> (content, embeds, view)
 lunch/            menzy a restaurace, BEZ závislosti na discord.py
+lunch/sides.py    klíč jídla pro hodnocení bez přílohy (Smažený sýr, Hranolky = Smažený sýr)
 shops/            slevy a letáky z Kupi.cz, BEZ závislosti na discord.py
 weather/          počasí z Open-Meteo, BEZ závislosti na discord.py
 pubs/             hospody a hledání termínu pro /na-pivo, BEZ závislosti na discord.py
@@ -211,8 +212,11 @@ Postup, když jsou nová oprávnění potřeba:
 - **Hodnocení jídel** (`storage/ratings.py`, `cogs/hodnoceni.py`, tabulka `dish_rating`): 1 = 👍, 0 = 😐, -1 = 👎,
   jedno na člověka a jídlo (`dish.id`). Tlačítko ⭐ `znamka:o:<skupina menz|rest>` → ephemeral výběr dnešních jídel
   `znamka:s` (hodnota = `dish.id`, max 25, hlavní jídla první) → `znamka:h:<id>:<g|o|b>` → uloženo + `znamka:z:<id>`
-  (zrušit). Souhrn (`rating_notes`) je pod kartičkou jídla jako `-# 👍 3 · 😐 1`, sčítá se podle (podnik, název)
-  přes všechny dny.
+  (zrušit). Souhrn (`rating_notes`) je pod kartičkou jídla jako `-# 👍 3 · 😐 1`, sčítá se přes všechny dny podle
+  klíče jídla **bez přílohy** (`lunch.sides.rating_key`: první část názvu + části za čárkou, které nejsou příloha
+  `SIDE_STEMS` ani doplněk `EXTRA_STEMS`, bez gramáže a závorek) a v menzách KaM ze všech menz dohromady
+  (`sides.pool`, restaurace každá zvlášť). Klíč se počítá při čtení, v databázi je název jak byl na webu, takže jde
+  pravidla kdykoli upravit. Nová příloha, která se neodřízne = slovo do `SIDE_STEMS` + případ do `tests/test_sides.py`.
 - **Historie cen akcí** (`storage/prices.py`, tabulka `deal_price`): po obnově Kupi.cz (`Slevy.remember_prices`)
   se uloží všechny načtené akce (řádek = akce podle ID z Kupi.cz, `first_seen`/`last_seen`), ~100 nových denně.
   Produkt = slug z `/sleva/<slug>` + balení. Z toho `prices.marks` → `Slevy.marks` {ID akce: hot/bait}: 🔥 = nejnižší

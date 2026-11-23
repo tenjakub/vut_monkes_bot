@@ -5,7 +5,8 @@ Postup (všechno vidí jen ten, kdo hodnotí, takže to nikoho neruší):
 2. tři tlačítka 👍 😐 👎 → uloženo, s tlačítkem ↩️ Zrušit (kdyby se člověk překlikl).
 
 Výběr jídla je zároveň „potvrzení“: omylem se ohodnotit nedá jedním kliknutím, a kdyby přece, jde to zrušit.
-Souhrn („👍 3 · 😐 1“) je nevýrazně pod jídlem ve výpisu, počítá se přes všechny dny, kdy se jídlo vařilo.
+Souhrn („👍 3 · 😐 1“) je nevýrazně pod jídlem ve výpisu, počítá se přes všechny dny, kdy se jídlo vařilo,
+i s jinou přílohou a v menzách KaM ze všech menz (storage/ratings.py).
 """
 
 from __future__ import annotations
@@ -109,7 +110,7 @@ def vote_message(dish: stored_menus.StoredDish, current: int | None = None) -> t
         (r.place for r in service.RESTAURANTS if r.place.key == dish.place), None
     )
     info = _describe(dish, place.name if place else dish.place)
-    content = f"**{dish.name}**\n-# {info}\nJak ti chutnalo?"
+    content = f"**{dish.name}**\n-# {info}\nJak ti chutnalo?\n-# Hodnotí se jídlo bez přílohy, takže to platí, i když bude příště s jinou."
     view = discord.ui.View(timeout=None)
     for key, score in SCORE_KEYS.items():
         icon, label = ratings.SCORES[score]
