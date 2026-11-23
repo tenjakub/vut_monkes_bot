@@ -7,6 +7,7 @@ import discord
 from cogs import napivo
 from lunch.service import TZ
 from pubs import planning, venues
+from pubs.beers import PubBeers, Tap
 from utils import render
 from utils.interactions import MessageState
 
@@ -176,7 +177,7 @@ def test_beer_prices_from_cache(monkeypatch):
     assert venues.PUBS["burza"].beer_text == "" and "Kč" not in " ".join(f.value for f in napivo.map_embed().fields)
 
     monkeypatch.setattr(venues, "beer_prices", {
-        "burza": venues.Beer(70, many=True, checked="11/2026"), "vlk": venues.Beer(65, "Plzeň 12°"),
+        "burza": PubBeers(many_price=70, checked="11/2026"), "vlk": PubBeers((Tap("Plzeň 12°", 65),)),
     })
     assert venues.PUBS["burza"].beer_text == "💰 víc druhů · ~70 Kč (11/2026)"
     assert venues.PUBS["vlk"].beer_text == "💰 Plzeň 12° · 65 Kč"

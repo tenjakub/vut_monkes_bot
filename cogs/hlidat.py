@@ -21,6 +21,7 @@ from lunch.service import TZ, today
 from shops import kupi, watching
 from storage import DatabaseUnavailable, watches
 from utils.interactions import STALE, reported
+from utils.text import clean
 
 log = logging.getLogger(__name__)
 
@@ -102,7 +103,7 @@ class WatchModal(discord.ui.Modal):
 
     @reported
     async def on_submit(self, interaction: discord.Interaction) -> None:
-        query = " ".join(self.query.value.split())
+        query = clean(self.query.value)
         try:
             max_price = watching.parse_price(self.price.value)
         except ValueError:

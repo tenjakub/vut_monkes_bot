@@ -32,7 +32,7 @@ v embedech s tlačítky na přepínání.
 | `/obed` | Hlasování „Kdo jde na oběd?“: kam a v kolik |
 | `/na-pivo` | Pozvánka na dnešní pivo: v kolik, kam (s mapou) a kdo jde / nejde / šel by jindy |
 | `/na-pivo-termin` | Hledání společného dne na pivo v příštích dvou týdnech i s počasím, nejlepší termín jde rovnou svolat |
-| `/cena-piva` | Ceny točeného piva v hospodách z `/na-pivo`: zadá je kdokoli, každá změna se pamatuje a jde vrátit |
+| `/cena-piva` | Točená piva a ceny v hospodách z `/na-pivo`: zadá je kdokoli, každá změna se pamatuje a jde vrátit |
 | `/co-jist` | Náhodné jídlo z dnešních menz a restaurací, volitelně do 150 Kč |
 | `/pocasi` | Počasí u FITu: teď, dalších 18 h, dnes a zítra, rady k oblečení a k oknu přes noc, kdo má svátek |
 | `/otevreno` | Co má teď otevřeno: menzy, pizzerie, kavárny a bufety VUT a okolní obchody (i se svátky) |
@@ -164,7 +164,7 @@ Co se ukládá:
 - **hodnocení jídel** (`dish_rating`): 👍/😐/👎 s ID člověka (každý hodnotí jednou a může hodnocení zrušit).
 - **ceny akcí** (`deal_price`): každá akce z Kupi.cz jednou (cena, sleva, platnost) pro 🔥/🎣 u slev a statistiky.
 - **hlídání akcí** (`watch`, `watch_hit`): co kdo hlídá (s ID člověka, komu psát) a o kterých akcích už ví. Zruší se v `/hlidat`.
-- **ceny piva v hospodách** (`beer_price`): každá změna zvlášť i s ID toho, kdo ji zadal (aby šly vrátit nesmysly).
+- **piva v hospodách** (`pub_beers`): po každé změně celý seznam piv podniku i s ID toho, kdo ji udělal (aby šly vrátit nesmysly).
 - **nastavení lidí** (`user_setting`): výchozí koleje z `/koleje` (nerozhodnuto = žádný záznam).
 - **nastavení serverů** (`guild_setting`): co admin nastavil v `/nastaveni` a kdo to naposledy změnil.
 

@@ -21,9 +21,9 @@ Nejnovější verze je vždy nahoře.
 
 ## 1.19 · 2026-11-23 · Ceny piva v hospodách 🍺
 
-- 🍺 Nový command `/cena-piva`: kdokoli může zadat nebo opravit, kolik stojí točené pivo v hospodách z `/na-pivo` (cena za půllitr, jaké pivo, nebo že točí víc druhů). Jde to i z 🗺️ **Kde co je** u pozvánky.
-- Ceny se pak ukazují v pozvánce `/na-pivo` u vybraného podniku a v 🗺️ Kde co je.
-- Každá změna se pamatuje i s tím, kdo ji udělal, takže když někdo zadá nesmysl, jde to jedním výběrem vrátit.
+- 🍺 Nový command `/cena-piva`: kdokoli může zapsat, jaká piva se v hospodách z `/na-pivo` točí a kolik stojí půllitr. Každé pivo jde zvlášť upravit nebo smazat. Pro hospody s velkým výběrem (Pivní burza) stačí zadat „🍻 víc druhů, kolem 70 Kč“. Jde to i z 🗺️ **Kde co je** u pozvánky.
+- 💰 Ceny se ukazují v pozvánce `/na-pivo` u vybraného podniku, v 🗺️ Kde co je a ve výběru „Kam“. Jedno nebo dvě piva jsou vypsaná rovnou, u víc piv je jen jejich počet a obvyklá cena (~ = medián).
+- ↩️ Každá změna se pamatuje i s tím, kdo ji udělal, takže když někdo zadá nesmysl, jde to výběrem vrátit na kterýkoli dřívější stav.
 
 ## 1.18 · 2026-11-23 · Hlídání akcí 🔔
 

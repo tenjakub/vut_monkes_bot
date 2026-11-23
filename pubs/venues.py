@@ -4,8 +4,8 @@ Nový podnik = jeden řádek v PUBS. Klíč (`key`) se nesmí měnit, jinak by s
 (podnik se pozná podle názvu v embedu a hodnoty ve výběru). Odkaz na mapu se skládá sám z názvu a adresy;
 když Google podnik nenajde správně, dej do `map_url` odkaz z „Sdílet“ v Google Mapách.
 
-Ceny točeného piva zadávají lidé v /cena-piva (databáze, storage/beer.py, i s historií). Aktuální ceny drží
-`beer_prices` (načte je cog CenaPiva při startu a po každé změně), `Pub.beer_text` je z nich vykreslí.
+Točená piva a ceny zadávají lidé v /cena-piva (pubs/beers.py, databáze storage/beer.py). Aktuální stav drží
+`beer_prices` (načte ho cog CenaPiva při startu a po každé změně), `Pub.beer_text` z něj kreslí řádek s cenou.
 
 Ve výběru „Kam“ jsou nahoře oblasti a pod nimi podniky. Dohromady jich Discord ve výběru unese nejvýš 25.
 """
@@ -15,6 +15,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from urllib.parse import quote_plus
 
+from .beers import PubBeers
+
 
 @dataclass(frozen=True)
 class Area:
@@ -23,28 +25,6 @@ class Area:
     emoji: str
     hint: str = "ještě nevíme kde"  # ve výběru za názvem
     note: str = "kam přesně, se domluví"  # v pozvánce za názvem
-
-
-@dataclass(frozen=True)
-class Beer:
-    """Točené pivo, cena za 0,5 l v Kč (zadávají lidé v /cena-piva)."""
-
-    price: int  # u `many` orientační (~)
-    name: str = ""  # jedno pivo: "Plzeň 12°"
-    many: bool = False  # víc druhů -> „víc druhů · ~XX Kč“
-    checked: str = ""  # kdy zjištěno, např. "11/2026"
-
-    @property
-    def price_text(self) -> str:
-        """'65 Kč', u víc druhů orientačně '~70 Kč' (vždy za půllitr)."""
-        return f"{'~' if self.many else ''}{self.price} Kč"
-
-    @property
-    def text(self) -> str:
-        """'💰 víc druhů · ~70 Kč' / '💰 Plzeň 12° · 65 Kč'. 💰, ne 🍺: pivo je ikona některých podniků."""
-        what = "víc druhů" if self.many else self.name
-        text = "💰 " + " · ".join(p for p in (what, self.price_text) if p)
-        return text + (f" ({self.checked})" if self.checked else "")
 
 
 @dataclass(frozen=True)
@@ -58,13 +38,13 @@ class Pub:
     map_url: str = ""  # vlastní odkaz na mapu (třeba z „Sdílet“ v Google Mapách), má přednost
 
     @property
-    def beer(self) -> Beer | None:
-        return beer_prices.get(self.key)
+    def beer(self) -> PubBeers:
+        return beer_prices.get(self.key, NO_BEERS)
 
     @property
     def beer_text(self) -> str:
-        """Cena piva k zobrazení, nebo "" (zatím ji nikdo nezadal)."""
-        return self.beer.text if self.beer else ""
+        """„💰 Plzeň 12° · 59 Kč (11/2026)“, nebo "" (zatím nikdo nic nezadal)."""
+        return self.beer.text
 
     @property
     def map(self) -> str:
@@ -74,8 +54,9 @@ class Pub:
         return f"https://www.google.com/maps/search/?api=1&query={quote_plus(query)}"
 
 
-# Aktuální ceny točeného podle klíče podniku (z databáze, viz docstring nahoře).
-beer_prices: dict[str, Beer] = {}
+NO_BEERS = PubBeers()
+# Aktuální piva a ceny podle klíče podniku (z databáze, viz docstring nahoře).
+beer_prices: dict[str, PubBeers] = {}
 
 AREAS: dict[str, Area] = {
     a.key: a
@@ -111,6 +92,11 @@ assert all(p.area in AREAS for p in PUBS.values())
 
 def pubs_in(area: str) -> list[Pub]:
     return [p for p in PUBS.values() if p.area == area]
+
+
+def pubs_by_area() -> list[Pub]:
+    """Podniky seřazené po oblastech (v pořadí AREAS), jak jsou ve výběrech."""
+    return [p for area in AREAS for p in pubs_in(area)]
 
 
 def by_name(name: str) -> str | None:

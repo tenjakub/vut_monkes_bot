@@ -85,19 +85,19 @@ MIGRATIONS: list[str] = [
         PRIMARY KEY (watch_id, deal_id)
     ) WITHOUT ROWID;
     """,
-    # 6 – ceny točeného piva v hospodách (storage/beer.py): každá změna je nový řádek, aktuální = poslední
+    # 6 – točená piva v hospodách (storage/beer.py): každá změna = nový řádek s celým stavem podniku
     """
-    CREATE TABLE beer_price (
+    CREATE TABLE pub_beers (
         id            INTEGER PRIMARY KEY,
         pub           TEXT    NOT NULL,       -- klíč podniku (pubs/venues.py PUBS)
-        price         INTEGER,                -- Kč za 0,5 l, NULL = cena smazaná („nevíme“)
-        beer          TEXT    NOT NULL DEFAULT '',  -- „Plzeň 12°“
-        many          INTEGER NOT NULL DEFAULT 0,   -- víc druhů, cena je orientační („kolem“)
-        user_id       INTEGER NOT NULL,       -- kdo cenu zadal (kvůli dohledání nesmyslů)
+        taps          TEXT    NOT NULL,       -- JSON [{"name": "Plzeň 12°", "price": 59}, …], Kč za 0,5 l
+        many_price    INTEGER,                -- ručně „víc druhů, ~XX Kč“, NULL = podle seznamu piv
+        change        TEXT    NOT NULL,       -- co se změnilo („➕ Plzeň 12° · 59 Kč“), do historie
+        user_id       INTEGER NOT NULL,       -- kdo to změnil (kvůli dohledání nesmyslů)
         created_at    TEXT    NOT NULL,       -- RRRR-MM-DD HH:MM
-        reverted_from INTEGER                 -- vráceno na záznam s tímhle id
+        reverted_from INTEGER                 -- vráceno na stav s tímhle id
     );
-    CREATE INDEX beer_price_pub ON beer_price (pub, id);
+    CREATE INDEX pub_beers_pub ON pub_beers (pub, id);
     """,
     # 7 – nastavení lidí (storage/prefs.py), zatím jen výchozí koleje z /koleje. Bez řádku = výchozí chování.
     """

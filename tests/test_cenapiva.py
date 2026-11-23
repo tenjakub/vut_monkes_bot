@@ -1,4 +1,4 @@
-"""🍺 /cena-piva: zadání ceny okném, historie, vrácení nesmyslu a ceny v /na-pivo."""
+"""🍺 /cena-piva: seznam piv v hospodě, úpravy jednotlivých piv, vrácení na starší stav a ceny v /na-pivo."""
 
 import asyncio
 from types import SimpleNamespace
@@ -6,37 +6,138 @@ from types import SimpleNamespace
 import pytest
 
 from cogs import cenapiva, napivo
-from pubs import venues
+from pubs import beers, venues
+from pubs.beers import BeerError, PubBeers, Tap
 from storage import beer
 from tests.fakes import Interaction, memory_db, with_values
+from utils.text import clean
 
 
 def run(coro):
     return asyncio.run(coro)
 
 
-@pytest.mark.parametrize(("text", "expected"), [("59", 59), (" 59 Kč", 59), ("59,-", 59), ("", None)])
+# --- pubs.beers: stav hospody (bez databáze) --------------------------------------------------------
+
+
+@pytest.mark.parametrize(("text", "expected"), [("59", 59), (" 59 Kč", 59), ("59,-", 59)])
 def test_parse_price(text, expected):
-    assert cenapiva.parse_price(text) == expected
+    assert beers.parse_price(text) == expected
 
 
-@pytest.mark.parametrize("text", ["5", "9999", "levné", "59,50"])
+def test_parse_price_optional():
+    assert beers.parse_price("  ", required=False) is None
+    with pytest.raises(BeerError):
+        beers.parse_price("")
+
+
+@pytest.mark.parametrize("text", ["5", "9999", "levné", "59,50", "-59"])
 def test_parse_price_nonsense(text):
-    with pytest.raises(ValueError):
-        cenapiva.parse_price(text)
+    with pytest.raises(BeerError):
+        beers.parse_price(text)
 
 
-async def _submit(client, user_id, price, name="", many=False):
-    entries = await beer.history(client.db, "burza", limit=1)
-    modal = cenapiva.PriceModal("burza", entries[0] if entries else None)
-    modal.price._value, modal.beer._value = price, name
-    modal.many._values = [cenapiva.MANY_YES if many else cenapiva.MANY_NO]
+def _taps(*prices):
+    state = PubBeers()
+    for i, price in enumerate(prices):
+        state, _ = beers.add(state, f"Pivo {i}", price)
+    return state
+
+
+def test_one_or_two_beers_are_listed():
+    state, change = beers.add(PubBeers(), "Plzeň 12°", 59)
+    assert change == "➕ Plzeň 12° · 59 Kč"
+    assert (state.price_text, state.text) == ("59 Kč", "💰 Plzeň 12° · 59 Kč")
+    state, _ = beers.add(state, "Kozel 11°", 45)
+    assert state.summary == "Kozel 11° · 45 Kč, Plzeň 12° · 59 Kč"  # seřazené podle ceny
+    assert state.price_text == "45–59 Kč"
+
+
+def test_more_beers_show_median():
+    assert _taps(45, 59, 70).summary == "3 piva · ~59 Kč"
+    assert _taps(40, 50, 60, 90).price_text == "~55 Kč"
+    assert _taps(*range(40, 45)).summary == "5 piv · ~42 Kč"
+
+
+def test_many_kinds_override_list():
+    state, change = beers.set_many(_taps(45, 59), 70)
+    assert change == "🍻 víc druhů · ~70 Kč"
+    assert (state.price_text, state.summary) == ("~70 Kč", "víc druhů · ~70 Kč")
+    state, change = beers.set_many(state, None)
+    assert change == "🍻 zrušeno „víc druhů“" and state.price_text == "45–59 Kč"
+
+
+def test_edit_rename_and_remove():
+    state, _ = beers.add(PubBeers(), "Plzeň 12°", 59)
+    state, change = beers.add(state, "plzeň 12°", 62, original="Plzeň 12°")
+    assert change == "✏️ Plzeň 12° → plzeň 12° · 62 Kč"
+    state, change = beers.add(state, "plzeň 12°", 64, original="plzeň 12°")
+    assert change == "✏️ plzeň 12° · 62 → 64 Kč"
+    state, change = beers.remove(state, "PLZEŇ 12°")
+    assert change == "🗑️ plzeň 12°" and state.empty and state.text == ""
+
+
+@pytest.mark.parametrize(("edit", "message"), [
+    (lambda s: beers.add(s, "plzeň 12°", 50), "už v seznamu je"),
+    (lambda s: beers.add(s, "Kozel", 50, original="Kozel"), "už v seznamu není"),
+    (lambda s: beers.add(s, "Plzeň 12°", 59, original="Plzeň 12°"), "Nic se nezměnilo"),
+    (lambda s: beers.remove(s, "Kozel"), "už v seznamu není"),
+    (lambda s: beers.set_many(s, None), "Nic se nezměnilo"),
+])
+def test_invalid_changes(edit, message):
+    state, _ = beers.add(PubBeers(), "Plzeň 12°", 59)
+    with pytest.raises(BeerError, match=message):
+        edit(state)
+
+
+def test_max_taps():
+    state = _taps(*[50] * beers.MAX_TAPS)
+    with pytest.raises(BeerError, match="nevejde"):
+        beers.add(state, "Další", 50)
+
+
+# --- text od lidí ---------------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(("text", "expected"), [
+    ("**Plzeň** 12°", "Plzeň 12°"),
+    ("@everyone Kozel", "everyone Kozel"),
+    ("<@123> [klik](https://x.cz)", "123 klik (https //x.cz)"),
+    ("Pilsner\nUrquell ~~", "Pilsner Urquell"),
+    ("`kód` <:emoji:1>", "kód emoji 1"),
+    ("Černá Hora 11°", "Černá Hora 11°"),
+    ("*** ___", ""),
+])
+def test_clean(text, expected):
+    assert clean(text) == expected
+
+
+def test_clean_limit():
+    assert clean("a" * 100, limit=10) == "a" * 10
+
+
+# --- /cena-piva v Discordu ------------------------------------------------------------------------
+
+
+async def _tap(client, user_id, name, price, original=None):
+    """Odešle okno piva (přidat, nebo upravit `original`)."""
+    state = await cenapiva._current(Interaction(client), "burza")
+    modal = cenapiva.TapModal("burza", state.find(original) if original else None)
+    modal.name._value, modal.price._value = name, price
     interaction = Interaction(client, user_id=user_id)
     await modal.on_submit(interaction)
     return interaction.last()
 
 
-def test_edit_history_and_revert(monkeypatch):
+async def _many(client, user_id, price):
+    modal = cenapiva.ManyModal("burza", None)
+    modal.price._value = price
+    interaction = Interaction(client, user_id=user_id)
+    await modal.on_submit(interaction)
+    return interaction.last()
+
+
+def test_add_edit_remove_and_revert(monkeypatch):
     monkeypatch.setattr(venues, "beer_prices", {})
 
     async def go():
@@ -47,48 +148,109 @@ def test_edit_history_and_revert(monkeypatch):
             await cog.cena_piva.callback(cog, opened)
             picked = Interaction(client)
             await with_values(cenapiva.PubSelect("e"), "burza").callback(picked)
+            add = Interaction(client)
+            await cenapiva.AddButton("burza").callback(add)
+            out = {"opened": opened.last(), "picked": picked.last(), "add": add.response.calls[0]}
+            out["first"] = await _tap(client, 1, "**Plzeň** 12°", "59 Kč")
+            out["second"] = await _tap(client, 1, "Kozel 11°", "45")
+            out["napivo"] = napivo.place_lines("burza")
             edit = Interaction(client)
-            await cenapiva.EditButton("burza").callback(edit)
-            saved = await _submit(client, 1, "59", "Plzeň 12°")
-            in_napivo = napivo.place_lines("burza")
-            vandal = await _submit(client, 2, "499", "zadarmo")
-            bad = await _submit(client, 2, "hodně")
-            first = (await beer.history(db, "burza"))[-1]
+            await with_values(cenapiva.TapSelect("burza"), "Plzeň 12°").callback(edit)
+            out["edit"] = edit.response.calls[0]
+            out["vandal"] = await _tap(client, 2, "zadarmo", "499", original="Plzeň 12°")
+            out["bad"] = await _tap(client, 2, "Kozel", "hodně")
+            out["removed"] = await _tap(client, 2, "Kozel 11°", "", original="Kozel 11°")
+            first_two = (await beer.history(db, "burza"))[-2]
             back = Interaction(client, user_id=1)
-            await with_values(cenapiva.RevertSelect("burza"), str(first.id)).callback(back)
-            history = await beer.history(db, "burza")
-            return (opened.last(), picked.last(), edit.response.calls[0], saved, in_napivo, vandal, bad,
-                    back.last(), history, dict(venues.beer_prices))
+            await with_values(cenapiva.RevertSelect("burza"), str(first_two.id)).callback(back)
+            out["back"] = back.last()
+            again = Interaction(client, user_id=1)
+            await with_values(cenapiva.RevertSelect("burza"), str(first_two.id)).callback(again)
+            out["again"] = again.last()
+            out["history"] = await beer.history(db, "burza")
+            out["cache"] = dict(venues.beer_prices)
+            return out
 
-    opened, picked, edit, saved, in_napivo, vandal, bad, back, history, cache = run(go())
-    assert "**Pivní burza** — _nevíme_" in opened["content"] and opened["ephemeral"]
-    assert "_Cenu zatím nikdo nezadal._" in picked["content"]
-    assert edit[0] == "modal"
-    assert saved["content"].startswith("✅ Uloženo, díky!") and "**Teď:** 💰 Plzeň 12° · 59 Kč" in saved["content"]
-    assert in_napivo[1].startswith("-# 💰 Plzeň 12° · 59 Kč (")
-    assert "**Teď:** 💰 zadarmo · 499 Kč" in vandal["content"]
-    assert "nechápu" in bad["content"]
-    assert back["content"].startswith("↩️ Vráceno na: 💰 Plzeň 12° · 59 Kč")
-    assert "(vráceno) · <@1>" in back["content"] and "<@2>" in back["content"]  # kdo co zadal, je vidět
-    assert [h.price for h in history] == [59, 499, 59] and history[0].reverted_from == history[-1].id
-    assert cache["burza"].price == 59
+    out = run(go())
+    assert "**Pivní burza** — _nevíme_" in out["opened"]["content"] and out["opened"]["ephemeral"]
+    assert "_Zatím nikdo nic nezadal._" in out["picked"]["content"]
+    assert out["add"][0] == "modal"
+    assert out["first"]["content"].startswith("✅ Uloženo: ➕ Plzeň 12° · 59 Kč")  # bez markdownu
+    assert "• Kozel 11° — **45 Kč**\n• Plzeň 12° — **59 Kč**" in out["second"]["content"]
+    assert out["napivo"][1].startswith("-# 💰 Kozel 11° · 45 Kč, Plzeň 12° · 59 Kč (")
+    assert out["edit"][0] == "modal"
+    assert "✏️ Plzeň 12° → zadarmo · 499 Kč" in out["vandal"]["content"]
+    assert "nechápu" in out["bad"]["content"] and out["bad"]["ephemeral"]
+    assert "✅ Uloženo: 🗑️ Kozel 11°" in out["removed"]["content"]
+    assert out["back"]["content"].startswith("✅ Uloženo: ↩️ vráceno na stav z ")
+    assert "<@1>" in out["back"]["content"] and "<@2>" in out["back"]["content"]  # kdo co změnil, je vidět
+    assert out["again"]["content"] == "Tohle už teď platí."
+    history = out["history"]
+    assert [len(v.state.taps) for v in history] == [2, 1, 2, 2, 1]
+    assert history[0].reverted_from == history[-2].id
+    assert out["cache"]["burza"].summary == "Kozel 11° · 45 Kč, Plzeň 12° · 59 Kč"
 
 
-def test_cleared_price_disappears_and_map_offers_editing(monkeypatch):
+def test_card_offers_editing_only_what_exists(monkeypatch):
     monkeypatch.setattr(venues, "beer_prices", {})
 
     async def go():
         async with memory_db() as db:
             client = SimpleNamespace(db=db)
-            await _submit(client, 1, "70", many=True)
-            many = venues.PUBS["burza"].beer_text
-            cleared = await _submit(client, 1, "")
-            return many, cleared, venues.PUBS["burza"].beer_text
+            empty = await cenapiva.card(db, "burza")
+            await _tap(client, 1, "Plzeň 12°", "59")
+            one = await cenapiva.card(db, "burza")
+            await _tap(client, 1, "Kozel 11°", "45")
+            two = await cenapiva.card(db, "burza")
+            return empty, one, two
 
-    many, cleared, after = run(go())
-    assert many.startswith("💰 víc druhů · ~70 Kč")
-    assert cleared["content"].startswith("🚫 Cena smazaná.") and after == ""
+    def ids(view):
+        return [c.item.custom_id for c in view.children]
 
+    (_, empty), (_, one), (_, two) = run(go())
+    assert ids(empty) == ["pivocena:a:burza", "pivocena:m:burza", "pivocena:o"]
+    assert ids(one) == ids(empty) + ["pivocena:e:burza"]
+    assert ids(two) == ids(one) + ["pivocena:v:burza"]
+    revert = two.children[-1].item
+    assert [o.label for o in revert.options] == ["Plzeň 12° · 59 Kč"]
+    assert revert.options[0].description.endswith("· ➕ Plzeň 12° · 59 Kč")
+
+
+def test_many_kinds_and_cancel(monkeypatch):
+    monkeypatch.setattr(venues, "beer_prices", {})
+
+    async def go():
+        async with memory_db() as db:
+            client = SimpleNamespace(db=db)
+            await _tap(client, 1, "Plzeň 12°", "59")
+            many = await _many(client, 1, "70")
+            text = venues.PUBS["burza"].beer_text
+            cancelled = await _many(client, 1, "")
+            return many, text, cancelled, venues.PUBS["burza"].beer_text
+
+    many, text, cancelled, after = run(go())
+    assert "🍻 **Víc druhů**, kolem **70 Kč**" in many["content"]
+    assert text.startswith("💰 víc druhů · ~70 Kč (")
+    assert "🍻 zrušeno „víc druhů“" in cancelled["content"] and after.startswith("💰 Plzeň 12° · 59 Kč")
+
+
+def test_stale_and_unknown_pub(monkeypatch):
+    monkeypatch.setattr(venues, "beer_prices", {})
+
+    async def go():
+        async with memory_db() as db:
+            client = SimpleNamespace(db=db)
+            gone = Interaction(client)
+            await with_values(cenapiva.TapSelect("burza"), "Plzeň 12°").callback(gone)
+            unknown = Interaction(client)
+            await cenapiva.ManyButton("zruseny_podnik").callback(unknown)
+            return gone.last(), unknown.last()
+
+    gone, unknown = run(go())
+    assert gone["content"] == unknown["content"] == cenapiva.STALE
+
+
+def test_map_offers_editing():
     shown = Interaction(SimpleNamespace())
     run(napivo.MapButton().callback(shown))
     select = shown.last()["view"].children[0].item
@@ -97,11 +259,21 @@ def test_cleared_price_disappears_and_map_offers_editing(monkeypatch):
 
 def test_pub_select_shows_only_prices(monkeypatch):
     monkeypatch.setattr(venues, "beer_prices", {
-        "burza": venues.Beer(70, many=True, checked="11/2026"), "vlk": venues.Beer(65, "Plzeň 12°"),
+        "burza": PubBeers(many_price=70, checked="11/2026"),
+        "vlk": PubBeers((Tap("Plzeň 12°", 65),)),
+        "palac": PubBeers((Tap("A", 45), Tap("B", 50), Tap("C", 70))),
     })
     options = {o.value: o.description for o in cenapiva.PubSelect("e").item.options}
-    assert (options["burza"], options["vlk"], options["yacht"]) == ("~70 Kč", "65 Kč", "cenu zatím nevíme")
+    assert (options["burza"], options["vlk"], options["palac"]) == ("~70 Kč", "65 Kč", "~50 Kč")
+    assert options["yacht"] == "cenu zatím nevíme"
     # výběr „Kam“ v /na-pivo: za adresou jen cena
     places = {o.value: o.description for o in napivo.place_options(None)}
     assert places["vlk"] == "V centru · Zelný trh · 65 Kč" and places["burza"] == "V centru · Jánská 16 · ~70 Kč"
     assert places["yacht"] == "U PPV · Kolejní 2 (koleje PPV)"
+
+
+def test_pubs_by_area_matches_choices():
+    keys = [p.key for p in venues.pubs_by_area()]
+    assert sorted(keys) == sorted(venues.PUBS)
+    assert [c.value for c in cenapiva.PUB_CHOICES] == keys[:25]
+    assert [o.value for o in napivo.place_options(None) if o.value in venues.PUBS] == keys[:25 - len(venues.AREAS)]

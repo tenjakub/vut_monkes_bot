@@ -187,6 +187,8 @@ Postup, když jsou nová oprávnění potřeba:
   (uživateli hláška, nepadat).
 - Režim WAL + `synchronous=NORMAL`, `foreign_keys=ON`. Jednotlivé příkazy se ukládají hned (`db.execute`), víc
   souvisejících najednou v `async with db.transaction() as tx:`. Dotazy vždy s parametry (`?`), nikdy f-stringem.
+  Volný text od lidí (název piva, co hlídat) projde `utils.text.clean` (jen písmena, číslice a pár znaků), aby
+  v něm nebyl markdown, odkazy ani zmínky `@everyone`.
 - **Migrace** (`storage/migrations.py`): seznam SQL, verze = `PRAGMA user_version`. Jen přidávat na konec, už
   vydanou migraci nikdy neměnit. Jen přidávací změny (tabulky, sloupce, indexy), nic nemazat ani nepřejmenovávat,
   aby šlo vrátit starší image (`BOT_TAG`). Každá migrace běží v jedné transakci.
@@ -367,12 +369,17 @@ Datum založení je v `embed.timestamp` (z něj se dopočítá rok a 14 dní hla
   sloupců přes celou šířku. Nový podnik = řádek v `PUBS`; klíč se nemění
   (je hodnotou ve výběru), podnik se v embedu pozná podle názvu (`by_name`). Výběr „Kam“ má oblasti i podniky
   dohromady a **unese max. 25 možností** (hlídá test). Při překročení je potřeba dvoustupňový výběr (oblast → podnik).
-- Ceny točeného zadávají lidé v **/cena-piva** (`cogs/cenapiva.py`, `storage/beer.py`, tabulka `beer_price`). Nic se
-  nepřepisuje: změna, smazání (prázdná cena) i vrácení (`beer.revert` = kopie starého řádku s `reverted_from`) je nový
-  řádek s ID toho, kdo ho zadal; aktuální = poslední řádek podniku. Aktuální ceny drží v paměti `venues.beer_prices`
-  (`cenapiva.reload` při startu a po každé změně), `Pub.beer_text` z nich kreslí řádek v „Kde co je“ a u podniku
-  v pozvánce. Cena 10–500 Kč za 0,5 l, jinak hláška. Tlačítka `pivocena:p:<e|n>` (výběr podniku: upravit zprávu /
-  poslat novou z Kde co je), `pivocena:u:<podnik>` (okno), `pivocena:v:<podnik>` (vrátit), `pivocena:o` (přehled).
+- Točená piva zadávají lidé v **/cena-piva** (`cogs/cenapiva.py`, logika `pubs/beers.py`, `storage/beer.py`, tabulka
+  `pub_beers`). Stav podniku (`PubBeers`) = seznam piv (`Tap`: název, cena za 0,5 l, max `MAX_TAPS`) a/nebo ručně
+  „víc druhů, ~XX Kč“ (`many_price`, má přednost). Do `SHOW_ALL` (2) piv se vypisují jednotlivě, víc = počet + medián.
+  Nic se nepřepisuje: každá změna je nový řádek s **celým stavem** podniku (piva jako JSON), popisem změny a ID toho,
+  kdo ji udělal; aktuální = poslední řádek. Čtení a zápis jsou v jedné transakci (`beer.change`). Vrácení
+  (`beer.revert`) = kopie staršího stavu s `reverted_from`, jde na kterýkoli. Aktuální stav drží v paměti
+  `venues.beer_prices` (`cenapiva.reload` při startu a po každé změně), `Pub.beer_text` / `beer.price_text` z něj kreslí
+  řádek v „Kde co je“, u podniku v pozvánce a ve výběru „Kam“. Cena 10–500 Kč, název piva prochází `utils.text.clean`.
+  Tlačítka: `pivocena:p:<e|n>` (výběr podniku: upravit zprávu / poslat novou z Kde co je), `pivocena:a:<podnik>`
+  (➕ okno), `pivocena:m:<podnik>` (🍻 víc druhů), `pivocena:e:<podnik>` (výběr piva k úpravě, hodnota = název),
+  `pivocena:v:<podnik>` (vrátit, hodnota = id řádku), `pivocena:o` (přehled).
 - Mapa = Google Maps vyhledávání z názvu a adresy, `query` ho upřesní, `map_url` (odkaz ze „Sdílet“) má přednost.
   Seznam podniků i odkazy na mapu potvrdil uživatel (u Mystiky a Utopie mapa schválně hledá jen název). Pivní burza jen Jánská,
   U Dřevěného orla schválně ne (je hned vedle vlka a kluci znají vlka).

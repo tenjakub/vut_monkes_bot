@@ -130,13 +130,13 @@ def place_options(current: str | None) -> list[discord.SelectOption]:
             label=f"{area.label} – {area.hint}", value=area.key, emoji=area.emoji,
             description=names[:100] or None, default=current == area.key,
         ))
-    for area in venues.AREAS.values():
-        for pub in venues.pubs_in(area.key):
-            options.append(discord.SelectOption(
-                label=pub.name, value=pub.key, emoji=pub.emoji,
-                description=" · ".join(p for p in (area.label, pub.address, pub.beer and pub.beer.price_text) if p)[:100],
-                default=current == pub.key,
-            ))
+    for pub in venues.pubs_by_area():
+        area = venues.AREAS[pub.area]
+        options.append(discord.SelectOption(
+            label=pub.name, value=pub.key, emoji=pub.emoji,
+            description=" · ".join(p for p in (area.label, pub.address, pub.beer.price_text) if p)[:100],
+            default=current == pub.key,
+        ))
     return options[:25]
 
 
