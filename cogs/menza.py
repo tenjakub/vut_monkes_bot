@@ -12,6 +12,7 @@ from discord.ext import commands, tasks
 from lunch import kam, service
 from lunch.models import Menu
 from cogs.obed import ObedNewButton
+from storage import menus as stored_menus
 from utils import loading, render
 from utils.interactions import STALE, reported
 
@@ -140,7 +141,8 @@ class Menza(commands.Cog):
         Mimo obědy se jen dotáhne, co v cache z dneška chybí (třeba po restartu bota večer)."""
         try:
             async with loading.track(self.bot, "jídelníčky menz"):
-                await service.menza_menus(self.bot.fetcher, "vse", force=service.is_lunch_time())
+                menus = await service.menza_menus(self.bot.fetcher, "vse", force=service.is_lunch_time())
+            await stored_menus.remember(getattr(self.bot, "db", None), menus)  # historie pro statistiky
         except Exception:
             log.exception("Obnova jídelníčků menz selhala")
 

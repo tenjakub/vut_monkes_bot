@@ -12,7 +12,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from lunch import emoji, service
-from lunch.models import Dish, Menu
+from lunch.models import Dish, Menu, price_value
 from utils import render
 from utils.interactions import STALE, reported
 
@@ -26,15 +26,6 @@ SCOPES: dict[str, tuple[str, str]] = {
     "restaurace": ("🍴", "Restaurace"),
 }
 MAX_PRICE = 150  # Kč – přepínač "Do 150 Kč", ve výchozím stavu vypnutý
-_PRICE_RE = re.compile(r"\d+(?:[.,]\d+)?")
-
-
-def price_value(price: str) -> float | None:
-    """'159 Kč' -> 159.0; bez čísla None."""
-    m = _PRICE_RE.search(price.replace("\u00a0", "").replace(" ", ""))
-    return float(m.group().replace(",", ".")) if m else None
-
-
 def affordable(dish: Dish, max_price: float = MAX_PRICE) -> bool:
     """Jídlo bez uvedené ceny se nevyřazuje (nevíme, kolik stojí)."""
     value = price_value(dish.price or "")

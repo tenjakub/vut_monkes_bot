@@ -192,6 +192,10 @@ Postup, když jsou nová oprávnění potřeba:
   v konzoli kontejneru v Portaineru.
 - **/statistiky** (`cogs/statistiky.py`): `on_app_command_completion` přičte +1 k (den, command) v `command_usage`.
   Tlačítka `statistiky:<7|30|vse>`.
+- **Historie jídel** (`storage/menus.py`, tabulka `dish`): obnova menz a restaurací na pozadí po každém stažení
+  uloží polévky a hlavní jídla (den, podnik = `Place.key`, název, cena v Kč, Economy). `first_seen`/`last_seen` je
+  čas stažení stránky, ne uložení (menzy vyprodané mažou, takže je vidět, kdy co došlo). ~100 řádků denně.
+  Klíče podniků (`Place.key`) se proto nepřejmenovávají.
 
 ## Zdroje dat a jejich záludnosti
 
