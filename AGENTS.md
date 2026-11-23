@@ -211,8 +211,10 @@ Postup, když jsou nová oprávnění potřeba:
   Klíče podniků (`Place.key`) se proto nepřejmenovávají.
 - **Hodnocení jídel** (`storage/ratings.py`, `cogs/hodnoceni.py`, tabulka `dish_rating`): 1 = 👍, 0 = 😐, -1 = 👎,
   jedno na člověka a jídlo (`dish.id`). Tlačítko ⭐ `znamka:o:<skupina menz|rest>` → ephemeral výběr dnešních jídel
-  `znamka:s` (hodnota = `dish.id`, max 25, hlavní jídla první) → `znamka:h:<id>:<g|o|b>` → uloženo + `znamka:z:<id>`
-  (zrušit). Souhrn (`rating_notes`) je pod kartičkou jídla jako `-# 👍 3 · 😐 1`, sčítá se přes všechny dny podle
+  `znamka:s` (hodnota = `dish.id`, hlavní jídla první) → `znamka:h:<id>:<g|o|b>` → uloženo + `znamka:z:<id>`
+  (zrušit). Výběr nabízí všechna dnešní jídla z tabulky `dish`, i vyprodaná (u podniku, který ještě vydává, mají
+  „došlo“). Když jich je víc než 25 (/menzy, /restaurace), napřed výběr podniku `znamka:m:<skupina|rest>` (hodnota =
+  `Place.key`), který pak zůstane nad výběrem jídel. Souhrn (`rating_notes`) je pod kartičkou jídla jako `-# 👍 3 · 😐 1`, sčítá se přes všechny dny podle
   klíče jídla **bez přílohy** (`lunch.sides.rating_key`: první část názvu + části za čárkou, které nejsou příloha
   `SIDE_STEMS` ani doplněk `EXTRA_STEMS`, bez gramáže a závorek) a v menzách KaM ze všech menz dohromady
   (`sides.pool`, restaurace každá zvlášť). Klíč se počítá při čtení, v databázi je název jak byl na webu, takže jde

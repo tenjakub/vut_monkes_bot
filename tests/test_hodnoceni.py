@@ -113,3 +113,57 @@ def test_stale_and_missing_database(monkeypatch):
     stale, unknown, offline = run(go())
     assert stale["content"] == hodnoceni.STALE and unknown["content"] == hodnoceni.STALE
     assert offline["content"] == interactions.UNAVAILABLE
+
+
+def test_sold_out_dish_still_offered(monkeypatch):
+    """Jídlo, které menza už smazala (vyprodané), jde ohodnotit i odpoledne."""
+    _patch(monkeypatch)
+
+    async def go():
+        async with memory_db() as db:
+            morning = _menus()
+            morning[0].dishes.append(Dish("Economy 3: Rizoto", "70 Kč", label="E3", economy=True))
+            await stored_menus.record(db, morning, NOW)
+            click = Interaction(SimpleNamespace(db=db, fetcher=None), user_id=7)
+            await hodnoceni.RateButton("ppv").callback(click)
+            return {o.label: o.description for o in click.followup.sent[0]["view"].children[0].item.options}
+
+    options = run(go())
+    assert options["Economy 3: Rizoto"].endswith("· došlo")
+    assert not options["Svíčková"].endswith("došlo")
+
+
+def test_too_many_dishes_pick_place_first(monkeypatch):
+    """/menzy: víc než 25 jídel → napřed výběr menzy, pak jídla jen z ní (a výběr menzy zůstane nahoře)."""
+    menus = _menus()
+    menus[0].dishes += [Dish(f"Jídlo {i}", "90 Kč") for i in range(20)]
+    menus[1].dishes += [Dish(f"Pizza {i}", "99 Kč") for i in range(10)]
+
+    async def menza_menus(fetcher, group, force=False):
+        return menus
+
+    monkeypatch.setattr(service, "menza_menus", menza_menus)
+    monkeypatch.setattr(service, "today", lambda: NOW.date())
+    monkeypatch.setattr(stored_menus, "datetime", SimpleNamespace(now=lambda tz=None: NOW))
+
+    async def go():
+        async with memory_db() as db:
+            client = SimpleNamespace(db=db, fetcher=None)
+            click = Interaction(client, user_id=7)
+            await hodnoceni.RateButton("vse").callback(click)
+            first = click.followup.sent[0]
+            pick = Interaction(client, user_id=7)
+            await with_values(hodnoceni.PlaceSelect("vse"), "mozzarella").callback(pick)
+            return first, pick.response.calls[0][1]
+
+    first, picked = run(go())
+    assert first["content"].startswith("⭐ **Kde jsi jedl(a)?**")
+    (places,) = first["view"].children
+    assert places.item.custom_id == "znamka:m:vse"
+    assert [(o.value, o.description) for o in places.item.options] == [
+        ("kolejni", "23 jídel"), ("mozzarella", "11 jídel"),
+    ]
+    places, dishes = picked["view"].children
+    assert [o.default for o in places.item.options] == [False, True]
+    assert len(dishes.item.options) == 11
+    assert {o.label for o in dishes.item.options} == {"Pizza Margherita", *(f"Pizza {i}" for i in range(10))}

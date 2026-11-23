@@ -11,6 +11,11 @@ Formát (bot ho čte, viz utils/changelog.py):
 Nejnovější verze je vždy nahoře.
 -->
 
+## 1.22 · 2026-11-23 · Hodnocení všech dnešních jídel ⭐
+
+- ⭐ Ve výběru k hodnocení jsou všechna dnešní jídla. Ta, která už došla, mají poznámku „došlo“, ale ohodnotit jdou dál, klidně i večer po zavření.
+- 📍 Pod `/menzy` a `/restaurace` se nejdřív vybere menza nebo restaurace, aby se do výběru vešla všechna jídla.
+
 ## 1.21 · 2026-11-23 · Nastavení serveru ⚙️
 
 - ⚙️ Nový command `/nastaveni` jen pro adminy serveru: dá se v něm nastavit, od kolika lidí bot zakládá událost z `/na-pivo` (2–5), nebo že ji nezakládá vůbec.

@@ -1,7 +1,8 @@
 """⭐ Hodnocení jídel pod výpisy menz a restaurací: 👍 dobré / 😐 neurazí / 👎 špatné.
 
 Postup (všechno vidí jen ten, kdo hodnotí, takže to nikoho neruší):
-1. ⭐ Ohodnotit pod /ppv, /purkyne, /menzy nebo /restaurace → výběr dnešního jídla,
+1. ⭐ Ohodnotit pod /ppv, /purkyne, /menzy nebo /restaurace → výběr dnešního jídla (všechna, co dnes byla,
+   i vyprodaná; když se nevejdou do 25, napřed výběr podniku),
 2. tři tlačítka 👍 😐 👎 → uloženo, s tlačítkem ↩️ Zrušit (kdyby se člověk překlikl).
 
 Výběr jídla je zároveň „potvrzení“: omylem se ohodnotit nedá jedním kliknutím, a kdyby přece, jde to zrušit.
@@ -13,6 +14,7 @@ from __future__ import annotations
 
 import logging
 import re
+from collections import Counter
 from collections.abc import Iterable
 from datetime import datetime
 
@@ -24,6 +26,7 @@ from lunch.models import Category, Menu
 from storage import DatabaseUnavailable, ratings, ready
 from storage import menus as stored_menus
 from utils.interactions import STALE, reported
+from utils.text import plural
 
 log = logging.getLogger(__name__)
 
@@ -74,8 +77,14 @@ def _describe(dish: stored_menus.StoredDish, place: str) -> str:
     return " · ".join(p for p in (place, dish.label, f"{dish.price} Kč" if dish.price else None) if p)
 
 
-async def dish_picker(client, user_id: int, scope: str) -> tuple[str, discord.ui.View | None]:
-    """Text a výběr dnešních jídel k ohodnocení (hlavní jídla první, polévky jen když se vejdou)."""
+async def dish_picker(
+    client, user_id: int, scope: str, place: str | None = None,
+) -> tuple[str, discord.ui.View | None]:
+    """Text a výběr dnešních jídel k ohodnocení: všechna, co dnes bot viděl, i ta, která už došla.
+
+    Když se jídla ze všech podniků nevejdou do jednoho výběru (/menzy má i 60 jídel), vybere se napřed podnik
+    (`place`) a výběr podniku zůstane nad jídly, aby šlo přepnout. Hlavní jídla první, polévky na konci.
+    """
     menus = await _menus(client, scope)
     if menus is None:
         return STALE, None
@@ -84,25 +93,45 @@ async def dish_picker(client, user_id: int, scope: str) -> tuple[str, discord.ui
         raise DatabaseUnavailable("Bot nemá databázi")
     await stored_menus.remember(db, menus)  # ať jsou v databázi i jídla, která obnova na pozadí ještě neuložila
     places = {m.place.key: m.place for m in menus}
+    if place is not None and place not in places:
+        return STALE, None
     dishes = await stored_menus.for_day(db, service.today(), places)
-    order = list(places)
-    dishes.sort(key=lambda d: (d.category != "main", d.group is not None, order.index(d.place), d.id))
-    dishes = dishes[:MAX_OPTIONS]
     if not dishes:
         return NOTHING, None
+    order = list(places)
+    dishes.sort(key=lambda d: (d.category != "main", d.group is not None, order.index(d.place), d.id))
+    view = discord.ui.View(timeout=None)
+    if len(dishes) > MAX_OPTIONS:
+        counts = Counter(d.place for d in dishes)
+        view.add_item(PlaceSelect(scope, [
+            discord.SelectOption(
+                label=places[key].name[:100], value=key, emoji=places[key].emoji,
+                description=plural(counts[key], "jídlo", "jídla", "jídel"), default=key == place,
+            )
+            for key in order if counts[key]
+        ][:MAX_OPTIONS]))
+        if place is None:
+            return "⭐ **Kde jsi jedl(a)?** Dnes je jídel moc na jeden výběr, tak napřed podnik.", view
+    if place is not None:
+        dishes = [d for d in dishes if d.place == place]
+    dishes = dishes[:MAX_OPTIONS]
+    # „došlo“ jen u podniku, který ještě vydává (po zavření je menu prázdné a došlo by všechno)
+    open_now = {m.place.key for m in menus if m.dishes and not m.error}
+    serving = {(m.place.key, d.name[: stored_menus.NAME_LIMIT]) for m in menus for d in m.dishes}
     mine = await ratings.scores_of(db, user_id, (d.id for d in dishes))
     options = []
     for d in dishes:
-        place = places[d.place]
-        description = _describe(d, place.name)
+        info = places[d.place]
+        description = _describe(d, info.name)
+        if d.place in open_now and (d.place, d.name) not in serving:
+            description = f"{description} · došlo"
         if d.id in mine:
             description = f"{description} · tvoje: {ratings.SCORES[mine[d.id]][0]}"
         options.append(discord.SelectOption(
-            label=d.name[:100], value=str(d.id), description=description[:100], emoji=place.emoji,
+            label=d.name[:100], value=str(d.id), description=description[:100], emoji=info.emoji,
         ))
-    view = discord.ui.View(timeout=None)
     view.add_item(DishSelect(options))
-    return "⭐ **Co sis dal(a)?** Vyber jídlo a pak ho ohodnoť.", view
+    return "⭐ **Co sis dal(a)?** Vyber jídlo a pak ho ohodnoť.\n-# Jsou tu všechna dnešní jídla, i ta, co už došla.", view
 
 
 def vote_message(dish: stored_menus.StoredDish, current: int | None = None) -> tuple[str, discord.ui.View]:
@@ -141,6 +170,29 @@ class RateButton(discord.ui.DynamicItem[discord.ui.Button], template=r"znamka:o:
             await interaction.followup.send(content, ephemeral=True)
         else:
             await interaction.followup.send(content, view=view, ephemeral=True)
+
+
+class PlaceSelect(discord.ui.DynamicItem[discord.ui.Select], template=r"znamka:m:(?P<scope>[a-z]+)"):
+    """Výběr podniku, když se dnešní jídla nevejdou do jednoho výběru. Hodnota = `Place.key`."""
+
+    def __init__(self, scope: str, options: list[discord.SelectOption] | None = None) -> None:
+        super().__init__(discord.ui.Select(
+            custom_id=f"znamka:m:{scope}", placeholder="📍 Vyber menzu / restauraci", options=options or [],
+        ))
+        self.scope = scope
+
+    @classmethod
+    async def from_custom_id(cls, interaction, item, match: re.Match[str], /) -> PlaceSelect:
+        return cls(match["scope"])
+
+    @reported
+    async def callback(self, interaction: discord.Interaction) -> None:
+        place = self.item.values[0] if self.item.values else ""
+        content, view = await dish_picker(interaction.client, interaction.user.id, self.scope, place)
+        if view is None:
+            await interaction.response.send_message(content, ephemeral=True)
+        else:
+            await interaction.response.edit_message(content=content, view=view)
 
 
 class DishSelect(discord.ui.DynamicItem[discord.ui.Select], template=r"znamka:s"):
@@ -215,7 +267,7 @@ class UndoButton(discord.ui.DynamicItem[discord.ui.Button], template=r"znamka:z:
         await interaction.response.edit_message(content=f"↩️ Hodnocení zrušeno.\n{content}", view=view)
 
 
-ITEMS = (RateButton, DishSelect, VoteButton, UndoButton)
+ITEMS = (RateButton, PlaceSelect, DishSelect, VoteButton, UndoButton)
 
 
 class Hodnoceni(commands.Cog):
