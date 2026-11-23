@@ -120,8 +120,8 @@ def read_place(embed: discord.Embed) -> str | None:
 
 
 def place_options(current: str | None) -> list[discord.SelectOption]:
-    """Nahoře pohromadě obecné možnosti (kamkoliv, oblasti), pod nimi podniky seřazené po oblastech.
-    Discord unese ve výběru nejvýš 25 možností."""
+    """Nahoře pohromadě obecné možnosti (kamkoliv, oblasti), pod nimi podniky seřazené po oblastech
+    (s cenou piva za adresou, když ji někdo zadal). Discord unese ve výběru nejvýš 25 možností."""
     options = []
     for area in venues.AREAS.values():
         names = ", ".join(p.name for p in venues.pubs_in(area.key))
@@ -133,7 +133,8 @@ def place_options(current: str | None) -> list[discord.SelectOption]:
         for pub in venues.pubs_in(area.key):
             options.append(discord.SelectOption(
                 label=pub.name, value=pub.key, emoji=pub.emoji,
-                description=" · ".join(p for p in (area.label, pub.address) if p)[:100], default=current == pub.key,
+                description=" · ".join(p for p in (area.label, pub.address, pub.beer and pub.beer.price_text) if p)[:100],
+                default=current == pub.key,
             ))
     return options[:25]
 
